@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.0...v1.0.1) (2025-12-14)
+
+
+### Bug Fixes
+
+* failed to load PR and over 100 items ([dd1c216](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/dd1c2164e3ed1b8dcfa1b4de75395f875a8d0de2))
+
 # 1.0.0 (2025-12-14)
 
 
