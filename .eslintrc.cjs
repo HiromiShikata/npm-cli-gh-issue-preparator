@@ -52,4 +52,14 @@ module.exports = {
     ],
     'unused-imports/no-unused-imports-ts': 'error',
   },
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/*.spec.ts'],
+      extends: ['plugin:jest/recommended'],
+      rules: {
+        '@typescript-eslint/unbound-method': 'off',
+        'jest/unbound-method': 'error',
+      },
+    },
+  ],
 };
