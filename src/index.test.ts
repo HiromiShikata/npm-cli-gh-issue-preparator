@@ -1,8 +1,7 @@
-import { hello } from './index';
+import { program } from './index';
 
 describe('index', () => {
-  test('hello', async () => {
-    const res = hello('test');
-    expect(res).toEqual('hello test');
+  it('should export program from CLI module', () => {
+    expect(program).toBeDefined();
   });
 });

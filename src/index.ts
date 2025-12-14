@@ -1,3 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-export const hello = (name: string) => `hello ${name}`;
+import { program } from './adapter/entry-points/cli/index';
+
+export { program };
