@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.2...v1.0.3) (2025-12-14)
+
+
+### Bug Fixes
+
+* change aw paramter order ([d42dfc5](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d42dfc5b6f298939edcc5fa3208c5601f042d503))
+* start preparation until maximum setting ([ed2feb2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ed2feb2f3a7fab53422e47481d3d44dfddf4a53b))
+
 ## [1.0.2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.1...v1.0.2) (2025-12-14)
 
 

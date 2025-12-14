@@ -11,18 +11,20 @@ class StartPreparationUseCase {
             const project = await this.projectRepository.getByUrl(params.projectUrl);
             const allIssues = await this.issueRepository.getAllOpened(project);
             const awaitingWorkspaceIssues = allIssues.filter((issue) => issue.status === params.awaitingWorkspaceStatus);
-            if (allIssues.filter((issue) => issue.status === params.preparationStatus)
-                .length >= this.maximumPreparingIssuesCount) {
-                return;
-            }
-            for (const issue of awaitingWorkspaceIssues) {
+            const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
+            for (let i = currentPreparationIssueCount; i <
+                Math.min(this.maximumPreparingIssuesCount, awaitingWorkspaceIssues.length + currentPreparationIssueCount); i++) {
+                const issue = awaitingWorkspaceIssues.pop();
+                if (!issue) {
+                    break;
+                }
                 const agent = issue.labels
                     .find((label) => label.startsWith('category:'))
                     ?.replace('category:', '')
                     .trim() || params.defaultAgentName;
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
-                await this.localCommandRunner.runCommand(`aw ${project.url} ${issue.url} ${agent}`);
+                await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${project.url}`);
             }
         };
     }
