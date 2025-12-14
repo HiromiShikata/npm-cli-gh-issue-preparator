@@ -16,7 +16,7 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
       - uses: actions/setup-node@v6
         with:
-          node-version: 19
+          node-version: 25
       - run: git pull
       - run: npm ci
       - run: npm run fmt && git --no-pager diff

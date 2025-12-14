@@ -5,7 +5,7 @@
   "main": "bin/index.js",
   "scripts": {
     "prebuild": "npm run doctor",
-    "doctor:node-version": "check-node-version --node 20 --npx 10 --npm 10",
+    "doctor:node-version": "check-node-version --node 25 --npx 11 --npm 11",
     "doctor": "npm run doctor:node-version",
     "prettier": "prettier --write '**/*'",
     "lint": "eslint src",
