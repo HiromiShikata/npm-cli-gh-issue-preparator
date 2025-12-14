@@ -27,6 +27,11 @@ type ProjectItemsResponse = {
     organization?: {
       projectV2?: {
         items: {
+          totalCount: number;
+          pageInfo: {
+            endCursor: string;
+            hasNextPage: boolean;
+          };
           nodes: ProjectItem[];
         };
       };
@@ -34,6 +39,11 @@ type ProjectItemsResponse = {
     user?: {
       projectV2?: {
         items: {
+          totalCount: number;
+          pageInfo: {
+            endCursor: string;
+            hasNextPage: boolean;
+          };
           nodes: ProjectItem[];
         };
       };
@@ -117,14 +127,29 @@ export class GitHubIssueRepository implements IssueRepository {
 
   private buildProjectItemsQuery(): string {
     return `
-      query($owner: String!, $number: Int!) {
+      query($owner: String!, $number: Int!, $after: String) {
         organization(login: $owner) {
           projectV2(number: $number) {
-            items(first: 100) {
+            items(first: 100, after: $after) {
+              totalCount
+              pageInfo {
+                endCursor
+                hasNextPage
+              }
               nodes {
                 id
                 content {
                   ... on Issue {
+                    url
+                    title
+                    number
+                    labels(first: 10) {
+                      nodes {
+                        name
+                      }
+                    }
+                  }
+                  ... on PullRequest {
                     url
                     title
                     number
@@ -162,11 +187,26 @@ export class GitHubIssueRepository implements IssueRepository {
         }
         user(login: $owner) {
           projectV2(number: $number) {
-            items(first: 100) {
+            items(first: 100, after: $after) {
+              totalCount
+              pageInfo {
+                endCursor
+                hasNextPage
+              }
               nodes {
                 id
                 content {
                   ... on Issue {
+                    url
+                    title
+                    number
+                    labels(first: 10) {
+                      nodes {
+                        name
+                      }
+                    }
+                  }
+                  ... on PullRequest {
                     url
                     title
                     number
@@ -300,53 +340,69 @@ export class GitHubIssueRepository implements IssueRepository {
 
     const query = this.buildProjectItemsQuery();
 
-    const response = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          owner,
-          number: projectNumber,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`GitHub API error: ${errorText}`);
-    }
-
-    const responseData: unknown = await response.json();
-    if (!isProjectItemsResponse(responseData)) {
-      throw new Error('Invalid API response format');
-    }
-
-    const result: ProjectItemsResponse = responseData;
-    const items =
-      result.data?.organization?.projectV2?.items.nodes ||
-      result.data?.user?.projectV2?.items.nodes ||
-      [];
-
     const issues: Issue[] = [];
-    for (const item of items) {
-      if (!item.content) continue;
+    let after: string | null = null;
+    let hasNextPage = true;
 
-      const statusField = item.fieldValues?.nodes.find(
-        (fv) => fv.field?.name === 'Status',
-      );
-      const status = statusField?.name || '';
-
-      issues.push({
-        id: item.id,
-        url: item.content.url,
-        title: item.content.title,
-        labels: item.content.labels.nodes.map((l) => l.name),
-        status,
+    while (hasNextPage) {
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          variables: {
+            owner,
+            number: projectNumber,
+            after,
+          },
+        }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${errorText}`);
+      }
+
+      const responseData: unknown = await response.json();
+      if (!isProjectItemsResponse(responseData)) {
+        throw new Error('Invalid API response format');
+      }
+
+      const result: ProjectItemsResponse = responseData;
+      const projectData =
+        result.data?.organization?.projectV2 || result.data?.user?.projectV2;
+
+      if (!projectData) {
+        break;
+      }
+
+      const items = projectData.items.nodes;
+
+      for (const item of items) {
+        if (!item.content) continue;
+
+        const statusField = item.fieldValues?.nodes.find(
+          (fv) => fv.field?.name === 'Status',
+        );
+        const status = statusField?.name || '';
+
+        if (item.content.url === undefined) {
+          continue;
+        }
+        issues.push({
+          id: item.id,
+          url: item.content.url,
+          title: item.content.title,
+          labels: item.content.labels?.nodes?.map((l) => l.name) || [],
+          status,
+        });
+      }
+
+      hasNextPage = projectData.items.pageInfo.hasNextPage;
+      after = projectData.items.pageInfo.endCursor;
     }
 
     return issues;
@@ -416,53 +472,66 @@ export class GitHubIssueRepository implements IssueRepository {
 
     const query = this.buildProjectItemsQuery();
 
-    const response = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          owner,
-          number: projectNumber,
+    let after: string | null = null;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          query,
+          variables: {
+            owner,
+            number: projectNumber,
+            after,
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      return null;
-    }
-
-    const responseData: unknown = await response.json();
-    if (!isProjectItemsResponse(responseData)) {
-      return null;
-    }
-
-    const result: ProjectItemsResponse = responseData;
-    const items =
-      result.data?.organization?.projectV2?.items.nodes ||
-      result.data?.user?.projectV2?.items.nodes ||
-      [];
-
-    for (const item of items) {
-      if (!item.content) continue;
-
-      if (item.content.url === issueUrl) {
-        const statusField = item.fieldValues?.nodes.find(
-          (fv) => fv.field?.name === 'Status',
-        );
-        const status = statusField?.name || '';
-
-        return {
-          id: item.id,
-          url: item.content.url,
-          title: item.content.title,
-          labels: item.content.labels.nodes.map((l) => l.name),
-          status,
-        };
+      if (!response.ok) {
+        return null;
       }
+
+      const responseData: unknown = await response.json();
+      if (!isProjectItemsResponse(responseData)) {
+        return null;
+      }
+
+      const result: ProjectItemsResponse = responseData;
+      const projectData =
+        result.data?.organization?.projectV2 || result.data?.user?.projectV2;
+
+      if (!projectData) {
+        return null;
+      }
+
+      const items = projectData.items.nodes;
+
+      for (const item of items) {
+        if (!item.content) continue;
+
+        if (item.content.url === issueUrl) {
+          const statusField = item.fieldValues?.nodes.find(
+            (fv) => fv.field?.name === 'Status',
+          );
+          const status = statusField?.name || '';
+
+          return {
+            id: item.id,
+            url: item.content.url,
+            title: item.content.title,
+            labels: item.content.labels?.nodes?.map((l) => l.name) || [],
+            status,
+          };
+        }
+      }
+
+      hasNextPage = projectData.items.pageInfo.hasNextPage;
+      after = projectData.items.pageInfo.endCursor;
     }
 
     return null;

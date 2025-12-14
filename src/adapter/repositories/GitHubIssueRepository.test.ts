@@ -38,6 +38,11 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 items: {
+                  totalCount: 2,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'issue-1',
@@ -149,6 +154,11 @@ describe('GitHubIssueRepository', () => {
             user: {
               projectV2: {
                 items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'user-issue-1',
@@ -199,6 +209,11 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 items: {
+                  totalCount: 2,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'item-without-content',
@@ -263,6 +278,11 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'issue-no-status',
@@ -728,6 +748,11 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'issue-1',
@@ -805,6 +830,11 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 items: {
+                  totalCount: 0,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [],
                 },
               },
@@ -828,6 +858,11 @@ describe('GitHubIssueRepository', () => {
             user: {
               projectV2: {
                 items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'issue-2',
@@ -880,6 +915,11 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
                   nodes: [
                     {
                       id: 'issue-3',
