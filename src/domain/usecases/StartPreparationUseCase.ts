@@ -49,7 +49,7 @@ export class StartPreparationUseCase {
       await this.issueRepository.update(issue, project);
 
       await this.localCommandRunner.runCommand(
-        `aw ${project.url} ${issue.url} ${agent}`,
+        `aw ${issue.url} ${agent} ${project.url}`,
       );
     }
   };
