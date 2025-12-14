@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.1...v1.0.2) (2025-12-14)
+
+
+### Bug Fixes
+
+* failed to get all fields ([f236af7](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/f236af7cab059d8b63bc81743bd59127b28933cb))
+
 ## [1.0.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.0...v1.0.1) (2025-12-14)
 
 
