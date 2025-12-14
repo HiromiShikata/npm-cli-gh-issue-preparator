@@ -1,2 +1,3 @@
-export declare const hello: (name: string) => string;
+import { program } from './adapter/entry-points/cli/index';
+export { program };
 //# sourceMappingURL=index.d.ts.map

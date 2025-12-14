@@ -1,6 +1,6 @@
 {
   "name": "npm-cli-gh-issue-preparator",
-  "version": "1.0.8",
+  "version": "1.0.0",
   "description": "",
   "main": "bin/index.js",
   "scripts": {

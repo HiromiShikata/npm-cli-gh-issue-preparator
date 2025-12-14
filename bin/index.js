@@ -1,11 +1,6 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hello = void 0;
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-const hello = (name) => `hello ${name}`;
-exports.hello = hello;
+exports.program = void 0;
+const index_1 = require("./adapter/entry-points/cli/index");
+Object.defineProperty(exports, "program", { enumerable: true, get: function () { return index_1.program; } });
 //# sourceMappingURL=index.js.map

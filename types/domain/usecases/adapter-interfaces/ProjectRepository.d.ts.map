@@ -1,0 +1,1 @@
+{"version":3,"file":"ProjectRepository.d.ts","sourceRoot":"","sources":["../../../../src/domain/usecases/adapter-interfaces/ProjectRepository.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,wBAAwB,CAAC;AAEjD,MAAM,WAAW,iBAAiB;IAChC,QAAQ,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,OAAO,CAAC,CAAC;CACzC"}

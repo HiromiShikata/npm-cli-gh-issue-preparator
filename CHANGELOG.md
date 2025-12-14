@@ -1,3 +1,10 @@
+# 1.0.0 (2025-12-14)
+
+
+### Features
+
+* implement first version ([e696b0a](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/e696b0a9bdd614313d807c8cfad368b62e471b5e))
+
 ## [1.0.8](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.7...v1.0.8) (2025-01-28)
 
 
