@@ -1,0 +1,150 @@
+import { StartPreparationUseCase } from './StartPreparationUseCase';
+import { IssueRepository } from './adapter-interfaces/IssueRepository';
+import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
+import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
+import { Issue } from '../entities/Issue';
+import { Project } from '../entities/Project';
+type Mocked<T> = jest.Mocked<T> & jest.MockedObject<T>;
+describe('StartPreparationUseCase', () => {
+  let useCase: StartPreparationUseCase;
+  let mockProjectRepository: Mocked<ProjectRepository>;
+  let mockIssueRepository: Mocked<IssueRepository>;
+  let mockLocalCommandRunner: Mocked<LocalCommandRunner>;
+  const mockProject: Project = {
+    id: 'project-1',
+    url: 'https://github.com/user/repo',
+    name: 'Test Project',
+    statuses: ['Awaiting Workspace', 'Preparation', 'Done'],
+    customFieldNames: ['workspace'],
+  };
+  beforeEach(() => {
+    jest.resetAllMocks();
+    mockProjectRepository = {
+      getByUrl: jest.fn(),
+    };
+    mockIssueRepository = {
+      getAllOpened: jest.fn(),
+      get: jest.fn(),
+      update: jest.fn(),
+    };
+    mockLocalCommandRunner = {
+      runCommand: jest.fn(),
+    };
+    useCase = new StartPreparationUseCase(
+      mockProjectRepository,
+      mockIssueRepository,
+      mockLocalCommandRunner,
+    );
+  });
+  it('should run aw command for awaiting workspace issues', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
+    expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+      id: '1',
+      status: 'Preparation',
+    });
+    expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw https://github.com/user/repo url1 impl',
+    );
+  });
+  it('should assign workspace to awaiting issues', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      },
+      {
+        id: '2',
+        url: 'url2',
+        title: 'Issue 2',
+        labels: [],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
+    expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+      id: '1',
+      status: 'Preparation',
+    });
+    expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
+    expect(mockIssueRepository.update.mock.calls[1][0]).toMatchObject({
+      id: '2',
+      status: 'Preparation',
+    });
+    expect(mockIssueRepository.update.mock.calls[1][1]).toBe(mockProject);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(2);
+  });
+  it('should not assign workspace if maximum preparing issues reached', async () => {
+    const preparationIssues: Issue[] = Array.from({ length: 6 }, (_, i) => ({
+      id: `${i + 1}`,
+      url: `url${i + 1}`,
+      title: `Issue ${i + 1}`,
+      labels: [],
+      status: 'Preparation',
+    }));
+    const awaitingIssues: Issue[] = [
+      {
+        id: '7',
+        url: 'url7',
+        title: 'Issue 7',
+        labels: [],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce([
+      ...preparationIssues,
+      ...awaitingIssues,
+    ]);
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+    });
+    const issue7UpdateCalls = mockIssueRepository.update.mock.calls.filter(
+      (call) => call[0].id === '7',
+    );
+    expect(issue7UpdateCalls).toHaveLength(0);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+  });
+});
