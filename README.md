@@ -4,47 +4,40 @@
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 
-Welcome to npm-cli-gh-issue-preparator, this template os for npm command-line.
-
-## How to use this template
-
-1. Grant write permission to gh-actions
-
-   https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/settings/actions
-
-1. Set secrets (optional)
-
-   https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/settings/secrets/actions
-   - [GH_TOKEN](https://github.com/settings/tokens)
-   - [NPM_TOKEN](https://www.npmjs.com/settings/hiromi/tokens)
-   - [RELEASE_APP_PRIVATE_KEY](https://github.com/settings/apps/semantic-release-changelog)
-
-1. Remove `How to use this template` section from README.md
+Welcome to npm-cli-gh-issue-preparator, this tool helps you to prepare you task by AI.
 
 ## Usage 🛠️
 
 Here's how you can use npm-cli-gh-issue-preparator:
-TODO: copy output of `npx npm-cli-gh-issue-preparator --help`
 
 ```
-Usage: Replace all words [options] <targetDirectoryPath> <beforeWord> <afterWord>
+Usage: npm-cli-gh-issue-preparator [options] [command]
 
-Arguments:
-  targetDirectoryPath  Path to the target directory where replacements are to be made
-  beforeWord           Word to be replaced throughout the target directory
-  afterWord            Word to replace the beforeWord with
+CLI tool to prepare GitHub issues
 
 Options:
+  -h, --help                                display help for command
 
+Commands:
+  startDaemon [options]                     Start daemon to prepare GitHub issues
+  notifyFinishedIssuePreparation [options]  Notify that issue preparation is finished
+  help [command]                            display help for command
 ```
 
 ## Example 📖
 
 Here's a quick example to illustrate its usage:
-TODO:
+
+### Start daemon
 
 ```
-npx npm-cli-gh-issue-preparator
+npx npm-cli-gh-issue-preparator startDaemon --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"
+```
+
+### Notify finished issue preparation
+
+```
+npx npm-cli-gh-issue-preparator notifyFinishedIssuePreparation --projectUrl <projectUrl> --issueUrl <issueUrl> --preparationStatus "Preparation" --awaitingQualityCheckStatus "Awaiting quality check"
 ```
 
 ## Contributing
