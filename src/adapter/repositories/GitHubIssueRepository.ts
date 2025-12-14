@@ -77,6 +77,10 @@ type StatusFieldsResponse = {
     organization?: {
       projectV2?: {
         fields: {
+          pageInfo: {
+            endCursor: string;
+            hasNextPage: boolean;
+          };
           nodes: StatusField[];
         };
       };
@@ -84,6 +88,10 @@ type StatusFieldsResponse = {
     user?: {
       projectV2?: {
         fields: {
+          pageInfo: {
+            endCursor: string;
+            hasNextPage: boolean;
+          };
           nodes: StatusField[];
         };
       };
@@ -253,10 +261,14 @@ export class GitHubIssueRepository implements IssueRepository {
     const { owner, projectNumber } = this.parseProjectInfo(project);
 
     const query = `
-      query($owner: String!, $number: Int!) {
+      query($owner: String!, $number: Int!, $after: String) {
         organization(login: $owner) {
           projectV2(number: $number) {
-            fields(first: 10) {
+            fields(first: 100, after: $after) {
+              pageInfo {
+                endCursor
+                hasNextPage
+              }
               nodes {
                 ... on ProjectV2SingleSelectField {
                   id
@@ -272,7 +284,11 @@ export class GitHubIssueRepository implements IssueRepository {
         }
         user(login: $owner) {
           projectV2(number: $number) {
-            fields(first: 10) {
+            fields(first: 100, after: $after) {
+              pageInfo {
+                endCursor
+                hasNextPage
+              }
               nodes {
                 ... on ProjectV2SingleSelectField {
                   id
@@ -289,50 +305,61 @@ export class GitHubIssueRepository implements IssueRepository {
       }
     `;
 
-    const response = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          owner,
-          number: projectNumber,
+    let after: string | null = null;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          query,
+          variables: {
+            owner,
+            number: projectNumber,
+            after,
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      return null;
+      if (!response.ok) {
+        return null;
+      }
+
+      const responseData: unknown = await response.json();
+      if (!isStatusFieldsResponse(responseData)) {
+        return null;
+      }
+
+      const result: StatusFieldsResponse = responseData;
+      const projectData =
+        result.data?.organization?.projectV2 || result.data?.user?.projectV2;
+
+      if (!projectData) {
+        return null;
+      }
+
+      const fields = projectData.fields.nodes;
+
+      const statusField = fields.find((f) => f.name === 'Status');
+      if (statusField) {
+        const option = statusField.options.find((o) => o.name === statusName);
+        if (option) {
+          return {
+            fieldId: statusField.id,
+            optionId: option.id,
+          };
+        }
+      }
+
+      hasNextPage = projectData.fields.pageInfo.hasNextPage;
+      after = projectData.fields.pageInfo.endCursor;
     }
 
-    const responseData: unknown = await response.json();
-    if (!isStatusFieldsResponse(responseData)) {
-      return null;
-    }
-
-    const result: StatusFieldsResponse = responseData;
-    const fields =
-      result.data?.organization?.projectV2?.fields.nodes ||
-      result.data?.user?.projectV2?.fields.nodes ||
-      [];
-
-    const statusField = fields.find((f) => f.name === 'Status');
-    if (!statusField) {
-      return null;
-    }
-
-    const option = statusField.options.find((o) => o.name === statusName);
-    if (!option) {
-      return null;
-    }
-
-    return {
-      fieldId: statusField.id,
-      optionId: option.id,
-    };
+    return null;
   }
 
   async getAllOpened(project: Project): Promise<Issue[]> {
