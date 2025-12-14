@@ -23,15 +23,23 @@ export class StartPreparationUseCase {
     const awaitingWorkspaceIssues = allIssues.filter(
       (issue) => issue.status === params.awaitingWorkspaceStatus,
     );
+    const currentPreparationIssueCount = allIssues.filter(
+      (issue) => issue.status === params.preparationStatus,
+    ).length;
 
-    if (
-      allIssues.filter((issue) => issue.status === params.preparationStatus)
-        .length >= this.maximumPreparingIssuesCount
+    for (
+      let i = currentPreparationIssueCount;
+      i <
+      Math.min(
+        this.maximumPreparingIssuesCount,
+        awaitingWorkspaceIssues.length + currentPreparationIssueCount,
+      );
+      i++
     ) {
-      return;
-    }
-
-    for (const issue of awaitingWorkspaceIssues) {
+      const issue = awaitingWorkspaceIssues.pop();
+      if (!issue) {
+        break;
+      }
       const agent =
         issue.labels
           .find((label) => label.startsWith('category:'))
