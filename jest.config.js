@@ -6,7 +6,21 @@ module.exports = {
   },
   transformIgnorePatterns: ['<rootDir>/node_modules/'],
   collectCoverage: true,
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.test.ts',
+    '!src/**/*.spec.ts',
+    '!src/**/adapter-interfaces/**',
+  ],
   coverageDirectory: 'reports/coverage',
+  coverageThreshold: {
+    global: {
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
+    },
+  },
   reporters: [
     'default',
     ['jest-junit', { outputDirectory: 'reports/jest-junit' }],
