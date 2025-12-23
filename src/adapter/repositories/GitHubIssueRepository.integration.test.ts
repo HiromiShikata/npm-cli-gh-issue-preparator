@@ -1,3 +1,4 @@
+/* eslint-disable no-type-assertion/no-type-assertion */
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -12,12 +13,8 @@ describe('GitHubIssueRepository Integration Test', () => {
 
   describe('getgetAllOpened', () => {
     it('should get all opened issues and verify the list is not empty', async () => {
-      if (!token) {
-        throw new Error('GH_TOKEN environment variable is required');
-      }
-
-      const repository = new GitHubIssueRepository(token);
-      const projectRepository = new GitHubProjectRepository(token);
+      const repository = new GitHubIssueRepository(token as string);
+      const projectRepository = new GitHubProjectRepository(token as string);
       const project = await projectRepository.getByUrl(projectUrl);
 
       const openedIssues = await repository.getAllOpened(project);
@@ -26,12 +23,8 @@ describe('GitHubIssueRepository Integration Test', () => {
   });
   describe('update', () => {
     it('should update issue status from Awaiting workspace to Preparation and verify the change', async () => {
-      if (!token) {
-        throw new Error('GH_TOKEN environment variable is required');
-      }
-
-      const repository = new GitHubIssueRepository(token);
-      const projectRepository = new GitHubProjectRepository(token);
+      const repository = new GitHubIssueRepository(token as string);
+      const projectRepository = new GitHubProjectRepository(token as string);
       const project = await projectRepository.getByUrl(projectUrl);
 
       const initialIssue = await repository.get(issueUrl, project);
