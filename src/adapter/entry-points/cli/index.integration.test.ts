@@ -14,9 +14,7 @@ describe('index', () => {
   const notifyFinishedIssueUrl =
     'https://github.com/HiromiShikata/test-repository/issues/1557';
 
-  const describeIfToken = token ? describe : describe.skip;
-
-  describeIfToken('startDaemon', () => {
+  describe('startDaemon', () => {
     beforeAll(async () => {
       const issueRepository = new GitHubIssueRepository(token as string);
       const projectRepository = new GitHubProjectRepository(token as string);
@@ -68,7 +66,7 @@ describe('index', () => {
     }, 600000);
   });
 
-  describeIfToken('notifyFinishedIssuePreparation', () => {
+  describe('notifyFinishedIssuePreparation', () => {
     beforeAll(async () => {
       const issueRepository = new GitHubIssueRepository(token as string);
       const projectRepository = new GitHubProjectRepository(token as string);

@@ -8,9 +8,7 @@ describe('GitHubProjectRepository Integration Test', () => {
   const token = process.env.GH_TOKEN;
   const userProjectUrl = 'https://github.com/users/HiromiShikata/projects/49';
 
-  const describeIfToken = token ? describe : describe.skip;
-
-  describeIfToken('getByUrl', () => {
+  describe('getByUrl', () => {
     it('should fetch user project data and verify structure', async () => {
       const repository = new GitHubProjectRepository(token as string);
       const project = await repository.getByUrl(userProjectUrl);

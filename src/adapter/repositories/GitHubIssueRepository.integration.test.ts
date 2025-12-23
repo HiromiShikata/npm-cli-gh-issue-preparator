@@ -11,9 +11,7 @@ describe('GitHubIssueRepository Integration Test', () => {
   const issueUrl =
     'https://github.com/HiromiShikata/test-repository/issues/1552';
 
-  const describeIfToken = token ? describe : describe.skip;
-
-  describeIfToken('getgetAllOpened', () => {
+  describe('getgetAllOpened', () => {
     it('should get all opened issues and verify the list is not empty', async () => {
       const repository = new GitHubIssueRepository(token as string);
       const projectRepository = new GitHubProjectRepository(token as string);
@@ -23,7 +21,7 @@ describe('GitHubIssueRepository Integration Test', () => {
       expect(openedIssues.length).toBeGreaterThan(0);
     }, 60000);
   });
-  describeIfToken('update', () => {
+  describe('update', () => {
     it('should update issue status from Awaiting workspace to Preparation and verify the change', async () => {
       const repository = new GitHubIssueRepository(token as string);
       const projectRepository = new GitHubProjectRepository(token as string);
