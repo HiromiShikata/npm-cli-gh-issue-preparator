@@ -147,4 +147,19 @@ describe('StartPreparationUseCase', () => {
     expect(issue7UpdateCalls).toHaveLength(0);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
+
+  it('should handle empty awaiting issues array', async () => {
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce([]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+    });
+
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+  });
 });

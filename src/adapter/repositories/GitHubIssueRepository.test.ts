@@ -254,6 +254,76 @@ describe('GitHubIssueRepository', () => {
       expect(issues[0].id).toBe('valid-issue');
     });
 
+    it('should skip items with undefined URL', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 2,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'item-without-url',
+                      content: {
+                        url: undefined,
+                        title: 'Issue Without URL',
+                        number: 1,
+                        labels: {
+                          nodes: [],
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                    {
+                      id: 'valid-issue',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/5',
+                        title: 'Valid Issue',
+                        number: 5,
+                        labels: {
+                          nodes: [],
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const issues = await repository.getAllOpened(mockProject);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].id).toBe('valid-issue');
+    });
+
     it('should return empty array when both organization and user projects are null', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
