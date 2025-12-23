@@ -324,6 +324,114 @@ describe('GitHubIssueRepository', () => {
       expect(issues[0].id).toBe('valid-issue');
     });
 
+    it('should handle items with undefined labels', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-no-labels',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/10',
+                        title: 'Issue Without Labels',
+                        number: 10,
+                        labels: undefined,
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const issues = await repository.getAllOpened(mockProject);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toEqual({
+        id: 'issue-no-labels',
+        url: 'https://github.com/owner/repo/issues/10',
+        title: 'Issue Without Labels',
+        labels: [],
+        status: 'Done',
+      });
+    });
+
+    it('should handle items with undefined labels nodes', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-no-label-nodes',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/11',
+                        title: 'Issue Without Label Nodes',
+                        number: 11,
+                        labels: {
+                          nodes: undefined,
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const issues = await repository.getAllOpened(mockProject);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toEqual({
+        id: 'issue-no-label-nodes',
+        url: 'https://github.com/owner/repo/issues/11',
+        title: 'Issue Without Label Nodes',
+        labels: [],
+        status: 'Done',
+      });
+    });
+
     it('should return empty array when both organization and user projects are null', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

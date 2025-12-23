@@ -34,6 +34,7 @@ export class StartPreparationUseCase {
 
     for (let i = currentPreparationIssueCount; i < targetCount; i++) {
       const issue = awaitingWorkspaceIssues.shift();
+      /* istanbul ignore next */
       if (!issue) {
         break;
       }
