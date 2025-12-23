@@ -1,4 +1,3 @@
-/* eslint-disable no-type-assertion/no-type-assertion */
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -10,7 +9,10 @@ describe('GitHubProjectRepository Integration Test', () => {
 
   describe('getByUrl', () => {
     it('should fetch user project data and verify structure', async () => {
-      const repository = new GitHubProjectRepository(token as string);
+      if (!token) {
+        throw new Error('GH_TOKEN is required for integration tests');
+      }
+      const repository = new GitHubProjectRepository(token);
       const project = await repository.getByUrl(userProjectUrl);
 
       expect(project).toBeDefined();
@@ -25,7 +27,10 @@ describe('GitHubProjectRepository Integration Test', () => {
     }, 60000);
 
     it('should fetch user project and verify it has Status field', async () => {
-      const repository = new GitHubProjectRepository(token as string);
+      if (!token) {
+        throw new Error('GH_TOKEN is required for integration tests');
+      }
+      const repository = new GitHubProjectRepository(token);
       const project = await repository.getByUrl(userProjectUrl);
 
       expect(project.customFieldNames).toContain('Status');
@@ -33,7 +38,10 @@ describe('GitHubProjectRepository Integration Test', () => {
     }, 60000);
 
     it('should throw error for invalid project URL', async () => {
-      const repository = new GitHubProjectRepository(token as string);
+      if (!token) {
+        throw new Error('GH_TOKEN is required for integration tests');
+      }
+      const repository = new GitHubProjectRepository(token);
       const invalidUrl = 'https://github.com/invalid/url';
 
       await expect(repository.getByUrl(invalidUrl)).rejects.toThrow(
@@ -42,7 +50,10 @@ describe('GitHubProjectRepository Integration Test', () => {
     }, 60000);
 
     it('should throw error for non-existent project', async () => {
-      const repository = new GitHubProjectRepository(token as string);
+      if (!token) {
+        throw new Error('GH_TOKEN is required for integration tests');
+      }
+      const repository = new GitHubProjectRepository(token);
       const nonExistentUrl =
         'https://github.com/users/HiromiShikata/projects/999999';
 
