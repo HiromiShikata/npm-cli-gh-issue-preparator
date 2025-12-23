@@ -36,7 +36,7 @@ export class StartPreparationUseCase {
       );
       i++
     ) {
-      const issue = awaitingWorkspaceIssues.pop();
+      const issue = awaitingWorkspaceIssues.shift();
       if (!issue) {
         break;
       }
