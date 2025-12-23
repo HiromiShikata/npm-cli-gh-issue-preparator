@@ -27,15 +27,12 @@ export class StartPreparationUseCase {
       (issue) => issue.status === params.preparationStatus,
     ).length;
 
-    for (
-      let i = currentPreparationIssueCount;
-      i <
-      Math.min(
-        this.maximumPreparingIssuesCount,
-        awaitingWorkspaceIssues.length + currentPreparationIssueCount,
-      );
-      i++
-    ) {
+    const targetCount = Math.min(
+      this.maximumPreparingIssuesCount,
+      awaitingWorkspaceIssues.length + currentPreparationIssueCount,
+    );
+
+    for (let i = currentPreparationIssueCount; i < targetCount; i++) {
       const issue = awaitingWorkspaceIssues.shift();
       if (!issue) {
         break;
