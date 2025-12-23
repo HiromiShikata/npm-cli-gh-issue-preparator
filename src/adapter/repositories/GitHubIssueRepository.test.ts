@@ -460,6 +460,10 @@ describe('GitHubIssueRepository', () => {
                       options: [{ id: 'status-1', name: 'Preparation' }],
                     },
                   ],
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                 },
               },
             },
@@ -532,6 +536,10 @@ describe('GitHubIssueRepository', () => {
                       options: [{ id: 'status-1', name: 'Preparation' }],
                     },
                   ],
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                 },
               },
             },
