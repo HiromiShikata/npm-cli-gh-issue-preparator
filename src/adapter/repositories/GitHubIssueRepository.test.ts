@@ -1218,5 +1218,117 @@ describe('GitHubIssueRepository', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should handle issue with undefined labels in get method', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-no-labels',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/100',
+                        title: 'Issue Without Labels',
+                        number: 100,
+                        labels: undefined,
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/100',
+        mockProject,
+      );
+
+      expect(result).toEqual({
+        id: 'issue-no-labels',
+        url: 'https://github.com/owner/repo/issues/100',
+        title: 'Issue Without Labels',
+        labels: [],
+        status: 'Done',
+      });
+    });
+
+    it('should handle issue with undefined label nodes in get method', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-no-label-nodes',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/101',
+                        title: 'Issue Without Label Nodes',
+                        number: 101,
+                        labels: {
+                          nodes: undefined,
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/101',
+        mockProject,
+      );
+
+      expect(result).toEqual({
+        id: 'issue-no-label-nodes',
+        url: 'https://github.com/owner/repo/issues/101',
+        title: 'Issue Without Label Nodes',
+        labels: [],
+        status: 'Done',
+      });
+    });
   });
 });
