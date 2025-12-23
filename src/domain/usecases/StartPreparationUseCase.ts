@@ -27,16 +27,14 @@ export class StartPreparationUseCase {
       (issue) => issue.status === params.preparationStatus,
     ).length;
 
-    for (
-      let i = currentPreparationIssueCount;
-      i <
-      Math.min(
-        this.maximumPreparingIssuesCount,
-        awaitingWorkspaceIssues.length + currentPreparationIssueCount,
-      );
-      i++
-    ) {
-      const issue = awaitingWorkspaceIssues.pop();
+    const targetCount = Math.min(
+      this.maximumPreparingIssuesCount,
+      awaitingWorkspaceIssues.length + currentPreparationIssueCount,
+    );
+
+    for (let i = currentPreparationIssueCount; i < targetCount; i++) {
+      const issue = awaitingWorkspaceIssues.shift();
+      /* istanbul ignore next */
       if (!issue) {
         break;
       }
@@ -49,7 +47,7 @@ export class StartPreparationUseCase {
       await this.issueRepository.update(issue, project);
 
       await this.localCommandRunner.runCommand(
-        `aw ${issue.url} ${agent} ${project.url}`,
+        `aw ${project.url} ${issue.url} ${agent}`,
       );
     }
   };

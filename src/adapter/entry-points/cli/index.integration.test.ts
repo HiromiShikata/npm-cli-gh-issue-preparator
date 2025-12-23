@@ -16,9 +16,8 @@ describe('index', () => {
   describe('startDaemon', () => {
     beforeAll(async () => {
       if (!token) {
-        throw new Error('GH_TOKEN environment variable is required');
+        throw new Error('GH_TOKEN is required for integration tests');
       }
-
       const issueRepository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
@@ -35,7 +34,6 @@ describe('index', () => {
       if (!token) {
         return;
       }
-
       const issueRepository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
@@ -48,11 +46,10 @@ describe('index', () => {
       await issueRepository.update(issue, project);
     });
 
-    it('success', async () => {
+    it('should start daemon and change status to Preparation', async () => {
       if (!token) {
-        throw new Error('GH_TOKEN environment variable is required');
+        throw new Error('GH_TOKEN is required for integration tests');
       }
-
       const issueRepository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
@@ -80,9 +77,8 @@ describe('index', () => {
   describe('notifyFinishedIssuePreparation', () => {
     beforeAll(async () => {
       if (!token) {
-        throw new Error('GH_TOKEN environment variable is required');
+        throw new Error('GH_TOKEN is required for integration tests');
       }
-
       const issueRepository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
@@ -99,7 +95,6 @@ describe('index', () => {
       if (!token) {
         return;
       }
-
       const issueRepository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
@@ -112,11 +107,10 @@ describe('index', () => {
       await issueRepository.update(issue, project);
     });
 
-    it('success', async () => {
+    it('should notify finished preparation and change status', async () => {
       if (!token) {
-        throw new Error('GH_TOKEN environment variable is required');
+        throw new Error('GH_TOKEN is required for integration tests');
       }
-
       const issueRepository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
