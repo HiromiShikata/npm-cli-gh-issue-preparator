@@ -3,18 +3,22 @@ dotenv.config();
 
 import { GitHubIssueRepository } from './GitHubIssueRepository';
 import { GitHubProjectRepository } from './GitHubProjectRepository';
+import { Issue } from '../../domain/entities/Issue';
+
+const getToken = (): string => {
+  const token = process.env.GH_TOKEN;
+  return token || '';
+};
 
 describe('GitHubIssueRepository Integration Test', () => {
-  const token = process.env.GH_TOKEN;
   const projectUrl = 'https://github.com/users/HiromiShikata/projects/49';
   const issueUrl =
     'https://github.com/HiromiShikata/test-repository/issues/1552';
 
   describe('getgetAllOpened', () => {
     it('should get all opened issues and verify the list is not empty', async () => {
-      if (!token) {
-        throw new Error('GH_TOKEN is required for integration tests');
-      }
+      const token = getToken();
+      expect(token).toBeTruthy();
       const repository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
@@ -25,40 +29,52 @@ describe('GitHubIssueRepository Integration Test', () => {
   });
   describe('update', () => {
     it('should update issue status from Awaiting workspace to Preparation and verify the change', async () => {
-      if (!token) {
-        throw new Error('GH_TOKEN is required for integration tests');
-      }
+      const token = getToken();
+      expect(token).toBeTruthy();
       const repository = new GitHubIssueRepository(token);
       const projectRepository = new GitHubProjectRepository(token);
       const project = await projectRepository.getByUrl(projectUrl);
 
       const initialIssue = await repository.get(issueUrl, project);
       expect(initialIssue).not.toBeNull();
-      if (!initialIssue) {
-        throw new Error('Failed to get initial issue');
-      }
+      const definedInitialIssue: Issue = initialIssue || {
+        id: '',
+        status: '',
+        url: '',
+        title: '',
+        labels: [],
+      };
 
-      initialIssue.status = 'Awaiting workspace';
-      await repository.update(initialIssue, project);
+      definedInitialIssue.status = 'Awaiting workspace';
+      await repository.update(definedInitialIssue, project);
 
       const reloadedIssue = await repository.get(issueUrl, project);
-      if (!reloadedIssue) {
-        throw new Error('Failed to get reloaded issue');
-      }
-      expect(reloadedIssue.status).toBe('Awaiting workspace');
+      expect(reloadedIssue).not.toBeNull();
+      const definedReloadedIssue: Issue = reloadedIssue || {
+        id: '',
+        status: '',
+        url: '',
+        title: '',
+        labels: [],
+      };
+      expect(definedReloadedIssue.status).toBe('Awaiting workspace');
 
-      reloadedIssue.status = 'Preparation';
-      await repository.update(reloadedIssue, project);
+      definedReloadedIssue.status = 'Preparation';
+      await repository.update(definedReloadedIssue, project);
 
       const verifyIssue = await repository.get(issueUrl, project);
       expect(verifyIssue).not.toBeNull();
-      if (!verifyIssue) {
-        throw new Error('Failed to get verify issue');
-      }
-      expect(verifyIssue.status).toBe('Preparation');
+      const definedVerifyIssue: Issue = verifyIssue || {
+        id: '',
+        status: '',
+        url: '',
+        title: '',
+        labels: [],
+      };
+      expect(definedVerifyIssue.status).toBe('Preparation');
 
-      verifyIssue.status = 'Awaiting workspace';
-      await repository.update(verifyIssue, project);
+      definedVerifyIssue.status = 'Awaiting workspace';
+      await repository.update(definedVerifyIssue, project);
     }, 60000);
   });
 });
