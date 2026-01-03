@@ -67,7 +67,7 @@ describe('StartPreparationUseCase', () => {
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      'aw https://github.com/user/repo url1 impl',
+      'aw url1 impl https://github.com/user/repo',
     );
   });
   it('should assign workspace to awaiting issues', async () => {
@@ -102,12 +102,12 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
-      id: '1',
+      id: '2',
       status: 'Preparation',
     });
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockIssueRepository.update.mock.calls[1][0]).toMatchObject({
-      id: '2',
+      id: '1',
       status: 'Preparation',
     });
     expect(mockIssueRepository.update.mock.calls[1][1]).toBe(mockProject);

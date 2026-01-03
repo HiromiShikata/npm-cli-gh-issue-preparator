@@ -27,19 +27,18 @@ export class StartPreparationUseCase {
       (issue) => issue.status === params.preparationStatus,
     ).length;
 
-    for (
-      let i = currentPreparationIssueCount;
-      i <
-      Math.min(
-        this.maximumPreparingIssuesCount,
-        awaitingWorkspaceIssues.length + currentPreparationIssueCount,
-      );
-      i++
-    ) {
-      const issue = awaitingWorkspaceIssues.pop();
-      if (!issue) {
-        break;
-      }
+    const issuesToProcess = Math.min(
+      this.maximumPreparingIssuesCount - currentPreparationIssueCount,
+      awaitingWorkspaceIssues.length,
+    );
+
+    if (issuesToProcess <= 0) {
+      return;
+    }
+
+    const issuesToPrepare = awaitingWorkspaceIssues.slice(-issuesToProcess);
+
+    for (const issue of issuesToPrepare.reverse()) {
       const agent =
         issue.labels
           .find((label) => label.startsWith('category:'))
