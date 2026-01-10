@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.3...v1.0.4) (2026-01-10)
+
+
+### Bug Fixes
+
+* **ci:** add GH_TOKEN to test workflow and fix test expectations ([86dbac0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/86dbac0bd66e0806531a26338b225ddec22c7826))
+
 ## [1.0.3](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.2...v1.0.3) (2025-12-14)
 
 
