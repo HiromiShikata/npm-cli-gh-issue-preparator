@@ -270,6 +270,123 @@ describe('GitHubIssueRepository', () => {
       expect(issues).toEqual([]);
     });
 
+    it('should skip items with content but undefined url', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 2,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'item-with-undefined-url',
+                      content: {
+                        url: undefined,
+                        title: 'Item Without URL',
+                        number: 1,
+                        labels: {
+                          nodes: [],
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                    {
+                      id: 'valid-issue',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/5',
+                        title: 'Valid Issue',
+                        number: 5,
+                        labels: {
+                          nodes: [],
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const issues = await repository.getAllOpened(mockProject);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].id).toBe('valid-issue');
+    });
+
+    it('should handle items with null labels nodes', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-no-labels',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/10',
+                        title: 'Issue Without Labels',
+                        number: 10,
+                        labels: null,
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const issues = await repository.getAllOpened(mockProject);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].labels).toEqual([]);
+    });
+
     it('should handle issue without Status field', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -343,6 +460,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -400,6 +521,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -453,6 +578,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -525,6 +654,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -560,6 +693,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -600,6 +737,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -642,6 +783,10 @@ describe('GitHubIssueRepository', () => {
             organization: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -682,6 +827,10 @@ describe('GitHubIssueRepository', () => {
             user: {
               projectV2: {
                 fields: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: null,
+                  },
                   nodes: [
                     {
                       id: 'field-1',
@@ -1031,6 +1180,61 @@ describe('GitHubIssueRepository', () => {
       );
 
       expect(result).toBeNull();
+    });
+
+    it('should handle issue with null labels in get method', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-null-labels',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/1',
+                        title: 'Issue With Null Labels',
+                        number: 1,
+                        labels: null,
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Done',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/1',
+        mockProject,
+      );
+
+      expect(result).toEqual({
+        id: 'issue-null-labels',
+        url: 'https://github.com/owner/repo/issues/1',
+        title: 'Issue With Null Labels',
+        labels: [],
+        status: 'Done',
+      });
     });
   });
 });
