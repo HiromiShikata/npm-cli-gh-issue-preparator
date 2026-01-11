@@ -142,6 +142,63 @@ describe('StartPreparationUseCase', () => {
     expect(issue7UpdateCalls).toHaveLength(0);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
+  it('should append logFilePath to aw command when provided', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      logFilePath: '/path/to/log.txt',
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 impl https://github.com/user/repo --logFilePath /path/to/log.txt',
+    );
+  });
+  it('should not append logFilePath to aw command when not provided', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 impl https://github.com/user/repo',
+    );
+  });
   it('should handle defensive break when pop returns undefined', async () => {
     const awaitingIssue: Issue = {
       id: '1',

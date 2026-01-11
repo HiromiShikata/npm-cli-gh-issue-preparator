@@ -25,6 +25,7 @@ program
     .requiredOption('--awaitingWorkspaceStatus <status>', 'Status for issues awaiting workspace')
     .requiredOption('--preparationStatus <status>', 'Status for issues in preparation')
     .requiredOption('--defaultAgentName <name>', 'Default agent name')
+    .option('--logFilePath <path>', 'Path to log file')
     .action(async (options) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -40,6 +41,7 @@ program
         awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
         preparationStatus: options.preparationStatus,
         defaultAgentName: options.defaultAgentName,
+        logFilePath: options.logFilePath,
     });
 });
 program

@@ -24,7 +24,10 @@ class StartPreparationUseCase {
                     .trim() || params.defaultAgentName;
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
-                await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${project.url}`);
+                const logFilePathArg = params.logFilePath
+                    ? `--logFilePath ${params.logFilePath}`
+                    : '';
+                await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`);
             }
         };
     }
