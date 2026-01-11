@@ -3,7 +3,6 @@ import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
 
 export class StartPreparationUseCase {
-  maximumPreparingIssuesCount = 6;
   constructor(
     private readonly projectRepository: ProjectRepository,
     private readonly issueRepository: IssueRepository,
@@ -15,7 +14,9 @@ export class StartPreparationUseCase {
     awaitingWorkspaceStatus: string;
     preparationStatus: string;
     defaultAgentName: string;
+    maximumPreparingIssuesCount?: number;
   }): Promise<void> => {
+    const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
     const project = await this.projectRepository.getByUrl(params.projectUrl);
 
     const allIssues = await this.issueRepository.getAllOpened(project);
@@ -27,19 +28,15 @@ export class StartPreparationUseCase {
       (issue) => issue.status === params.preparationStatus,
     ).length;
 
-    for (
-      let i = currentPreparationIssueCount;
-      i <
-      Math.min(
-        this.maximumPreparingIssuesCount,
-        awaitingWorkspaceIssues.length + currentPreparationIssueCount,
-      );
-      i++
-    ) {
-      const issue = awaitingWorkspaceIssues.pop();
-      if (!issue) {
-        break;
-      }
+    const targetCount = Math.min(
+      maximumPreparingIssuesCount,
+      awaitingWorkspaceIssues.length + currentPreparationIssueCount,
+    );
+
+    for (const issue of awaitingWorkspaceIssues.slice(
+      0,
+      targetCount - currentPreparationIssueCount,
+    )) {
       const agent =
         issue.labels
           .find((label) => label.startsWith('category:'))
