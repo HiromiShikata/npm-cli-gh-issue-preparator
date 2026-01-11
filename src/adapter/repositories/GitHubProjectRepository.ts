@@ -159,4 +159,16 @@ export class GitHubProjectRepository implements ProjectRepository {
       customFieldNames: fields.map((f) => f.name),
     };
   }
+
+  async prepareStatus(name: string, project: Project): Promise<Project> {
+    if (project.statuses.includes(name)) {
+      return project;
+    }
+
+    throw new Error(
+      `Status "${name}" does not exist in project "${project.name}". ` +
+        `GitHub API does not support adding status options programmatically. ` +
+        `Please add the status manually through the GitHub UI.`,
+    );
+  }
 }
