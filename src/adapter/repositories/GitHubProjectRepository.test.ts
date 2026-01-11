@@ -249,4 +249,50 @@ describe('GitHubProjectRepository', () => {
       customFieldNames: ['Priority'],
     });
   });
+
+  describe('prepareStatus', () => {
+    it('should return project as-is when status already exists', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo', 'In Progress', 'Done'],
+        customFieldNames: ['Status'],
+      };
+
+      const result = await repository.prepareStatus('In Progress', project);
+
+      expect(result).toEqual(project);
+    });
+
+    it('should throw error when status does not exist', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo', 'Done'],
+        customFieldNames: ['Status'],
+      };
+
+      await expect(
+        repository.prepareStatus('In Progress', project),
+      ).rejects.toThrow(
+        'Status "In Progress" does not exist in project "Test Project"',
+      );
+    });
+
+    it('should throw error with helpful message about manual creation', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: [],
+        customFieldNames: ['Status'],
+      };
+
+      await expect(
+        repository.prepareStatus('New Status', project),
+      ).rejects.toThrow('Please add the status manually through the GitHub UI');
+    });
+  });
 });

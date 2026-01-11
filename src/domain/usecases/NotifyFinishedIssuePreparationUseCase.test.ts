@@ -24,6 +24,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
 
     mockProjectRepository = {
       getByUrl: jest.fn(),
+      prepareStatus: jest.fn(),
     };
 
     mockIssueRepository = {

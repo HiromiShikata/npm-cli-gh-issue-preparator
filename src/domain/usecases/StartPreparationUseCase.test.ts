@@ -21,6 +21,7 @@ describe('StartPreparationUseCase', () => {
     jest.resetAllMocks();
     mockProjectRepository = {
       getByUrl: jest.fn(),
+      prepareStatus: jest.fn(),
     };
     mockIssueRepository = {
       getAllOpened: jest.fn(),
