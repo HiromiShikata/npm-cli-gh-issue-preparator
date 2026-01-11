@@ -12,6 +12,7 @@ export declare class StartPreparationUseCase {
         awaitingWorkspaceStatus: string;
         preparationStatus: string;
         defaultAgentName: string;
+        logFilePath?: string;
     }) => Promise<void>;
 }
 //# sourceMappingURL=StartPreparationUseCase.d.ts.map

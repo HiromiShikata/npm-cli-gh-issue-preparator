@@ -15,6 +15,7 @@ export class StartPreparationUseCase {
     awaitingWorkspaceStatus: string;
     preparationStatus: string;
     defaultAgentName: string;
+    logFilePath?: string;
   }): Promise<void> => {
     const project = await this.projectRepository.getByUrl(params.projectUrl);
 
@@ -48,8 +49,11 @@ export class StartPreparationUseCase {
       issue.status = params.preparationStatus;
       await this.issueRepository.update(issue, project);
 
+      const logFilePathArg = params.logFilePath
+        ? `--logFilePath ${params.logFilePath}`
+        : '';
       await this.localCommandRunner.runCommand(
-        `aw ${issue.url} ${agent} ${project.url}`,
+        `aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
       );
     }
   };

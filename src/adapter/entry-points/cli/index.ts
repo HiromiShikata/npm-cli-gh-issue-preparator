@@ -14,6 +14,7 @@ type StartDaemonOptions = {
   awaitingWorkspaceStatus: string;
   preparationStatus: string;
   defaultAgentName: string;
+  logFilePath?: string;
 };
 
 type NotifyFinishedOptions = {
@@ -41,6 +42,7 @@ program
     'Status for issues in preparation',
   )
   .requiredOption('--defaultAgentName <name>', 'Default agent name')
+  .option('--logFilePath <path>', 'Path to log file')
   .action(async (options: StartDaemonOptions) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -63,6 +65,7 @@ program
       awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
       preparationStatus: options.preparationStatus,
       defaultAgentName: options.defaultAgentName,
+      logFilePath: options.logFilePath,
     });
   });
 
