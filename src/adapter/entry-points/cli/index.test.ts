@@ -32,7 +32,6 @@ describe('CLI', () => {
       this: StartPreparationUseCase,
     ) {
       this.run = mockRun;
-      this.maximumPreparingIssuesCount = 6;
       return this;
     });
 
@@ -56,7 +55,220 @@ describe('CLI', () => {
       awaitingWorkspaceStatus: 'Awaiting',
       preparationStatus: 'Preparing',
       defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: undefined,
     });
+  });
+
+  it('should pass maximumPreparingIssuesCount to run when provided', async () => {
+    const mockRun = jest.fn().mockResolvedValue(undefined);
+    const MockedStartPreparationUseCase = jest.mocked(StartPreparationUseCase);
+
+    MockedStartPreparationUseCase.mockImplementation(function (
+      this: StartPreparationUseCase,
+    ) {
+      this.run = mockRun;
+      return this;
+    });
+
+    await program.parseAsync([
+      'node',
+      'test',
+      'startDaemon',
+      '--projectUrl',
+      'https://github.com/test/project',
+      '--awaitingWorkspaceStatus',
+      'Awaiting',
+      '--preparationStatus',
+      'Preparing',
+      '--defaultAgentName',
+      'agent1',
+      '--maximumPreparingIssuesCount',
+      '10',
+    ]);
+
+    expect(mockRun).toHaveBeenCalledTimes(1);
+    expect(mockRun).toHaveBeenCalledWith({
+      projectUrl: 'https://github.com/test/project',
+      awaitingWorkspaceStatus: 'Awaiting',
+      preparationStatus: 'Preparing',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: 10,
+    });
+  });
+
+  it('should pass undefined maximumPreparingIssuesCount when not provided', async () => {
+    const mockRun = jest.fn().mockResolvedValue(undefined);
+    const MockedStartPreparationUseCase = jest.mocked(StartPreparationUseCase);
+
+    MockedStartPreparationUseCase.mockImplementation(function (
+      this: StartPreparationUseCase,
+    ) {
+      this.run = mockRun;
+      return this;
+    });
+
+    await program.parseAsync([
+      'node',
+      'test',
+      'startDaemon',
+      '--projectUrl',
+      'https://github.com/test/project',
+      '--awaitingWorkspaceStatus',
+      'Awaiting',
+      '--preparationStatus',
+      'Preparing',
+      '--defaultAgentName',
+      'agent1',
+    ]);
+
+    expect(mockRun).toHaveBeenCalledTimes(1);
+    expect(mockRun).toHaveBeenCalledWith({
+      projectUrl: 'https://github.com/test/project',
+      awaitingWorkspaceStatus: 'Awaiting',
+      preparationStatus: 'Preparing',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: undefined,
+    });
+  });
+
+  it('should exit with error for non-numeric maximumPreparingIssuesCount', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--awaitingWorkspaceStatus',
+        'Awaiting',
+        '--preparationStatus',
+        'Preparing',
+        '--defaultAgentName',
+        'agent1',
+        '--maximumPreparingIssuesCount',
+        'abc',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --maximumPreparingIssuesCount. It must be a positive integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
+  });
+
+  it('should exit with error for negative maximumPreparingIssuesCount', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--awaitingWorkspaceStatus',
+        'Awaiting',
+        '--preparationStatus',
+        'Preparing',
+        '--defaultAgentName',
+        'agent1',
+        '--maximumPreparingIssuesCount',
+        '-5',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --maximumPreparingIssuesCount. It must be a positive integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
+  });
+
+  it('should exit with error for zero maximumPreparingIssuesCount', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--awaitingWorkspaceStatus',
+        'Awaiting',
+        '--preparationStatus',
+        'Preparing',
+        '--defaultAgentName',
+        'agent1',
+        '--maximumPreparingIssuesCount',
+        '0',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --maximumPreparingIssuesCount. It must be a positive integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
+  });
+
+  it('should exit with error for decimal maximumPreparingIssuesCount', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--awaitingWorkspaceStatus',
+        'Awaiting',
+        '--preparationStatus',
+        'Preparing',
+        '--defaultAgentName',
+        'agent1',
+        '--maximumPreparingIssuesCount',
+        '3.5',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --maximumPreparingIssuesCount. It must be a positive integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
   });
 
   it('should pass correct parameters to NotifyFinishedIssuePreparationUseCase', async () => {

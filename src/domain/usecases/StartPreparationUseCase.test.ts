@@ -70,7 +70,7 @@ describe('StartPreparationUseCase', () => {
       'aw url1 impl https://github.com/user/repo',
     );
   });
-  it('should assign workspace to awaiting issues', async () => {
+  it('should assign workspace to all awaiting issues within limit', async () => {
     const awaitingIssues: Issue[] = [
       {
         id: '1',
@@ -100,13 +100,16 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
     });
-    expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+      id: '1',
+      status: 'Preparation',
+    });
+    expect(mockIssueRepository.update.mock.calls[1][0]).toMatchObject({
       id: '2',
       status: 'Preparation',
     });
-    expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(2);
   });
   it('should not assign workspace if maximum preparing issues reached', async () => {
     const preparationIssues: Issue[] = Array.from({ length: 6 }, (_, i) => ({
@@ -142,33 +145,26 @@ describe('StartPreparationUseCase', () => {
     expect(issue7UpdateCalls).toHaveLength(0);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
-  it('should handle defensive break when pop returns undefined', async () => {
-    const awaitingIssue: Issue = {
-      id: '1',
-      url: 'url1',
-      title: 'Issue 1',
+  it('should process issues up to the limit when there are more awaiting than available slots', async () => {
+    const preparationIssues: Issue[] = Array.from({ length: 4 }, (_, i) => ({
+      id: `prep-${i + 1}`,
+      url: `prep-url${i + 1}`,
+      title: `Preparation Issue ${i + 1}`,
+      labels: [],
+      status: 'Preparation',
+    }));
+    const awaitingIssues: Issue[] = Array.from({ length: 5 }, (_, i) => ({
+      id: `await-${i + 1}`,
+      url: `await-url${i + 1}`,
+      title: `Awaiting Issue ${i + 1}`,
       labels: [],
       status: 'Awaiting Workspace',
-    };
-    let popCallCount = 0;
-    const issuesWithMockedPop: Issue[] = [awaitingIssue, awaitingIssue];
-    const mockedPop = jest.fn((): Issue | undefined => {
-      popCallCount++;
-      if (popCallCount === 1) {
-        return awaitingIssue;
-      }
-      return undefined;
-    });
-    Object.defineProperty(issuesWithMockedPop, 'pop', { value: mockedPop });
-    Object.defineProperty(issuesWithMockedPop, 'filter', {
-      value: () => issuesWithMockedPop,
-    });
-    const allIssues: Issue[] = [];
-    Object.defineProperty(allIssues, 'filter', {
-      value: jest.fn(() => issuesWithMockedPop),
-    });
+    }));
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
-    mockIssueRepository.getAllOpened.mockResolvedValueOnce(allIssues);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce([
+      ...preparationIssues,
+      ...awaitingIssues,
+    ]);
     mockLocalCommandRunner.runCommand.mockResolvedValue({
       stdout: '',
       stderr: '',
@@ -180,7 +176,56 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
     });
-    expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(2);
+  });
+  it('should use custom maximumPreparingIssuesCount when provided', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `await-${i + 1}`,
+      url: `await-url${i + 1}`,
+      title: `Awaiting Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: 3,
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(3);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(3);
+  });
+  it('should use default maximumPreparingIssuesCount of 6 when not provided', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `await-${i + 1}`,
+      url: `await-url${i + 1}`,
+      title: `Awaiting Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(6);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(6);
   });
 });

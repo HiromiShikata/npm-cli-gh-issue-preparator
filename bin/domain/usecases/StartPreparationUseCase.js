@@ -12,12 +12,8 @@ class StartPreparationUseCase {
             const allIssues = await this.issueRepository.getAllOpened(project);
             const awaitingWorkspaceIssues = allIssues.filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
-            for (let i = currentPreparationIssueCount; i <
-                Math.min(this.maximumPreparingIssuesCount, awaitingWorkspaceIssues.length + currentPreparationIssueCount); i++) {
-                const issue = awaitingWorkspaceIssues.pop();
-                if (!issue) {
-                    break;
-                }
+            const targetCount = Math.min(this.maximumPreparingIssuesCount, awaitingWorkspaceIssues.length + currentPreparationIssueCount);
+            for (const issue of awaitingWorkspaceIssues.slice(0, targetCount - currentPreparationIssueCount)) {
                 const agent = issue.labels
                     .find((label) => label.startsWith('category:'))
                     ?.replace('category:', '')
