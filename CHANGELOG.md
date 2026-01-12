@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.4...v1.1.0) (2026-01-12)
+
+
+### Features
+
+* **core:** add Claude usage repository for OAuth API integration ([57ab791](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/57ab7914f9574a4e6746183457e643dac47f7261))
+
 ## [1.0.4](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.3...v1.0.4) (2026-01-10)
 
 
