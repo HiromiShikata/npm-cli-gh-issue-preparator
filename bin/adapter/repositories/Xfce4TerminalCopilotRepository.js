@@ -12,10 +12,15 @@ class Xfce4TerminalCopilotRepository {
         const innerCommand = `copilot --model ${model} --allow-all-tools -p '${escapedPrompt}'`;
         const escapedInnerCommand = this.escapeForSingleQuotes(innerCommand);
         const title = `gh-issue-preparator: ${escapedTitle}`;
-        (0, child_process_1.spawn)('xfce4-terminal', ['-T', title, '-e', `bash -c '${escapedInnerCommand}'`], {
+        const child = (0, child_process_1.spawn)('xfce4-terminal', ['-T', title, '-e', `bash -c '${escapedInnerCommand}'`], {
             detached: true,
             stdio: 'ignore',
-        }).unref();
+        });
+        child.on('error', () => {
+            // Intentionally empty - fire-and-forget behavior
+            // Errors are silently ignored as this is a background terminal spawn
+        });
+        child.unref();
     }
 }
 exports.Xfce4TerminalCopilotRepository = Xfce4TerminalCopilotRepository;

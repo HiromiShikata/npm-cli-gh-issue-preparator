@@ -13,13 +13,20 @@ export class Xfce4TerminalCopilotRepository implements CopilotRepository {
     const escapedInnerCommand = this.escapeForSingleQuotes(innerCommand);
     const title = `gh-issue-preparator: ${escapedTitle}`;
 
-    spawn(
+    const child = spawn(
       'xfce4-terminal',
       ['-T', title, '-e', `bash -c '${escapedInnerCommand}'`],
       {
         detached: true,
         stdio: 'ignore',
       },
-    ).unref();
+    );
+
+    child.on('error', () => {
+      // Intentionally empty - fire-and-forget behavior
+      // Errors are silently ignored as this is a background terminal spawn
+    });
+
+    child.unref();
   }
 }

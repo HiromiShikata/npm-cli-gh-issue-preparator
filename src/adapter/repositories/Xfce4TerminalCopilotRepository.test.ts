@@ -1,5 +1,6 @@
 const mockUnref = jest.fn();
-const mockSpawn = jest.fn(() => ({ unref: mockUnref }));
+const mockOn = jest.fn();
+const mockSpawn = jest.fn(() => ({ on: mockOn, unref: mockUnref }));
 
 jest.mock('child_process', () => ({
   spawn: mockSpawn,
@@ -32,6 +33,7 @@ describe('Xfce4TerminalCopilotRepository', () => {
           stdio: 'ignore',
         },
       );
+      expect(mockOn).toHaveBeenCalledWith('error', expect.any(Function));
       expect(mockUnref).toHaveBeenCalled();
     });
 
@@ -119,6 +121,23 @@ describe('Xfce4TerminalCopilotRepository', () => {
         expect.arrayContaining(['-T', 'gh-issue-preparator: my-custom-title']),
         expect.any(Object),
       );
+    });
+
+    it('should register error handler and silently ignore errors', () => {
+      let capturedHandler: ((error: Error) => void) | undefined;
+      mockOn.mockImplementation(
+        (event: string, handler: (error: Error) => void) => {
+          if (event === 'error') {
+            capturedHandler = handler;
+          }
+        },
+      );
+
+      repository.run('test', 'gpt-5-mini', 'test');
+
+      expect(mockOn).toHaveBeenCalledWith('error', expect.any(Function));
+      expect(capturedHandler).toBeDefined();
+      expect(() => capturedHandler?.(new Error('spawn failed'))).not.toThrow();
     });
   });
 });
