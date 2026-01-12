@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.2.0...v1.3.0) (2026-01-12)
+
+
+### Bug Fixes
+
+* prevent command injection in xfce4-terminal spawn ([0a4e008](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/0a4e008749b293cd1f1d311ad08adfc9f37033c3))
+
+
+### Features
+
+* **src:** create CopilotRepository ([c79ed81](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c79ed8127342a5aa58fc2f83b10334bbb0fc6a0d)), closes [#38](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/38)
+
 # [1.2.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.1.0...v1.2.0) (2026-01-12)
 
 
