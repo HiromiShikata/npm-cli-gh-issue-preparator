@@ -45,9 +45,6 @@ const findCredentials = (filePathList: string[]): CredentialInfo[] => {
 
   for (const filePath of filePathList) {
     const fileName = path.basename(filePath);
-    if (!fileName.startsWith(baseFileName)) {
-      continue;
-    }
 
     if (fileName === baseFileName) {
       continue;

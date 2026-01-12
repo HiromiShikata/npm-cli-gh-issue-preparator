@@ -679,5 +679,163 @@ describe('OauthAPIClaudeRepository', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should skip credential files with non-numeric priority', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue([
+        '.credentials.json',
+        '.credentials.json.dev.abc',
+        '.credentials.json.dev1.1',
+      ]);
+
+      mockReadFileSync.mockReturnValue(
+        JSON.stringify({
+          claudeAiOauth: { accessToken: 'token-dev1' },
+        }),
+      );
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          five_hour: { utilization: 30.0 },
+        }),
+      });
+
+      repository = new OauthAPIClaudeRepository();
+      const result = await repository.isClaudeAvailable(80);
+
+      expect(result).toBe(true);
+      expect(mockCopyFileSync).toHaveBeenCalledWith(
+        path.join(claudeDir, '.credentials.json.dev1.1'),
+        path.join(claudeDir, '.credentials.json'),
+      );
+    });
+
+    it('should skip to next credential when API returns invalid response format', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue([
+        '.credentials.json',
+        '.credentials.json.dev1.1',
+        '.credentials.json.dev2.2',
+      ]);
+
+      const credentialContents: Record<string, string> = {
+        [path.join(claudeDir, '.credentials.json.dev1.1')]: JSON.stringify({
+          claudeAiOauth: { accessToken: 'token-dev1' },
+        }),
+        [path.join(claudeDir, '.credentials.json.dev2.2')]: JSON.stringify({
+          claudeAiOauth: { accessToken: 'token-dev2' },
+        }),
+      };
+
+      mockReadFileSync.mockImplementation((filePath: string) => {
+        return credentialContents[filePath] || '';
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue(null),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            five_hour: { utilization: 30.0 },
+          }),
+        });
+
+      repository = new OauthAPIClaudeRepository();
+      const result = await repository.isClaudeAvailable(80);
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockCopyFileSync).toHaveBeenCalledWith(
+        path.join(claudeDir, '.credentials.json.dev2.2'),
+        path.join(claudeDir, '.credentials.json'),
+      );
+    });
+
+    it('should skip to next credential when API returns error in response', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue([
+        '.credentials.json',
+        '.credentials.json.dev1.1',
+        '.credentials.json.dev2.2',
+      ]);
+
+      const credentialContents: Record<string, string> = {
+        [path.join(claudeDir, '.credentials.json.dev1.1')]: JSON.stringify({
+          claudeAiOauth: { accessToken: 'token-dev1' },
+        }),
+        [path.join(claudeDir, '.credentials.json.dev2.2')]: JSON.stringify({
+          claudeAiOauth: { accessToken: 'token-dev2' },
+        }),
+      };
+
+      mockReadFileSync.mockImplementation((filePath: string) => {
+        return credentialContents[filePath] || '';
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            error: 'Token expired',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            five_hour: { utilization: 30.0 },
+          }),
+        });
+
+      repository = new OauthAPIClaudeRepository();
+      const result = await repository.isClaudeAvailable(80);
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockCopyFileSync).toHaveBeenCalledWith(
+        path.join(claudeDir, '.credentials.json.dev2.2'),
+        path.join(claudeDir, '.credentials.json'),
+      );
+    });
+
+    it('should skip credential files with invalid JSON format', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue([
+        '.credentials.json',
+        '.credentials.json.dev1.1',
+        '.credentials.json.dev2.2',
+      ]);
+
+      const credentialContents: Record<string, string> = {
+        [path.join(claudeDir, '.credentials.json.dev1.1')]: 'null',
+        [path.join(claudeDir, '.credentials.json.dev2.2')]: JSON.stringify({
+          claudeAiOauth: { accessToken: 'token-dev2' },
+        }),
+      };
+
+      mockReadFileSync.mockImplementation((filePath: string) => {
+        return credentialContents[filePath] || '';
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          five_hour: { utilization: 30.0 },
+        }),
+      });
+
+      repository = new OauthAPIClaudeRepository();
+      const result = await repository.isClaudeAvailable(80);
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockCopyFileSync).toHaveBeenCalledWith(
+        path.join(claudeDir, '.credentials.json.dev2.2'),
+        path.join(claudeDir, '.credentials.json'),
+      );
+    });
   });
 });
