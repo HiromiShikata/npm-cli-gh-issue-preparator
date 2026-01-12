@@ -1,0 +1,1 @@
+{"version":3,"file":"Xfce4TerminalCopilotRepository.d.ts","sourceRoot":"","sources":["../../../src/adapter/repositories/Xfce4TerminalCopilotRepository.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,4DAA4D,CAAC;AAG/F,qBAAa,8BAA+B,YAAW,iBAAiB;IACtE,OAAO,CAAC,qBAAqB;IAI7B,GAAG,CAAC,MAAM,EAAE,MAAM,EAAE,KAAK,EAAE,YAAY,EAAE,YAAY,EAAE,MAAM,GAAG,IAAI;CAgBrE"}

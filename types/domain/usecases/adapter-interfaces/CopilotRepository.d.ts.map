@@ -1,0 +1,1 @@
+{"version":3,"file":"CopilotRepository.d.ts","sourceRoot":"","sources":["../../../../src/domain/usecases/adapter-interfaces/CopilotRepository.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,iBAAiB;IAChC,GAAG,CAAC,MAAM,EAAE,MAAM,EAAE,KAAK,EAAE,YAAY,EAAE,YAAY,EAAE,MAAM,GAAG,IAAI,CAAC;CACtE"}
