@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.1.0...v1.2.0) (2026-01-12)
+
+
+### Features
+
+* **src:** add isClaudeAvailable method to rotate Claude credentials ([7b966bd](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/7b966bd123eb9474fd9f675e7addb4b54b509abe))
+
 # [1.1.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.0.4...v1.1.0) (2026-01-12)
 
 
