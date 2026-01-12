@@ -47,9 +47,40 @@ const isUsageResponse = (value) => {
         return false;
     return true;
 };
+const findCredentials = (filePathList) => {
+    const credentials = [];
+    const baseFileName = '.credentials.json';
+    for (const filePath of filePathList) {
+        const fileName = path.basename(filePath);
+        if (!fileName.startsWith(baseFileName)) {
+            continue;
+        }
+        if (fileName === baseFileName) {
+            continue;
+        }
+        const suffix = fileName.slice(baseFileName.length + 1);
+        const parts = suffix.split('.');
+        if (parts.length !== 2) {
+            continue;
+        }
+        const name = parts[0];
+        const priorityStr = parts[1];
+        const priority = parseInt(priorityStr, 10);
+        if (isNaN(priority)) {
+            continue;
+        }
+        credentials.push({
+            name,
+            priority,
+            filePath,
+        });
+    }
+    return credentials.sort((a, b) => a.priority - b.priority);
+};
 class OauthAPIClaudeRepository {
     constructor() {
-        this.credentialsPath = path.join(os.homedir(), '.claude', '.credentials.json');
+        this.claudeDir = path.join(os.homedir(), '.claude');
+        this.credentialsPath = path.join(this.claudeDir, '.credentials.json');
     }
     getAccessToken() {
         if (!fs.existsSync(this.credentialsPath)) {
@@ -127,6 +158,80 @@ class OauthAPIClaudeRepository {
             });
         }
         return usages;
+    }
+    async getUsageWithToken(accessToken) {
+        const response = await fetch('https://api.anthropic.com/api/oauth/usage', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+                'User-Agent': 'claude-code/2.0.32',
+                Authorization: `Bearer ${accessToken}`,
+                'anthropic-beta': 'oauth-2025-04-20',
+            },
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Claude API error: ${errorText}`);
+        }
+        const responseData = await response.json();
+        if (!isUsageResponse(responseData)) {
+            throw new Error('Invalid API response format');
+        }
+        if (responseData.error) {
+            throw new Error(`API error: ${responseData.error}`);
+        }
+        return responseData;
+    }
+    isUsageUnderThreshold(usageResponse, threshold) {
+        const windows = [
+            usageResponse.five_hour,
+            usageResponse.seven_day,
+            usageResponse.seven_day_opus,
+            usageResponse.seven_day_sonnet,
+        ];
+        for (const window of windows) {
+            if (window?.utilization !== undefined &&
+                window.utilization >= threshold) {
+                return false;
+            }
+        }
+        return true;
+    }
+    async isClaudeAvailable(threshold) {
+        if (!fs.existsSync(this.claudeDir)) {
+            return false;
+        }
+        const files = fs.readdirSync(this.claudeDir);
+        const filePathList = files
+            .filter((file) => file.startsWith('.credentials.json'))
+            .map((file) => path.join(this.claudeDir, file));
+        const credentials = findCredentials(filePathList);
+        if (credentials.length === 0) {
+            return false;
+        }
+        for (const credential of credentials) {
+            const fileContent = fs.readFileSync(credential.filePath, 'utf-8');
+            const credentialData = JSON.parse(fileContent);
+            if (!isCredentialsFile(credentialData)) {
+                continue;
+            }
+            const accessToken = credentialData.claudeAiOauth?.accessToken;
+            if (!accessToken) {
+                continue;
+            }
+            try {
+                const usageResponse = await this.getUsageWithToken(accessToken);
+                if (this.isUsageUnderThreshold(usageResponse, threshold)) {
+                    fs.copyFileSync(credential.filePath, this.credentialsPath);
+                    return true;
+                }
+            }
+            catch {
+                continue;
+            }
+        }
+        return false;
     }
 }
 exports.OauthAPIClaudeRepository = OauthAPIClaudeRepository;
