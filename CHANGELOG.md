@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.3.0...v1.4.0) (2026-01-14)
+
+
+### Features
+
+* **cli:** add logFilePath to cli parameter ([8e7dba7](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/8e7dba7608cac085883c7beaeca1cd5de490f46e))
+
 # [1.3.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.2.0...v1.3.0) (2026-01-12)
 
 
