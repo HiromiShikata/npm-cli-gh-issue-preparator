@@ -58,6 +58,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
@@ -99,6 +100,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
@@ -135,6 +137,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
     });
     const issue7UpdateCalls = mockIssueRepository.update.mock.calls.filter(
       (call) => call[0].id === '7',
@@ -165,6 +168,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       logFilePath: '/path/to/log.txt',
+      maximumPreparingIssuesCount: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
@@ -193,6 +197,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
@@ -236,8 +241,59 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+  });
+  it('should use custom maximumPreparingIssuesCount when provided', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `${i + 1}`,
+      url: `url${i + 1}`,
+      title: `Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: 3,
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(3);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(3);
+  });
+  it('should use default maximumPreparingIssuesCount of 6 when null is provided', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `${i + 1}`,
+      url: `url${i + 1}`,
+      title: `Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(6);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(6);
   });
 });
