@@ -26,6 +26,7 @@ program
     .requiredOption('--preparationStatus <status>', 'Status for issues in preparation')
     .requiredOption('--defaultAgentName <name>', 'Default agent name')
     .option('--logFilePath <path>', 'Path to log file')
+    .option('--maximumPreparingIssuesCount <count>', 'Maximum number of issues in preparation status (default: 6)')
     .action(async (options) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -36,12 +37,24 @@ program
     const issueRepository = new GitHubIssueRepository_1.GitHubIssueRepository(token);
     const localCommandRunner = new NodeLocalCommandRunner_1.NodeLocalCommandRunner();
     const useCase = new StartPreparationUseCase_1.StartPreparationUseCase(projectRepository, issueRepository, localCommandRunner);
+    let maximumPreparingIssuesCount = null;
+    if (options.maximumPreparingIssuesCount !== undefined) {
+        const parsedCount = Number(options.maximumPreparingIssuesCount);
+        if (!Number.isFinite(parsedCount) ||
+            !Number.isInteger(parsedCount) ||
+            parsedCount <= 0) {
+            console.error('Invalid value for --maximumPreparingIssuesCount. It must be a positive integer.');
+            process.exit(1);
+        }
+        maximumPreparingIssuesCount = parsedCount;
+    }
     await useCase.run({
         projectUrl: options.projectUrl,
         awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
         preparationStatus: options.preparationStatus,
         defaultAgentName: options.defaultAgentName,
         logFilePath: options.logFilePath,
+        maximumPreparingIssuesCount,
     });
 });
 program

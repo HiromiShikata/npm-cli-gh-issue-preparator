@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.4.0...v1.5.0) (2026-01-20)
+
+
+### Features
+
+* **cli:** add maximumPreparingIssuesCount as cli parameter for startDaemon ([a3f1e98](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/a3f1e985c65cdda426538abd5d1552344f33da0e))
+
 # [1.4.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.3.0...v1.4.0) (2026-01-14)
 
 

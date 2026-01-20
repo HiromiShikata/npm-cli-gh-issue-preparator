@@ -6,14 +6,14 @@ class StartPreparationUseCase {
         this.projectRepository = projectRepository;
         this.issueRepository = issueRepository;
         this.localCommandRunner = localCommandRunner;
-        this.maximumPreparingIssuesCount = 6;
         this.run = async (params) => {
+            const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
             const project = await this.projectRepository.getByUrl(params.projectUrl);
             const allIssues = await this.issueRepository.getAllOpened(project);
             const awaitingWorkspaceIssues = allIssues.filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
             for (let i = currentPreparationIssueCount; i <
-                Math.min(this.maximumPreparingIssuesCount, awaitingWorkspaceIssues.length + currentPreparationIssueCount); i++) {
+                Math.min(maximumPreparingIssuesCount, awaitingWorkspaceIssues.length + currentPreparationIssueCount); i++) {
                 const issue = awaitingWorkspaceIssues.pop();
                 if (!issue) {
                     break;
