@@ -15,6 +15,7 @@ type StartDaemonOptions = {
   preparationStatus: string;
   defaultAgentName: string;
   logFilePath?: string;
+  maximumPreparingIssuesCount?: string;
 };
 
 type NotifyFinishedOptions = {
@@ -43,6 +44,10 @@ program
   )
   .requiredOption('--defaultAgentName <name>', 'Default agent name')
   .option('--logFilePath <path>', 'Path to log file')
+  .option(
+    '--maximumPreparingIssuesCount <count>',
+    'Maximum number of issues in preparation status (default: 6)',
+  )
   .action(async (options: StartDaemonOptions) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -60,12 +65,29 @@ program
       localCommandRunner,
     );
 
+    let maximumPreparingIssuesCount: number | null = null;
+    if (options.maximumPreparingIssuesCount !== undefined) {
+      const parsedCount = Number(options.maximumPreparingIssuesCount);
+      if (
+        !Number.isFinite(parsedCount) ||
+        !Number.isInteger(parsedCount) ||
+        parsedCount <= 0
+      ) {
+        console.error(
+          'Invalid value for --maximumPreparingIssuesCount. It must be a positive integer.',
+        );
+        process.exit(1);
+      }
+      maximumPreparingIssuesCount = parsedCount;
+    }
+
     await useCase.run({
       projectUrl: options.projectUrl,
       awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
       preparationStatus: options.preparationStatus,
       defaultAgentName: options.defaultAgentName,
       logFilePath: options.logFilePath,
+      maximumPreparingIssuesCount,
     });
   });
 

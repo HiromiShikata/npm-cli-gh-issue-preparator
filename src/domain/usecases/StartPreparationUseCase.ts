@@ -3,7 +3,6 @@ import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
 
 export class StartPreparationUseCase {
-  maximumPreparingIssuesCount = 6;
   constructor(
     private readonly projectRepository: ProjectRepository,
     private readonly issueRepository: IssueRepository,
@@ -16,7 +15,9 @@ export class StartPreparationUseCase {
     preparationStatus: string;
     defaultAgentName: string;
     logFilePath?: string;
+    maximumPreparingIssuesCount: number | null;
   }): Promise<void> => {
+    const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
     const project = await this.projectRepository.getByUrl(params.projectUrl);
 
     const allIssues = await this.issueRepository.getAllOpened(project);
@@ -32,7 +33,7 @@ export class StartPreparationUseCase {
       let i = currentPreparationIssueCount;
       i <
       Math.min(
-        this.maximumPreparingIssuesCount,
+        maximumPreparingIssuesCount,
         awaitingWorkspaceIssues.length + currentPreparationIssueCount,
       );
       i++
