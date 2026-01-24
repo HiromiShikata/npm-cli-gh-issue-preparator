@@ -1,8 +1,8 @@
 export interface LocalCommandRunner {
-  runCommand(command: string): Promise<{
-    stdout: string;
-    stderr: string;
-    exitCode: number;
-  }>;
+    runCommand(command: string): Promise<{
+        stdout: string;
+        stderr: string;
+        exitCode: number;
+    }>;
 }
 //# sourceMappingURL=LocalCommandRunner.d.ts.map
