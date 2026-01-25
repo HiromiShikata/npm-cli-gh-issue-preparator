@@ -4,5 +4,6 @@ export type Project = {
     name: string;
     statuses: string[];
     customFieldNames: string[];
+    statusFieldId: string | null;
 };
 //# sourceMappingURL=Project.d.ts.map

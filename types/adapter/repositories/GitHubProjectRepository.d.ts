@@ -5,5 +5,6 @@ export declare class GitHubProjectRepository implements ProjectRepository {
     constructor(token: string);
     private parseGitHubProjectUrl;
     getByUrl(url: string): Promise<Project>;
+    prepareStatus(name: string, project: Project): Promise<Project>;
 }
 //# sourceMappingURL=GitHubProjectRepository.d.ts.map
