@@ -17,6 +17,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     name: 'Test Project',
     statuses: ['Preparation', 'Awaiting Quality Check', 'Done'],
     customFieldNames: ['workspace'],
+    statusFieldId: 'status-field-id',
   };
 
   beforeEach(() => {
@@ -24,6 +25,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
 
     mockProjectRepository = {
       getByUrl: jest.fn(),
+      prepareStatus: jest.fn(),
     };
 
     mockIssueRepository = {

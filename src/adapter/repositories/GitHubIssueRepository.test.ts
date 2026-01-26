@@ -12,6 +12,7 @@ describe('GitHubIssueRepository', () => {
     name: 'Test Project',
     statuses: ['Awaiting Workspace', 'Preparation', 'Done'],
     customFieldNames: ['Status', 'workspace'],
+    statusFieldId: 'status-field-id',
   };
 
   const mockUserProject: Project = {
@@ -20,6 +21,7 @@ describe('GitHubIssueRepository', () => {
     name: 'User Project',
     statuses: ['Todo', 'Done'],
     customFieldNames: ['Status'],
+    statusFieldId: 'status-field-id-user',
   };
 
   beforeEach(() => {

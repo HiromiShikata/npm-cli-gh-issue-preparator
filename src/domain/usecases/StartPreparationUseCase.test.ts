@@ -16,11 +16,13 @@ describe('StartPreparationUseCase', () => {
     name: 'Test Project',
     statuses: ['Awaiting Workspace', 'Preparation', 'Done'],
     customFieldNames: ['workspace'],
+    statusFieldId: 'status-field-id',
   };
   beforeEach(() => {
     jest.resetAllMocks();
     mockProjectRepository = {
       getByUrl: jest.fn(),
+      prepareStatus: jest.fn(),
     };
     mockIssueRepository = {
       getAllOpened: jest.fn(),

@@ -46,12 +46,14 @@ class GitHubProjectRepository {
             fields(first: 100) {
               nodes {
                 ... on ProjectV2SingleSelectField {
+                  id
                   name
                   options {
                     name
                   }
                 }
                 ... on ProjectV2Field {
+                  id
                   name
                 }
               }
@@ -66,12 +68,14 @@ class GitHubProjectRepository {
             fields(first: 100) {
               nodes {
                 ... on ProjectV2SingleSelectField {
+                  id
                   name
                   options {
                     name
                   }
                 }
                 ... on ProjectV2Field {
+                  id
                   name
                 }
               }
@@ -116,6 +120,73 @@ class GitHubProjectRepository {
             name: project.title,
             statuses,
             customFieldNames: fields.map((f) => f.name),
+            statusFieldId: statusField?.id ?? null,
+        };
+    }
+    async prepareStatus(name, project) {
+        if (project.statuses.includes(name)) {
+            return project;
+        }
+        if (!project.statusFieldId) {
+            throw new Error(`Status field not found in project "${project.name}". ` +
+                `Cannot add status "${name}".`);
+        }
+        const existingOptions = project.statuses.map((statusName) => ({
+            name: statusName,
+            color: 'GRAY',
+            description: '',
+        }));
+        const newOptions = [
+            ...existingOptions,
+            { name, color: 'GRAY', description: '' },
+        ];
+        const mutation = `
+      mutation($fieldId: ID!, $singleSelectOptions: [ProjectV2SingleSelectFieldOptionInput!]!) {
+        updateProjectV2Field(input: {
+          fieldId: $fieldId
+          singleSelectOptions: $singleSelectOptions
+        }) {
+          projectV2Field {
+            ... on ProjectV2SingleSelectField {
+              id
+              name
+              options {
+                name
+              }
+            }
+          }
+        }
+      }
+    `;
+        const response = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                query: mutation,
+                variables: {
+                    fieldId: project.statusFieldId,
+                    singleSelectOptions: newOptions,
+                },
+            }),
+        });
+        const responseData = await response.json();
+        if (!isGitHubApiResponse(responseData)) {
+            throw new Error('Invalid API response format');
+        }
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${JSON.stringify(responseData)}`);
+        }
+        if (typeof responseData === 'object' &&
+            responseData !== null &&
+            'errors' in responseData) {
+            throw new Error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
+        }
+        return {
+            ...project,
+            statuses: [...project.statuses, name],
         };
     }
 }

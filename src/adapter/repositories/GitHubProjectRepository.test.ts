@@ -27,6 +27,7 @@ describe('GitHubProjectRepository', () => {
                 fields: {
                   nodes: [
                     {
+                      id: 'status-field-id',
                       name: 'Status',
                       options: [
                         { name: 'Awaiting workspace' },
@@ -34,7 +35,7 @@ describe('GitHubProjectRepository', () => {
                         { name: 'Done' },
                       ],
                     },
-                    { name: 'workspace' },
+                    { id: 'workspace-field-id', name: 'workspace' },
                   ],
                 },
               },
@@ -51,6 +52,7 @@ describe('GitHubProjectRepository', () => {
         name: 'Test Project',
         statuses: ['Awaiting workspace', 'Preparation', 'Done'],
         customFieldNames: ['Status', 'workspace'],
+        statusFieldId: 'status-field-id',
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -80,6 +82,7 @@ describe('GitHubProjectRepository', () => {
                 fields: {
                   nodes: [
                     {
+                      id: 'user-status-field-id',
                       name: 'Status',
                       options: [{ name: 'Todo' }, { name: 'Done' }],
                     },
@@ -99,6 +102,7 @@ describe('GitHubProjectRepository', () => {
         name: 'User Project',
         statuses: ['Todo', 'Done'],
         customFieldNames: ['Status'],
+        statusFieldId: 'user-status-field-id',
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -192,6 +196,7 @@ describe('GitHubProjectRepository', () => {
               fields: {
                 nodes: [
                   {
+                    id: 'repo-status-field-id',
                     name: 'Status',
                     options: [{ name: 'Open' }, { name: 'Closed' }],
                   },
@@ -211,6 +216,7 @@ describe('GitHubProjectRepository', () => {
       name: 'Repo Project',
       statuses: ['Open', 'Closed'],
       customFieldNames: ['Status'],
+      statusFieldId: 'repo-status-field-id',
     });
   });
 
@@ -229,6 +235,7 @@ describe('GitHubProjectRepository', () => {
               fields: {
                 nodes: [
                   {
+                    id: 'priority-field-id',
                     name: 'Priority',
                   },
                 ],
@@ -247,6 +254,150 @@ describe('GitHubProjectRepository', () => {
       name: 'Project Without Status',
       statuses: [],
       customFieldNames: ['Priority'],
+      statusFieldId: null,
+    });
+  });
+
+  describe('prepareStatus', () => {
+    it('should return project as-is when status already exists', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo', 'In Progress', 'Done'],
+        customFieldNames: ['Status'],
+        statusFieldId: 'status-field-id',
+      };
+
+      const result = await repository.prepareStatus('In Progress', project);
+
+      expect(result).toEqual(project);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should add new status when it does not exist', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo', 'Done'],
+        customFieldNames: ['Status'],
+        statusFieldId: 'status-field-id',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            updateProjectV2Field: {
+              projectV2Field: {
+                id: 'status-field-id',
+                name: 'Status',
+                options: [
+                  { name: 'Todo' },
+                  { name: 'Done' },
+                  { name: 'In Progress' },
+                ],
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.prepareStatus('In Progress', project);
+
+      expect(result).toEqual({
+        ...project,
+        statuses: ['Todo', 'Done', 'In Progress'],
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.github.com/graphql',
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer test-token',
+            'Content-Type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    it('should throw error when status field is not found', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: [],
+        customFieldNames: ['Priority'],
+        statusFieldId: null,
+      };
+
+      await expect(
+        repository.prepareStatus('New Status', project),
+      ).rejects.toThrow('Status field not found in project "Test Project"');
+    });
+
+    it('should throw error when GitHub API returns error', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo'],
+        customFieldNames: ['Status'],
+        statusFieldId: 'status-field-id',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: jest.fn().mockResolvedValue({ errors: ['API Error'] }),
+      });
+
+      await expect(
+        repository.prepareStatus('New Status', project),
+      ).rejects.toThrow('GitHub API error');
+    });
+
+    it('should throw error when response format is invalid', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo'],
+        customFieldNames: ['Status'],
+        statusFieldId: 'status-field-id',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        repository.prepareStatus('New Status', project),
+      ).rejects.toThrow('Invalid API response format');
+    });
+
+    it('should throw error when response has GraphQL errors', async () => {
+      const project = {
+        id: 'project-id',
+        url: 'https://github.com/orgs/test-org/projects/1',
+        name: 'Test Project',
+        statuses: ['Todo'],
+        customFieldNames: ['Status'],
+        statusFieldId: 'status-field-id',
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          errors: [{ message: 'Permission denied' }],
+        }),
+      });
+
+      await expect(
+        repository.prepareStatus('New Status', project),
+      ).rejects.toThrow('GraphQL errors');
     });
   });
 });
