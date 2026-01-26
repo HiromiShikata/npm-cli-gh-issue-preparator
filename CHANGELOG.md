@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.5.0...v1.6.0) (2026-01-26)
+
+
+### Features
+
+* **core:** add prepareStatus method to ProjectRepository ([931b2ed](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/931b2ed9e4298235b48afa0b6a82d81a49ea78d2))
+
 # [1.5.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.4.0...v1.5.0) (2026-01-20)
 
 
