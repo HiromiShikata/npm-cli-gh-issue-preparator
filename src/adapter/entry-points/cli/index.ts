@@ -8,6 +8,7 @@ import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/
 import { GitHubProjectRepository } from '../../repositories/GitHubProjectRepository';
 import { GitHubIssueRepository } from '../../repositories/GitHubIssueRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
+import { Xfce4TerminalCopilotRepository } from '../../repositories/Xfce4TerminalCopilotRepository';
 
 type StartDaemonOptions = {
   projectUrl: string;
@@ -22,7 +23,9 @@ type NotifyFinishedOptions = {
   projectUrl: string;
   issueUrl: string;
   preparationStatus: string;
+  awaitingAutoQualityCheckStatus: string;
   awaitingQualityCheckStatus: string;
+  commentCountThreshold: string;
 };
 
 const program = new Command();
@@ -101,8 +104,16 @@ program
     'Status for issues in preparation',
   )
   .requiredOption(
+    '--awaitingAutoQualityCheckStatus <status>',
+    'Status for issues awaiting auto quality check',
+  )
+  .requiredOption(
     '--awaitingQualityCheckStatus <status>',
     'Status for issues awaiting quality check',
+  )
+  .requiredOption(
+    '--commentCountThreshold <count>',
+    'Threshold of comment count to trigger manual quality check',
   )
   .action(async (options: NotifyFinishedOptions) => {
     const token = process.env.GH_TOKEN;
@@ -111,19 +122,35 @@ program
       process.exit(1);
     }
 
+    const commentCountThreshold = Number(options.commentCountThreshold);
+    if (
+      !Number.isFinite(commentCountThreshold) ||
+      !Number.isInteger(commentCountThreshold) ||
+      commentCountThreshold <= 0
+    ) {
+      console.error(
+        'Invalid value for --commentCountThreshold. It must be a positive integer.',
+      );
+      process.exit(1);
+    }
+
     const projectRepository = new GitHubProjectRepository(token);
     const issueRepository = new GitHubIssueRepository(token);
+    const copilotRepository = new Xfce4TerminalCopilotRepository();
 
     const useCase = new NotifyFinishedIssuePreparationUseCase(
       projectRepository,
       issueRepository,
+      copilotRepository,
     );
 
     await useCase.run({
       projectUrl: options.projectUrl,
       issueUrl: options.issueUrl,
       preparationStatus: options.preparationStatus,
+      awaitingAutoQualityCheckStatus: options.awaitingAutoQualityCheckStatus,
       awaitingQualityCheckStatus: options.awaitingQualityCheckStatus,
+      commentCountThreshold,
     });
   });
 
