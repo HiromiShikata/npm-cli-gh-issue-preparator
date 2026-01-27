@@ -128,7 +128,7 @@ describe('index', () => {
       expect(beforeIssue?.status).toBe('Preparation');
 
       const result = execSync(
-        'npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl https://github.com/users/HiromiShikata/projects/49 --issueUrl https://github.com/HiromiShikata/test-repository/issues/1557 --preparationStatus "Preparation" --awaitingQualityCheckStatus "Awaiting quality check"',
+        'npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl https://github.com/users/HiromiShikata/projects/49 --issueUrl https://github.com/HiromiShikata/test-repository/issues/1557 --preparationStatus "Preparation" --awaitingAutoQualityCheckStatus "In Progress" --awaitingQualityCheckStatus "Awaiting quality check" --commentCountThreshold 5',
         { encoding: 'utf-8', timeout: 600000 },
       );
       expect(result).toBeDefined();
@@ -137,7 +137,7 @@ describe('index', () => {
         notifyFinishedIssueUrl,
         project,
       );
-      expect(afterIssue?.status).toBe('Awaiting quality check');
+      expect(afterIssue?.status).toBe('In Progress');
     }, 600000);
   });
 });
