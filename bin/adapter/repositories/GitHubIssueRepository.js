@@ -52,6 +52,15 @@ class GitHubIssueRepository {
                         name
                       }
                     }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
+                      }
+                    }
                   }
                   ... on PullRequest {
                     url
@@ -60,6 +69,15 @@ class GitHubIssueRepository {
                     labels(first: 10) {
                       nodes {
                         name
+                      }
+                    }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
                       }
                     }
                   }
@@ -109,6 +127,15 @@ class GitHubIssueRepository {
                         name
                       }
                     }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
+                      }
+                    }
                   }
                   ... on PullRequest {
                     url
@@ -117,6 +144,15 @@ class GitHubIssueRepository {
                     labels(first: 10) {
                       nodes {
                         name
+                      }
+                    }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
                       }
                     }
                   }
@@ -148,6 +184,15 @@ class GitHubIssueRepository {
         }
       }
     `;
+    }
+    mapCommentsToEntity(commentNodes) {
+        if (!commentNodes)
+            return [];
+        return commentNodes.map((node) => ({
+            author: node.author?.login || '',
+            content: node.body,
+            createdAt: new Date(node.createdAt),
+        }));
     }
     async getStatusOptionId(project, statusName) {
         const { owner, projectNumber } = this.parseProjectInfo(project);
@@ -291,6 +336,7 @@ class GitHubIssueRepository {
                     title: item.content.title,
                     labels: item.content.labels?.nodes?.map((l) => l.name) || [],
                     status,
+                    comments: this.mapCommentsToEntity(item.content.comments?.nodes),
                 });
             }
             hasNextPage = projectData.items.pageInfo.hasNextPage;
@@ -394,6 +440,7 @@ class GitHubIssueRepository {
                         title: item.content.title,
                         labels: item.content.labels?.nodes?.map((l) => l.name) || [],
                         status,
+                        comments: this.mapCommentsToEntity(item.content.comments?.nodes),
                     };
                 }
             }
