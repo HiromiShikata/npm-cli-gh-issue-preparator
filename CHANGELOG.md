@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.6.0...v1.7.0) (2026-01-31)
+
+
+### Features
+
+* **core:** add Comment domain entity with author, content, createdAt ([8e3e861](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/8e3e8617284f818cf72f9e4c33afac9748b2661a))
+
 # [1.6.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.5.0...v1.6.0) (2026-01-26)
 
 
