@@ -128,7 +128,7 @@ describe('index', () => {
       expect(beforeIssue?.status).toBe('Preparation');
 
       const result = execSync(
-        'npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl https://github.com/users/HiromiShikata/projects/49 --issueUrl https://github.com/HiromiShikata/test-repository/issues/1557 --preparationStatus "Preparation" --awaitingQualityCheckStatus "Awaiting quality check"',
+        'npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl https://github.com/users/HiromiShikata/projects/49 --issueUrl https://github.com/HiromiShikata/test-repository/issues/1557 --preparationStatus "Preparation" --awaitingAutoQualityCheckStatus "Awaiting quality check" --awaitingQualityCheckStatus "Done" --commentCountThreshold 5',
         { encoding: 'utf-8', timeout: 600000 },
       );
       expect(result).toBeDefined();
