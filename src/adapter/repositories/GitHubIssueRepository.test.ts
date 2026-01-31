@@ -1411,4 +1411,981 @@ describe('GitHubIssueRepository', () => {
       ]);
     });
   });
+
+  describe('findRelatedOpenPR', () => {
+    it('should find related open PRs for an issue', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [{ isResolved: true }],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        url: 'https://github.com/owner/repo/pull/10',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchNotLatest: false,
+      });
+    });
+
+    it('should throw error when response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+
+      await expect(
+        repository.findRelatedOpenPR('https://github.com/owner/repo/issues/1'),
+      ).rejects.toThrow(
+        'Failed to fetch issue timeline from GitHub GraphQL API: 500 Internal Server Error',
+      );
+    });
+
+    it('should throw error when response format is invalid', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        repository.findRelatedOpenPR('https://github.com/owner/repo/issues/1'),
+      ).rejects.toThrow(
+        'Unexpected response shape when fetching issue timeline from GitHub GraphQL API.',
+      );
+    });
+
+    it('should throw error when issue data is null', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: null,
+            },
+          },
+        }),
+      });
+
+      await expect(
+        repository.findRelatedOpenPR('https://github.com/owner/repo/issues/1'),
+      ).rejects.toThrow(
+        'Issue not found when fetching timeline from GitHub GraphQL API.',
+      );
+    });
+
+    it('should throw error for invalid issue URL', async () => {
+      await expect(
+        repository.findRelatedOpenPR('https://invalid-url'),
+      ).rejects.toThrow('Invalid GitHub issue URL');
+    });
+
+    it('should detect conflicting PR', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'CONFLICTING',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isConflicted).toBe(true);
+    });
+
+    it('should detect failing CI', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'FAILURE',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+    });
+
+    it('should detect unresolved review comments', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [{ isResolved: true }, { isResolved: false }],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isResolvedAllReviewComments).toBe(false);
+    });
+
+    it('should detect branch not latest', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'def456' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isBranchNotLatest).toBe(true);
+    });
+
+    it('should skip closed PRs', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'CLOSED',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should skip non-CrossReferencedEvent items', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'LabeledEvent',
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should skip items without PullRequest source', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'Issue',
+                        url: 'https://github.com/owner/repo/issues/5',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle PR with null statusCheckRollup', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: null,
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+    });
+
+    it('should handle PR with empty reviewThreads', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isResolvedAllReviewComments).toBe(true);
+    });
+
+    it('should handle pagination', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: {
+                      endCursor: 'cursor1',
+                      hasNextPage: true,
+                    },
+                    nodes: [
+                      {
+                        __typename: 'CrossReferencedEvent',
+                        source: {
+                          __typename: 'PullRequest',
+                          url: 'https://github.com/owner/repo/pull/10',
+                          number: 10,
+                          state: 'OPEN',
+                          mergeable: 'MERGEABLE',
+                          baseRefName: 'main',
+                          headRefName: 'feature-branch',
+                          headRefOid: 'abc123',
+                          commits: {
+                            nodes: [
+                              {
+                                commit: {
+                                  statusCheckRollup: {
+                                    state: 'SUCCESS',
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                          reviewThreads: {
+                            nodes: [],
+                          },
+                          repository: {
+                            defaultBranchRef: {
+                              target: {
+                                history: {
+                                  nodes: [{ oid: 'abc123' }],
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: {
+                      endCursor: null,
+                      hasNextPage: false,
+                    },
+                    nodes: [
+                      {
+                        __typename: 'CrossReferencedEvent',
+                        source: {
+                          __typename: 'PullRequest',
+                          url: 'https://github.com/owner/repo/pull/11',
+                          number: 11,
+                          state: 'OPEN',
+                          mergeable: 'MERGEABLE',
+                          baseRefName: 'main',
+                          headRefName: 'another-branch',
+                          headRefOid: 'def456',
+                          commits: {
+                            nodes: [
+                              {
+                                commit: {
+                                  statusCheckRollup: {
+                                    state: 'SUCCESS',
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                          reviewThreads: {
+                            nodes: [],
+                          },
+                          repository: {
+                            defaultBranchRef: {
+                              target: {
+                                history: {
+                                  nodes: [{ oid: 'def456' }],
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0].url).toBe('https://github.com/owner/repo/pull/10');
+      expect(result[1].url).toBe('https://github.com/owner/repo/pull/11');
+    });
+
+    it('should handle CrossReferencedEvent without source', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: null,
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle PR without defaultBranchRef data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: null,
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isBranchNotLatest).toBe(false);
+    });
+
+    it('should handle PR with undefined url', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: undefined,
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: {
+                          nodes: [],
+                        },
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].url).toBe('');
+    });
+
+    it('should handle PR with undefined reviewThreads nodes', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/owner/repo/pull/10',
+                        number: 10,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        headRefName: 'feature-branch',
+                        headRefOid: 'abc123',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: null,
+                        repository: {
+                          defaultBranchRef: {
+                            target: {
+                              history: {
+                                nodes: [{ oid: 'abc123' }],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPR(
+        'https://github.com/owner/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isResolvedAllReviewComments).toBe(true);
+    });
+  });
 });

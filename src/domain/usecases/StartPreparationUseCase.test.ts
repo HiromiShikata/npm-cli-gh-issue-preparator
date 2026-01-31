@@ -28,6 +28,7 @@ describe('StartPreparationUseCase', () => {
       getAllOpened: jest.fn(),
       get: jest.fn(),
       update: jest.fn(),
+      findRelatedOpenPR: jest.fn(),
     };
     mockLocalCommandRunner = {
       runCommand: jest.fn(),
