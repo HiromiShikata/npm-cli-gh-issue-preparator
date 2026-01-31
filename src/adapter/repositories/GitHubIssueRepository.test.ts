@@ -105,6 +105,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue 1',
         labels: ['bug', 'category:impl'],
         status: 'Awaiting Workspace',
+        comments: [],
       });
       expect(issues[1]).toEqual({
         id: 'issue-2',
@@ -112,6 +113,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue 2',
         labels: ['enhancement'],
         status: 'Preparation',
+        comments: [],
       });
     });
 
@@ -200,6 +202,7 @@ describe('GitHubIssueRepository', () => {
         title: 'User Issue',
         labels: ['enhancement'],
         status: 'Todo',
+        comments: [],
       });
     });
 
@@ -441,6 +444,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Issue Without Status',
         labels: ['bug'],
         status: '',
+        comments: [],
       });
     });
   });
@@ -453,6 +457,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -514,6 +519,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Done',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -571,6 +577,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'NonExistentStatus',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -610,6 +617,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -628,6 +636,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -647,6 +656,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -686,6 +696,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -730,6 +741,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -776,6 +788,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -820,6 +833,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Todo',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -872,6 +886,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -945,6 +960,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        comments: [],
       });
     });
 
@@ -1055,6 +1071,7 @@ describe('GitHubIssueRepository', () => {
         title: 'User Issue',
         labels: ['feature'],
         status: 'Todo',
+        comments: [],
       });
     });
 
@@ -1112,6 +1129,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Issue Without Status',
         labels: [],
         status: '',
+        comments: [],
       });
     });
 
@@ -1236,7 +1254,161 @@ describe('GitHubIssueRepository', () => {
         title: 'Issue With Null Labels',
         labels: [],
         status: 'Done',
+        comments: [],
       });
+    });
+
+    it('should fetch and map comments correctly', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-with-comments',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/1',
+                        title: 'Issue With Comments',
+                        number: 1,
+                        labels: {
+                          nodes: [],
+                        },
+                        comments: {
+                          nodes: [
+                            {
+                              author: {
+                                login: 'user1',
+                              },
+                              body: 'First comment',
+                              createdAt: '2024-01-15T10:00:00Z',
+                            },
+                            {
+                              author: {
+                                login: 'user2',
+                              },
+                              body: 'Second comment',
+                              createdAt: '2024-01-16T12:00:00Z',
+                            },
+                          ],
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Todo',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/1',
+        mockProject,
+      );
+
+      expect(result).toEqual({
+        id: 'issue-with-comments',
+        url: 'https://github.com/owner/repo/issues/1',
+        title: 'Issue With Comments',
+        labels: [],
+        status: 'Todo',
+        comments: [
+          {
+            author: 'user1',
+            content: 'First comment',
+            createdAt: new Date('2024-01-15T10:00:00Z'),
+          },
+          {
+            author: 'user2',
+            content: 'Second comment',
+            createdAt: new Date('2024-01-16T12:00:00Z'),
+          },
+        ],
+      });
+    });
+
+    it('should handle comments with null author', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-null-author',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/1',
+                        title: 'Issue With Null Author Comment',
+                        number: 1,
+                        labels: {
+                          nodes: [],
+                        },
+                        comments: {
+                          nodes: [
+                            {
+                              author: null,
+                              body: 'Comment from deleted user',
+                              createdAt: '2024-01-15T10:00:00Z',
+                            },
+                          ],
+                        },
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Todo',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/1',
+        mockProject,
+      );
+
+      expect(result?.comments).toEqual([
+        {
+          author: '',
+          content: 'Comment from deleted user',
+          createdAt: new Date('2024-01-15T10:00:00Z'),
+        },
+      ]);
     });
   });
 });

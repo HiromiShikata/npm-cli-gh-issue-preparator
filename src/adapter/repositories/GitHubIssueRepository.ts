@@ -1,6 +1,15 @@
 import { IssueRepository } from '../../domain/usecases/adapter-interfaces/IssueRepository';
 import { Issue } from '../../domain/entities/Issue';
 import { Project } from '../../domain/entities/Project';
+import { Comment } from '../../domain/entities/Comment';
+
+type CommentNode = {
+  author: {
+    login: string;
+  } | null;
+  body: string;
+  createdAt: string;
+};
 
 type ProjectItem = {
   id: string;
@@ -10,6 +19,9 @@ type ProjectItem = {
     number: number;
     labels: {
       nodes: Array<{ name: string }>;
+    };
+    comments?: {
+      nodes: CommentNode[];
     };
   };
   fieldValues?: {
@@ -156,6 +168,15 @@ export class GitHubIssueRepository implements IssueRepository {
                         name
                       }
                     }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
+                      }
+                    }
                   }
                   ... on PullRequest {
                     url
@@ -164,6 +185,15 @@ export class GitHubIssueRepository implements IssueRepository {
                     labels(first: 10) {
                       nodes {
                         name
+                      }
+                    }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
                       }
                     }
                   }
@@ -213,6 +243,15 @@ export class GitHubIssueRepository implements IssueRepository {
                         name
                       }
                     }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
+                      }
+                    }
                   }
                   ... on PullRequest {
                     url
@@ -221,6 +260,15 @@ export class GitHubIssueRepository implements IssueRepository {
                     labels(first: 10) {
                       nodes {
                         name
+                      }
+                    }
+                    comments(first: 100) {
+                      nodes {
+                        author {
+                          login
+                        }
+                        body
+                        createdAt
                       }
                     }
                   }
@@ -252,6 +300,17 @@ export class GitHubIssueRepository implements IssueRepository {
         }
       }
     `;
+  }
+
+  private mapCommentsToEntity(
+    commentNodes: CommentNode[] | undefined,
+  ): Comment[] {
+    if (!commentNodes) return [];
+    return commentNodes.map((node) => ({
+      author: node.author?.login || '',
+      content: node.body,
+      createdAt: new Date(node.createdAt),
+    }));
   }
 
   private async getStatusOptionId(
@@ -425,6 +484,7 @@ export class GitHubIssueRepository implements IssueRepository {
           title: item.content.title,
           labels: item.content.labels?.nodes?.map((l) => l.name) || [],
           status,
+          comments: this.mapCommentsToEntity(item.content.comments?.nodes),
         });
       }
 
@@ -553,6 +613,7 @@ export class GitHubIssueRepository implements IssueRepository {
             title: item.content.title,
             labels: item.content.labels?.nodes?.map((l) => l.name) || [],
             status,
+            comments: this.mapCommentsToEntity(item.content.comments?.nodes),
           };
         }
       }

@@ -47,6 +47,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       title: 'Test Issue',
       labels: [],
       status: 'Preparation',
+      comments: [],
     };
 
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -92,6 +93,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       title: 'Test Issue',
       labels: [],
       status: 'Done',
+      comments: [],
     };
 
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);

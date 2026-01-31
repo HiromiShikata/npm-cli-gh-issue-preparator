@@ -46,6 +46,7 @@ describe('StartPreparationUseCase', () => {
         title: 'Issue 1',
         labels: ['category:impl'],
         status: 'Awaiting Workspace',
+        comments: [],
       },
     ];
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -81,6 +82,7 @@ describe('StartPreparationUseCase', () => {
         title: 'Issue 1',
         labels: [],
         status: 'Awaiting Workspace',
+        comments: [],
       },
       {
         id: '2',
@@ -88,6 +90,7 @@ describe('StartPreparationUseCase', () => {
         title: 'Issue 2',
         labels: [],
         status: 'Awaiting Workspace',
+        comments: [],
       },
     ];
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -119,6 +122,7 @@ describe('StartPreparationUseCase', () => {
       title: `Issue ${i + 1}`,
       labels: [],
       status: 'Preparation',
+      comments: [],
     }));
     const awaitingIssues: Issue[] = [
       {
@@ -127,6 +131,7 @@ describe('StartPreparationUseCase', () => {
         title: 'Issue 7',
         labels: [],
         status: 'Awaiting Workspace',
+        comments: [],
       },
     ];
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -155,6 +160,7 @@ describe('StartPreparationUseCase', () => {
         title: 'Issue 1',
         labels: ['category:impl'],
         status: 'Awaiting Workspace',
+        comments: [],
       },
     ];
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -185,6 +191,7 @@ describe('StartPreparationUseCase', () => {
         title: 'Issue 1',
         labels: ['category:impl'],
         status: 'Awaiting Workspace',
+        comments: [],
       },
     ];
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -213,6 +220,7 @@ describe('StartPreparationUseCase', () => {
       title: 'Issue 1',
       labels: [],
       status: 'Awaiting Workspace',
+      comments: [],
     };
     let popCallCount = 0;
     const issuesWithMockedPop: Issue[] = [awaitingIssue, awaitingIssue];
@@ -255,6 +263,7 @@ describe('StartPreparationUseCase', () => {
       title: `Issue ${i + 1}`,
       labels: [],
       status: 'Awaiting Workspace',
+      comments: [],
     }));
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
     mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
@@ -280,6 +289,7 @@ describe('StartPreparationUseCase', () => {
       title: `Issue ${i + 1}`,
       labels: [],
       status: 'Awaiting Workspace',
+      comments: [],
     }));
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
     mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);

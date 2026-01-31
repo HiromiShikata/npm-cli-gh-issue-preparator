@@ -2,13 +2,14 @@ import { IssueRepository } from '../../domain/usecases/adapter-interfaces/IssueR
 import { Issue } from '../../domain/entities/Issue';
 import { Project } from '../../domain/entities/Project';
 export declare class GitHubIssueRepository implements IssueRepository {
-    private readonly token;
-    constructor(token: string);
-    private parseProjectInfo;
-    private buildProjectItemsQuery;
-    private getStatusOptionId;
-    getAllOpened(project: Project): Promise<Issue[]>;
-    update(issue: Issue, project: Project): Promise<void>;
-    get(issueUrl: string, project: Project): Promise<Issue | null>;
+  private readonly token;
+  constructor(token: string);
+  private parseProjectInfo;
+  private buildProjectItemsQuery;
+  private mapCommentsToEntity;
+  private getStatusOptionId;
+  getAllOpened(project: Project): Promise<Issue[]>;
+  update(issue: Issue, project: Project): Promise<void>;
+  get(issueUrl: string, project: Project): Promise<Issue | null>;
 }
 //# sourceMappingURL=GitHubIssueRepository.d.ts.map
