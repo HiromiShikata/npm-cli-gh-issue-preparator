@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.7.0...v1.7.1) (2026-02-04)
+
+
+### Bug Fixes
+
+* **ci:** add token fallback for dependabot PRs in workflows ([3a1fc86](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/3a1fc86eb89aed7cd8ea356cce1b0a8c489f3475))
+
 # [1.7.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.6.0...v1.7.0) (2026-01-31)
 
 
