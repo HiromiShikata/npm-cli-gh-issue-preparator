@@ -7,6 +7,7 @@ jest.mock('../../../domain/usecases/NotifyFinishedIssuePreparationUseCase');
 jest.mock('../../repositories/GitHubProjectRepository');
 jest.mock('../../repositories/GitHubIssueRepository');
 jest.mock('../../repositories/NodeLocalCommandRunner');
+jest.mock('../../repositories/Xfce4TerminalCopilotRepository');
 
 describe('CLI', () => {
   const originalEnv = process.env;
@@ -299,8 +300,12 @@ describe('CLI', () => {
       'https://github.com/test/issue/1',
       '--preparationStatus',
       'Preparing',
+      '--awaitingAutoQualityCheckStatus',
+      'Awaiting Auto QC',
       '--awaitingQualityCheckStatus',
       'Awaiting QC',
+      '--commentCountThreshold',
+      '5',
     ]);
 
     expect(mockRun).toHaveBeenCalledTimes(1);
@@ -308,8 +313,163 @@ describe('CLI', () => {
       projectUrl: 'https://github.com/test/project',
       issueUrl: 'https://github.com/test/issue/1',
       preparationStatus: 'Preparing',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto QC',
       awaitingQualityCheckStatus: 'Awaiting QC',
+      commentCountThreshold: 5,
     });
+  });
+
+  it('should accept zero as valid commentCountThreshold', async () => {
+    const mockRun = jest.fn().mockResolvedValue(undefined);
+    const MockedNotifyFinishedUseCase = jest.mocked(
+      NotifyFinishedIssuePreparationUseCase,
+    );
+
+    MockedNotifyFinishedUseCase.mockImplementation(function (
+      this: NotifyFinishedIssuePreparationUseCase,
+    ) {
+      this.run = mockRun;
+      return this;
+    });
+
+    await program.parseAsync([
+      'node',
+      'test',
+      'notifyFinishedIssuePreparation',
+      '--projectUrl',
+      'https://github.com/test/project',
+      '--issueUrl',
+      'https://github.com/test/issue/1',
+      '--preparationStatus',
+      'Preparing',
+      '--awaitingAutoQualityCheckStatus',
+      'Awaiting Auto QC',
+      '--awaitingQualityCheckStatus',
+      'Awaiting QC',
+      '--commentCountThreshold',
+      '0',
+    ]);
+
+    expect(mockRun).toHaveBeenCalledTimes(1);
+    expect(mockRun).toHaveBeenCalledWith({
+      projectUrl: 'https://github.com/test/project',
+      issueUrl: 'https://github.com/test/issue/1',
+      preparationStatus: 'Preparing',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto QC',
+      awaitingQualityCheckStatus: 'Awaiting QC',
+      commentCountThreshold: 0,
+    });
+  });
+
+  it('should exit with error for negative commentCountThreshold', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--preparationStatus',
+        'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
+        '--awaitingQualityCheckStatus',
+        'Awaiting QC',
+        '--commentCountThreshold',
+        '-1',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --commentCountThreshold. It must be a non-negative integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
+  });
+
+  it('should exit with error for non-numeric commentCountThreshold', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--preparationStatus',
+        'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
+        '--awaitingQualityCheckStatus',
+        'Awaiting QC',
+        '--commentCountThreshold',
+        'abc',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --commentCountThreshold. It must be a non-negative integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
+  });
+
+  it('should exit with error for decimal commentCountThreshold', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--preparationStatus',
+        'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
+        '--awaitingQualityCheckStatus',
+        'Awaiting QC',
+        '--commentCountThreshold',
+        '3.5',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --commentCountThreshold. It must be a non-negative integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
   });
 
   it('should exit with error when GH_TOKEN is missing for startDaemon', async () => {
@@ -366,8 +526,12 @@ describe('CLI', () => {
         'https://github.com/test/issue/1',
         '--preparationStatus',
         'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
         '--awaitingQualityCheckStatus',
         'Awaiting QC',
+        '--commentCountThreshold',
+        '5',
       ]),
     ).rejects.toThrow('process.exit called');
 
