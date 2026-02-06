@@ -1,6 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GitHubIssueRepository = void 0;
+function isIssueTimelineResponse(value) {
+    if (typeof value !== 'object' || value === null)
+        return false;
+    return true;
+}
 function isProjectItemsResponse(value) {
     if (typeof value !== 'object' || value === null)
         return false;
@@ -448,6 +453,131 @@ class GitHubIssueRepository {
             after = projectData.items.pageInfo.endCursor;
         }
         return null;
+    }
+    parseIssueUrl(issueUrl) {
+        const urlMatch = issueUrl.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/);
+        if (!urlMatch) {
+            throw new Error(`Invalid GitHub issue URL: ${issueUrl}`);
+        }
+        return {
+            owner: urlMatch[1],
+            repo: urlMatch[2],
+            issueNumber: parseInt(urlMatch[3], 10),
+        };
+    }
+    async findRelatedOpenPRs(issueUrl) {
+        const { owner, repo, issueNumber } = this.parseIssueUrl(issueUrl);
+        const query = `
+      query($owner: String!, $repo: String!, $issueNumber: Int!, $after: String) {
+        repository(owner: $owner, name: $repo) {
+          issue(number: $issueNumber) {
+            timelineItems(first: 100, after: $after, itemTypes: [CROSS_REFERENCED_EVENT]) {
+              pageInfo {
+                endCursor
+                hasNextPage
+              }
+              nodes {
+                __typename
+                ... on CrossReferencedEvent {
+                  willCloseTarget
+                  source {
+                    __typename
+                    ... on PullRequest {
+                      url
+                      number
+                      state
+                      mergeable
+                      baseRefName
+                      headRefName
+                      commits(last: 1) {
+                        nodes {
+                          commit {
+                            statusCheckRollup {
+                              state
+                            }
+                          }
+                        }
+                      }
+                      reviewThreads(first: 100) {
+                        nodes {
+                          isResolved
+                        }
+                      }
+                      compareWithBaseRef {
+                        behindBy
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+        const relatedPRsMap = new Map();
+        let after = null;
+        let hasNextPage = true;
+        while (hasNextPage) {
+            const response = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query,
+                    variables: {
+                        owner,
+                        repo,
+                        issueNumber,
+                        after,
+                    },
+                }),
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch issue timeline from GitHub GraphQL API: ${response.status} ${response.statusText}`);
+            }
+            const responseData = await response.json();
+            if (!isIssueTimelineResponse(responseData)) {
+                throw new Error('Unexpected response shape when fetching issue timeline from GitHub GraphQL API.');
+            }
+            const result = responseData;
+            const issueData = result.data?.repository?.issue;
+            if (!issueData) {
+                throw new Error('Issue not found when fetching timeline from GitHub GraphQL API.');
+            }
+            const timelineItems = issueData.timelineItems.nodes;
+            for (const item of timelineItems) {
+                if (item.__typename !== 'CrossReferencedEvent')
+                    continue;
+                if (!item.source || item.source.__typename !== 'PullRequest')
+                    continue;
+                if (item.source.state !== 'OPEN')
+                    continue;
+                const pr = item.source;
+                const prUrl = pr.url || '';
+                const isConflicted = pr.mergeable === 'CONFLICTING';
+                const lastCommit = pr.commits?.nodes[0]?.commit;
+                const ciState = lastCommit?.statusCheckRollup?.state;
+                const isPassedAllCiJob = ciState === 'SUCCESS';
+                const reviewThreads = pr.reviewThreads?.nodes || [];
+                const isResolvedAllReviewComments = reviewThreads.length === 0 ||
+                    reviewThreads.every((thread) => thread.isResolved);
+                const behindBy = pr.compareWithBaseRef?.behindBy ?? 0;
+                const isBranchOutOfDate = behindBy > 0;
+                relatedPRsMap.set(prUrl, {
+                    url: prUrl,
+                    isConflicted,
+                    isPassedAllCiJob,
+                    isResolvedAllReviewComments,
+                    isBranchOutOfDate,
+                });
+            }
+            hasNextPage = issueData.timelineItems.pageInfo.hasNextPage;
+            after = issueData.timelineItems.pageInfo.endCursor;
+        }
+        return Array.from(relatedPRsMap.values());
     }
 }
 exports.GitHubIssueRepository = GitHubIssueRepository;
