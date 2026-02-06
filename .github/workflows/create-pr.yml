@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Set branch name as output
         id: branch_name
