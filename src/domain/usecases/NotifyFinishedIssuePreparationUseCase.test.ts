@@ -32,6 +32,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       getAllOpened: jest.fn(),
       get: jest.fn(),
       update: jest.fn(),
+      findRelatedOpenPRs: jest.fn(),
     };
 
     useCase = new NotifyFinishedIssuePreparationUseCase(
