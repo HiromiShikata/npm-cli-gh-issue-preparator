@@ -19,7 +19,11 @@ describe('index', () => {
   beforeAll(() => {
     const configContent = `org: 'HiromiShikata'
 projectUrl: '${projectUrl}'
+projectName: 'test-project'
 manager: 'HiromiShikata'
+allowIssueCacheMinutes: 0
+credentials:
+  ghToken: '${process.env.GH_TOKEN || ''}'
 workingReport:
   repo: 'test-repository'
   members:
