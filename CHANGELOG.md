@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.7.1...v1.8.0) (2026-02-09)
+
+
+### Features
+
+* **core:** add findRelatedOpenPRs method to IssueRepository interface ([50de650](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/50de650520a68a0ece086c1d1f6d971dd579a455))
+
 ## [1.7.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.7.0...v1.7.1) (2026-02-04)
 
 
