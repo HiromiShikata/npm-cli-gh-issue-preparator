@@ -1,5 +1,4 @@
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
-import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 
 export class IssueNotFoundError extends Error {
   constructor(issueUrl: string) {
@@ -8,7 +7,11 @@ export class IssueNotFoundError extends Error {
   }
 }
 export class IllegalIssueStatusError extends Error {
-  constructor(issueUrl: string, currentStatus: string, expectedStatus: string) {
+  constructor(
+    issueUrl: string,
+    currentStatus: string | null,
+    expectedStatus: string,
+  ) {
     super(
       `Illegal issue status for ${issueUrl}: expected ${expectedStatus}, but got ${currentStatus}`,
     );
@@ -17,10 +20,7 @@ export class IllegalIssueStatusError extends Error {
 }
 
 export class NotifyFinishedIssuePreparationUseCase {
-  constructor(
-    private readonly projectRepository: ProjectRepository,
-    private readonly issueRepository: IssueRepository,
-  ) {}
+  constructor(private readonly issueRepository: IssueRepository) {}
 
   run = async (params: {
     projectUrl: string;
@@ -28,9 +28,10 @@ export class NotifyFinishedIssuePreparationUseCase {
     preparationStatus: string;
     awaitingQualityCheckStatus: string;
   }): Promise<void> => {
-    const project = await this.projectRepository.getByUrl(params.projectUrl);
-
-    const issue = await this.issueRepository.get(params.issueUrl, project);
+    const issue = await this.issueRepository.get(
+      params.issueUrl,
+      params.projectUrl,
+    );
 
     if (!issue) {
       throw new IssueNotFoundError(params.issueUrl);
@@ -43,6 +44,6 @@ export class NotifyFinishedIssuePreparationUseCase {
     }
 
     issue.status = params.awaitingQualityCheckStatus;
-    await this.issueRepository.update(issue, project);
+    await this.issueRepository.update(issue, params.projectUrl);
   };
 }

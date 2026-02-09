@@ -16,12 +16,10 @@ class IllegalIssueStatusError extends Error {
 }
 exports.IllegalIssueStatusError = IllegalIssueStatusError;
 class NotifyFinishedIssuePreparationUseCase {
-    constructor(projectRepository, issueRepository) {
-        this.projectRepository = projectRepository;
+    constructor(issueRepository) {
         this.issueRepository = issueRepository;
         this.run = async (params) => {
-            const project = await this.projectRepository.getByUrl(params.projectUrl);
-            const issue = await this.issueRepository.get(params.issueUrl, project);
+            const issue = await this.issueRepository.get(params.issueUrl, params.projectUrl);
             if (!issue) {
                 throw new IssueNotFoundError(params.issueUrl);
             }
@@ -29,7 +27,7 @@ class NotifyFinishedIssuePreparationUseCase {
                 throw new IllegalIssueStatusError(params.issueUrl, issue.status, params.preparationStatus);
             }
             issue.status = params.awaitingQualityCheckStatus;
-            await this.issueRepository.update(issue, project);
+            await this.issueRepository.update(issue, params.projectUrl);
         };
     }
 }

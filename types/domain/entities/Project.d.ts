@@ -1,9 +1,2 @@
-export type Project = {
-    id: string;
-    url: string;
-    name: string;
-    statuses: string[];
-    customFieldNames: string[];
-    statusFieldId: string | null;
-};
+export type { Project } from 'github-issue-tower-defence-management';
 //# sourceMappingURL=Project.d.ts.map

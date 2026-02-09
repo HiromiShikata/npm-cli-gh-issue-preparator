@@ -10,8 +10,7 @@ dotenv_1.default.config();
 const commander_1 = require("commander");
 const StartPreparationUseCase_1 = require("../../../domain/usecases/StartPreparationUseCase");
 const NotifyFinishedIssuePreparationUseCase_1 = require("../../../domain/usecases/NotifyFinishedIssuePreparationUseCase");
-const GitHubProjectRepository_1 = require("../../repositories/GitHubProjectRepository");
-const GitHubIssueRepository_1 = require("../../repositories/GitHubIssueRepository");
+const TowerDefenceIssueRepository_1 = require("../../repositories/TowerDefenceIssueRepository");
 const NodeLocalCommandRunner_1 = require("../../repositories/NodeLocalCommandRunner");
 const program = new commander_1.Command();
 exports.program = program;
@@ -25,6 +24,7 @@ program
     .requiredOption('--awaitingWorkspaceStatus <status>', 'Status for issues awaiting workspace')
     .requiredOption('--preparationStatus <status>', 'Status for issues in preparation')
     .requiredOption('--defaultAgentName <name>', 'Default agent name')
+    .requiredOption('--configFilePath <path>', 'Path to config file for tower defence management')
     .option('--logFilePath <path>', 'Path to log file')
     .option('--maximumPreparingIssuesCount <count>', 'Maximum number of issues in preparation status (default: 6)')
     .action(async (options) => {
@@ -33,10 +33,9 @@ program
         console.error('GH_TOKEN environment variable is required');
         process.exit(1);
     }
-    const projectRepository = new GitHubProjectRepository_1.GitHubProjectRepository(token);
-    const issueRepository = new GitHubIssueRepository_1.GitHubIssueRepository(token);
+    const issueRepository = new TowerDefenceIssueRepository_1.TowerDefenceIssueRepository(options.configFilePath, token);
     const localCommandRunner = new NodeLocalCommandRunner_1.NodeLocalCommandRunner();
-    const useCase = new StartPreparationUseCase_1.StartPreparationUseCase(projectRepository, issueRepository, localCommandRunner);
+    const useCase = new StartPreparationUseCase_1.StartPreparationUseCase(issueRepository, localCommandRunner);
     let maximumPreparingIssuesCount = null;
     if (options.maximumPreparingIssuesCount !== undefined) {
         const parsedCount = Number(options.maximumPreparingIssuesCount);
@@ -64,15 +63,15 @@ program
     .requiredOption('--issueUrl <url>', 'GitHub issue URL')
     .requiredOption('--preparationStatus <status>', 'Status for issues in preparation')
     .requiredOption('--awaitingQualityCheckStatus <status>', 'Status for issues awaiting quality check')
+    .requiredOption('--configFilePath <path>', 'Path to config file for tower defence management')
     .action(async (options) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
         console.error('GH_TOKEN environment variable is required');
         process.exit(1);
     }
-    const projectRepository = new GitHubProjectRepository_1.GitHubProjectRepository(token);
-    const issueRepository = new GitHubIssueRepository_1.GitHubIssueRepository(token);
-    const useCase = new NotifyFinishedIssuePreparationUseCase_1.NotifyFinishedIssuePreparationUseCase(projectRepository, issueRepository);
+    const issueRepository = new TowerDefenceIssueRepository_1.TowerDefenceIssueRepository(options.configFilePath, token);
+    const useCase = new NotifyFinishedIssuePreparationUseCase_1.NotifyFinishedIssuePreparationUseCase(issueRepository);
     await useCase.run({
         projectUrl: options.projectUrl,
         issueUrl: options.issueUrl,

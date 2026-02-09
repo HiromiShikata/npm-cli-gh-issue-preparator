@@ -1,10 +1,8 @@
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
-import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
 
 export class StartPreparationUseCase {
   constructor(
-    private readonly projectRepository: ProjectRepository,
     private readonly issueRepository: IssueRepository,
     private readonly localCommandRunner: LocalCommandRunner,
   ) {}
@@ -18,9 +16,10 @@ export class StartPreparationUseCase {
     maximumPreparingIssuesCount: number | null;
   }): Promise<void> => {
     const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
-    const project = await this.projectRepository.getByUrl(params.projectUrl);
 
-    const allIssues = await this.issueRepository.getAllOpened(project);
+    const allIssues = await this.issueRepository.getAllOpened(
+      params.projectUrl,
+    );
 
     const awaitingWorkspaceIssues = allIssues.filter(
       (issue) => issue.status === params.awaitingWorkspaceStatus,
@@ -48,13 +47,13 @@ export class StartPreparationUseCase {
           ?.replace('category:', '')
           .trim() || params.defaultAgentName;
       issue.status = params.preparationStatus;
-      await this.issueRepository.update(issue, project);
+      await this.issueRepository.update(issue, params.projectUrl);
 
       const logFilePathArg = params.logFilePath
         ? `--logFilePath ${params.logFilePath}`
         : '';
       await this.localCommandRunner.runCommand(
-        `aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
+        `aw ${issue.url} ${agent} ${params.projectUrl}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
       );
     }
   };

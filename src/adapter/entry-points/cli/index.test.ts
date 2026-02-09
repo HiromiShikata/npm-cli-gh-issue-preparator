@@ -4,8 +4,7 @@ import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/
 
 jest.mock('../../../domain/usecases/StartPreparationUseCase');
 jest.mock('../../../domain/usecases/NotifyFinishedIssuePreparationUseCase');
-jest.mock('../../repositories/GitHubProjectRepository');
-jest.mock('../../repositories/GitHubIssueRepository');
+jest.mock('../../repositories/TowerDefenceIssueRepository');
 jest.mock('../../repositories/NodeLocalCommandRunner');
 
 describe('CLI', () => {
@@ -47,6 +46,8 @@ describe('CLI', () => {
       'Preparing',
       '--defaultAgentName',
       'agent1',
+      '--configFilePath',
+      '/path/to/config.yml',
     ]);
 
     expect(mockRun).toHaveBeenCalledTimes(1);
@@ -83,6 +84,8 @@ describe('CLI', () => {
       'Preparing',
       '--defaultAgentName',
       'agent1',
+      '--configFilePath',
+      '/path/to/config.yml',
       '--logFilePath',
       '/path/to/log.txt',
     ]);
@@ -121,6 +124,8 @@ describe('CLI', () => {
       'Preparing',
       '--defaultAgentName',
       'agent1',
+      '--configFilePath',
+      '/path/to/config.yml',
       '--maximumPreparingIssuesCount',
       '10',
     ]);
@@ -157,6 +162,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         'abc',
       ]),
@@ -192,6 +199,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         '-5',
       ]),
@@ -227,6 +236,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         '0',
       ]),
@@ -262,6 +273,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         '3.5',
       ]),
@@ -301,6 +314,8 @@ describe('CLI', () => {
       'Preparing',
       '--awaitingQualityCheckStatus',
       'Awaiting QC',
+      '--configFilePath',
+      '/path/to/config.yml',
     ]);
 
     expect(mockRun).toHaveBeenCalledTimes(1);
@@ -334,6 +349,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
       ]),
     ).rejects.toThrow('process.exit called');
 
@@ -368,6 +385,8 @@ describe('CLI', () => {
         'Preparing',
         '--awaitingQualityCheckStatus',
         'Awaiting QC',
+        '--configFilePath',
+        '/path/to/config.yml',
       ]),
     ).rejects.toThrow('process.exit called');
 

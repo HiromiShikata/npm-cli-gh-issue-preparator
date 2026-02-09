@@ -5,8 +5,7 @@ dotenv.config();
 import { Command } from 'commander';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
-import { GitHubProjectRepository } from '../../repositories/GitHubProjectRepository';
-import { GitHubIssueRepository } from '../../repositories/GitHubIssueRepository';
+import { TowerDefenceIssueRepository } from '../../repositories/TowerDefenceIssueRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
 
 type StartDaemonOptions = {
@@ -16,6 +15,7 @@ type StartDaemonOptions = {
   defaultAgentName: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
+  configFilePath: string;
 };
 
 type NotifyFinishedOptions = {
@@ -23,6 +23,7 @@ type NotifyFinishedOptions = {
   issueUrl: string;
   preparationStatus: string;
   awaitingQualityCheckStatus: string;
+  configFilePath: string;
 };
 
 const program = new Command();
@@ -43,6 +44,10 @@ program
     'Status for issues in preparation',
   )
   .requiredOption('--defaultAgentName <name>', 'Default agent name')
+  .requiredOption(
+    '--configFilePath <path>',
+    'Path to config file for tower defence management',
+  )
   .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
@@ -55,12 +60,13 @@ program
       process.exit(1);
     }
 
-    const projectRepository = new GitHubProjectRepository(token);
-    const issueRepository = new GitHubIssueRepository(token);
+    const issueRepository = new TowerDefenceIssueRepository(
+      options.configFilePath,
+      token,
+    );
     const localCommandRunner = new NodeLocalCommandRunner();
 
     const useCase = new StartPreparationUseCase(
-      projectRepository,
       issueRepository,
       localCommandRunner,
     );
@@ -104,6 +110,10 @@ program
     '--awaitingQualityCheckStatus <status>',
     'Status for issues awaiting quality check',
   )
+  .requiredOption(
+    '--configFilePath <path>',
+    'Path to config file for tower defence management',
+  )
   .action(async (options: NotifyFinishedOptions) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -111,13 +121,12 @@ program
       process.exit(1);
     }
 
-    const projectRepository = new GitHubProjectRepository(token);
-    const issueRepository = new GitHubIssueRepository(token);
-
-    const useCase = new NotifyFinishedIssuePreparationUseCase(
-      projectRepository,
-      issueRepository,
+    const issueRepository = new TowerDefenceIssueRepository(
+      options.configFilePath,
+      token,
     );
+
+    const useCase = new NotifyFinishedIssuePreparationUseCase(issueRepository);
 
     await useCase.run({
       projectUrl: options.projectUrl,

@@ -1,32 +1,41 @@
 import { NotifyFinishedIssuePreparationUseCase } from './NotifyFinishedIssuePreparationUseCase';
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
-import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { Issue } from '../entities/Issue';
-import { Project } from '../entities/Project';
 
 type Mocked<T> = jest.Mocked<T> & jest.MockedObject<T>;
 
+const createMockIssue = (overrides: Partial<Issue> = {}): Issue => ({
+  nameWithOwner: 'user/repo',
+  number: 1,
+  title: 'Test Issue',
+  state: 'OPEN',
+  status: null,
+  story: null,
+  nextActionDate: null,
+  nextActionHour: null,
+  estimationMinutes: null,
+  dependedIssueUrls: [],
+  completionDate50PercentConfidence: null,
+  url: 'https://github.com/user/repo/issues/1',
+  assignees: [],
+  labels: [],
+  org: 'user',
+  repo: 'repo',
+  body: '',
+  itemId: 'item-1',
+  isPr: false,
+  isInProgress: false,
+  isClosed: false,
+  createdAt: new Date(),
+  ...overrides,
+});
+
 describe('NotifyFinishedIssuePreparationUseCase', () => {
   let useCase: NotifyFinishedIssuePreparationUseCase;
-  let mockProjectRepository: Mocked<ProjectRepository>;
   let mockIssueRepository: Mocked<IssueRepository>;
-
-  const mockProject: Project = {
-    id: 'project-1',
-    url: 'https://github.com/user/repo',
-    name: 'Test Project',
-    statuses: ['Preparation', 'Awaiting Quality Check', 'Done'],
-    customFieldNames: ['workspace'],
-    statusFieldId: 'status-field-id',
-  };
 
   beforeEach(() => {
     jest.resetAllMocks();
-
-    mockProjectRepository = {
-      getByUrl: jest.fn(),
-      prepareStatus: jest.fn(),
-    };
 
     mockIssueRepository = {
       getAllOpened: jest.fn(),
@@ -35,23 +44,18 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       findRelatedOpenPRs: jest.fn(),
     };
 
-    useCase = new NotifyFinishedIssuePreparationUseCase(
-      mockProjectRepository,
-      mockIssueRepository,
-    );
+    useCase = new NotifyFinishedIssuePreparationUseCase(mockIssueRepository);
   });
 
   it('should update issue status from Preparation to Awaiting Quality Check', async () => {
-    const issue: Issue = {
-      id: '1',
+    const issue: Issue = createMockIssue({
+      itemId: '1',
       url: 'https://github.com/user/repo/issues/1',
       title: 'Test Issue',
       labels: [],
       status: 'Preparation',
-      comments: [],
-    };
+    });
 
-    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
     mockIssueRepository.get.mockResolvedValue(issue);
 
     await useCase.run({
@@ -64,15 +68,14 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     expect(mockIssueRepository.update).toHaveBeenCalledTimes(1);
     expect(mockIssueRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: '1',
+        itemId: '1',
         status: 'Awaiting Quality Check',
       }),
-      mockProject,
+      'https://github.com/user/repo',
     );
   });
 
   it('should throw IssueNotFoundError when issue does not exist', async () => {
-    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
     mockIssueRepository.get.mockResolvedValue(null);
 
     await expect(
@@ -88,16 +91,14 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
   });
 
   it('should throw IllegalIssueStatusError when issue status is not Preparation', async () => {
-    const issue: Issue = {
-      id: '1',
+    const issue: Issue = createMockIssue({
+      itemId: '1',
       url: 'https://github.com/user/repo/issues/1',
       title: 'Test Issue',
       labels: [],
       status: 'Done',
-      comments: [],
-    };
+    });
 
-    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
     mockIssueRepository.get.mockResolvedValue(issue);
 
     await expect(
