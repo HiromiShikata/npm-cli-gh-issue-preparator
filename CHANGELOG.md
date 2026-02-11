@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.8.0...v1.9.0) (2026-02-11)
+
+
+### Features
+
+* **core:** use getStoryObjectMap from tower-defence library ([980aed8](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/980aed86127965c68d38e1336ef007aad5d810ee)), closes [#82](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/82)
+
 # [1.8.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.7.1...v1.8.0) (2026-02-09)
 
 
