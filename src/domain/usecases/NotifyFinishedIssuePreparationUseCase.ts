@@ -1,5 +1,6 @@
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
 import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
+import { IssueCommentRepository } from './adapter-interfaces/IssueCommentRepository';
 
 export class IssueNotFoundError extends Error {
   constructor(issueUrl: string) {
@@ -8,7 +9,11 @@ export class IssueNotFoundError extends Error {
   }
 }
 export class IllegalIssueStatusError extends Error {
-  constructor(issueUrl: string, currentStatus: string, expectedStatus: string) {
+  constructor(
+    issueUrl: string,
+    currentStatus: string | null,
+    expectedStatus: string | null,
+  ) {
     super(
       `Illegal issue status for ${issueUrl}: expected ${expectedStatus}, but got ${currentStatus}`,
     );
@@ -18,15 +23,21 @@ export class IllegalIssueStatusError extends Error {
 
 export class NotifyFinishedIssuePreparationUseCase {
   constructor(
-    private readonly projectRepository: ProjectRepository,
-    private readonly issueRepository: IssueRepository,
+    private readonly projectRepository: Pick<ProjectRepository, 'getByUrl'>,
+    private readonly issueRepository: Pick<IssueRepository, 'get' | 'update'>,
+    private readonly issueCommentRepository: Pick<
+      IssueCommentRepository,
+      'getCommentsFromIssue' | 'createComment'
+    >,
   ) {}
 
   run = async (params: {
     projectUrl: string;
     issueUrl: string;
     preparationStatus: string;
+    awaitingWorkspaceStatus: string;
     awaitingQualityCheckStatus: string;
+    thresholdForAutoReject: number;
   }): Promise<void> => {
     const project = await this.projectRepository.getByUrl(params.projectUrl);
 
@@ -41,8 +52,45 @@ export class NotifyFinishedIssuePreparationUseCase {
         params.preparationStatus,
       );
     }
+    const comments =
+      await this.issueCommentRepository.getCommentsFromIssue(issue);
 
-    issue.status = params.awaitingQualityCheckStatus;
+    const lastThreeComments = comments.slice(-params.thresholdForAutoReject);
+    if (
+      lastThreeComments.length === params.thresholdForAutoReject &&
+      lastThreeComments.every((comment) =>
+        comment.content.startsWith('Auto Status Check: REJECTED'),
+      )
+    ) {
+      issue.status = params.awaitingQualityCheckStatus;
+      await this.issueRepository.update(issue, project);
+      await this.issueCommentRepository.createComment(
+        issue,
+        `Failed to pass the check autimatically for ${params.thresholdForAutoReject} times`,
+      );
+      return;
+    }
+
+    const rejectReason: 'NO_REPORT'[] = [];
+    const lastComment = comments[comments.length - 1];
+    if (!lastComment || !lastComment.content.startsWith('From: ')) {
+      rejectReason.push('NO_REPORT');
+    }
+
+    if (rejectReason.length <= 0) {
+      issue.status = params.awaitingQualityCheckStatus;
+      await this.issueRepository.update(issue, project);
+      return;
+    }
+
+    issue.status = params.awaitingWorkspaceStatus;
     await this.issueRepository.update(issue, project);
+
+    await this.issueCommentRepository.createComment(
+      issue,
+      `
+Auto Status Check: REJECTED
+${JSON.stringify(rejectReason)}`,
+    );
   };
 }

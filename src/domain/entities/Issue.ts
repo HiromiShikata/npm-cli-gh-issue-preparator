@@ -1,10 +1,26 @@
-import { Comment } from './Comment';
-
+import { Member } from './Member';
+export type Label = string;
 export type Issue = {
-  id: string;
-  url: string;
+  nameWithOwner: string;
+  number: number;
   title: string;
-  labels: string[];
-  status: string;
-  comments: Comment[];
+  state: 'OPEN' | 'CLOSED' | 'MERGED';
+  status: string | null;
+  story: string | null;
+  nextActionDate: Date | null;
+  nextActionHour: number | null;
+  estimationMinutes: number | null;
+  dependedIssueUrls: string[];
+  completionDate50PercentConfidence: Date | null;
+  url: string;
+  assignees: Member['name'][];
+  labels: Label[];
+  org: string;
+  repo: string;
+  body: string;
+  itemId: string;
+  isPr: boolean;
+  isInProgress: boolean;
+  isClosed: boolean;
+  createdAt: Date;
 };

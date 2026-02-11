@@ -5,8 +5,9 @@ dotenv.config();
 import { Command } from 'commander';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
-import { GitHubProjectRepository } from '../../repositories/GitHubProjectRepository';
-import { GitHubIssueRepository } from '../../repositories/GitHubIssueRepository';
+import { TowerDefenceIssueRepository } from '../../repositories/TowerDefenceIssueRepository';
+import { TowerDefenceProjectRepository } from '../../repositories/TowerDefenceProjectRepository';
+import { GitHubIssueCommentRepository } from '../../repositories/GitHubIssueCommentRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
 
 type StartDaemonOptions = {
@@ -16,13 +17,17 @@ type StartDaemonOptions = {
   defaultAgentName: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
+  configFilePath: string;
 };
 
 type NotifyFinishedOptions = {
   projectUrl: string;
   issueUrl: string;
   preparationStatus: string;
+  awaitingWorkspaceStatus: string;
   awaitingQualityCheckStatus: string;
+  thresholdForAutoReject?: string;
+  configFilePath: string;
 };
 
 const program = new Command();
@@ -43,6 +48,10 @@ program
     'Status for issues in preparation',
   )
   .requiredOption('--defaultAgentName <name>', 'Default agent name')
+  .requiredOption(
+    '--configFilePath <path>',
+    'Path to config file for tower defence management',
+  )
   .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
@@ -55,8 +64,14 @@ program
       process.exit(1);
     }
 
-    const projectRepository = new GitHubProjectRepository(token);
-    const issueRepository = new GitHubIssueRepository(token);
+    const projectRepository = new TowerDefenceProjectRepository(
+      options.configFilePath,
+      token,
+    );
+    const issueRepository = new TowerDefenceIssueRepository(
+      options.configFilePath,
+      token,
+    );
     const localCommandRunner = new NodeLocalCommandRunner();
 
     const useCase = new StartPreparationUseCase(
@@ -101,8 +116,20 @@ program
     'Status for issues in preparation',
   )
   .requiredOption(
+    '--awaitingWorkspaceStatus <status>',
+    'Status for issues awaiting workspace',
+  )
+  .requiredOption(
     '--awaitingQualityCheckStatus <status>',
     'Status for issues awaiting quality check',
+  )
+  .requiredOption(
+    '--configFilePath <path>',
+    'Path to config file for tower defence management',
+  )
+  .option(
+    '--thresholdForAutoReject <count>',
+    'Threshold for auto-escalation after consecutive rejections (default: 3)',
   )
   .action(async (options: NotifyFinishedOptions) => {
     const token = process.env.GH_TOKEN;
@@ -111,19 +138,45 @@ program
       process.exit(1);
     }
 
-    const projectRepository = new GitHubProjectRepository(token);
-    const issueRepository = new GitHubIssueRepository(token);
+    const projectRepository = new TowerDefenceProjectRepository(
+      options.configFilePath,
+      token,
+    );
+    const issueRepository = new TowerDefenceIssueRepository(
+      options.configFilePath,
+      token,
+    );
+    const issueCommentRepository = new GitHubIssueCommentRepository(token);
 
     const useCase = new NotifyFinishedIssuePreparationUseCase(
       projectRepository,
       issueRepository,
+      issueCommentRepository,
     );
+
+    let thresholdForAutoReject = 3;
+    if (options.thresholdForAutoReject !== undefined) {
+      const parsed = Number(options.thresholdForAutoReject);
+      if (
+        !Number.isFinite(parsed) ||
+        !Number.isInteger(parsed) ||
+        parsed <= 0
+      ) {
+        console.error(
+          'Invalid value for --thresholdForAutoReject. It must be a positive integer.',
+        );
+        process.exit(1);
+      }
+      thresholdForAutoReject = parsed;
+    }
 
     await useCase.run({
       projectUrl: options.projectUrl,
       issueUrl: options.issueUrl,
       preparationStatus: options.preparationStatus,
+      awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
       awaitingQualityCheckStatus: options.awaitingQualityCheckStatus,
+      thresholdForAutoReject,
     });
   });
 
