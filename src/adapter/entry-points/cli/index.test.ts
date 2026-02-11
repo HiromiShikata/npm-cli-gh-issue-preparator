@@ -4,8 +4,9 @@ import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/
 
 jest.mock('../../../domain/usecases/StartPreparationUseCase');
 jest.mock('../../../domain/usecases/NotifyFinishedIssuePreparationUseCase');
-jest.mock('../../repositories/GitHubProjectRepository');
-jest.mock('../../repositories/GitHubIssueRepository');
+jest.mock('../../repositories/TowerDefenceIssueRepository');
+jest.mock('../../repositories/TowerDefenceProjectRepository');
+jest.mock('../../repositories/GitHubIssueCommentRepository');
 jest.mock('../../repositories/NodeLocalCommandRunner');
 
 describe('CLI', () => {
@@ -47,6 +48,8 @@ describe('CLI', () => {
       'Preparing',
       '--defaultAgentName',
       'agent1',
+      '--configFilePath',
+      '/path/to/config.yml',
     ]);
 
     expect(mockRun).toHaveBeenCalledTimes(1);
@@ -83,6 +86,8 @@ describe('CLI', () => {
       'Preparing',
       '--defaultAgentName',
       'agent1',
+      '--configFilePath',
+      '/path/to/config.yml',
       '--logFilePath',
       '/path/to/log.txt',
     ]);
@@ -121,6 +126,8 @@ describe('CLI', () => {
       'Preparing',
       '--defaultAgentName',
       'agent1',
+      '--configFilePath',
+      '/path/to/config.yml',
       '--maximumPreparingIssuesCount',
       '10',
     ]);
@@ -157,6 +164,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         'abc',
       ]),
@@ -192,6 +201,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         '-5',
       ]),
@@ -227,6 +238,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         '0',
       ]),
@@ -262,6 +275,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
         '--maximumPreparingIssuesCount',
         '3.5',
       ]),
@@ -299,8 +314,12 @@ describe('CLI', () => {
       'https://github.com/test/issue/1',
       '--preparationStatus',
       'Preparing',
+      '--awaitingWorkspaceStatus',
+      'Awaiting Workspace',
       '--awaitingQualityCheckStatus',
       'Awaiting QC',
+      '--configFilePath',
+      '/path/to/config.yml',
     ]);
 
     expect(mockRun).toHaveBeenCalledTimes(1);
@@ -308,8 +327,93 @@ describe('CLI', () => {
       projectUrl: 'https://github.com/test/project',
       issueUrl: 'https://github.com/test/issue/1',
       preparationStatus: 'Preparing',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting QC',
+      thresholdForAutoReject: 3,
     });
+  });
+
+  it('should pass custom thresholdForAutoReject to NotifyFinishedIssuePreparationUseCase', async () => {
+    const mockRun = jest.fn().mockResolvedValue(undefined);
+    const MockedNotifyFinishedUseCase = jest.mocked(
+      NotifyFinishedIssuePreparationUseCase,
+    );
+
+    MockedNotifyFinishedUseCase.mockImplementation(function (
+      this: NotifyFinishedIssuePreparationUseCase,
+    ) {
+      this.run = mockRun;
+      return this;
+    });
+
+    await program.parseAsync([
+      'node',
+      'test',
+      'notifyFinishedIssuePreparation',
+      '--projectUrl',
+      'https://github.com/test/project',
+      '--issueUrl',
+      'https://github.com/test/issue/1',
+      '--preparationStatus',
+      'Preparing',
+      '--awaitingWorkspaceStatus',
+      'Awaiting Workspace',
+      '--awaitingQualityCheckStatus',
+      'Awaiting QC',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--thresholdForAutoReject',
+      '5',
+    ]);
+
+    expect(mockRun).toHaveBeenCalledTimes(1);
+    expect(mockRun).toHaveBeenCalledWith({
+      projectUrl: 'https://github.com/test/project',
+      issueUrl: 'https://github.com/test/issue/1',
+      preparationStatus: 'Preparing',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting QC',
+      thresholdForAutoReject: 5,
+    });
+  });
+
+  it('should exit with error for invalid thresholdForAutoReject', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--preparationStatus',
+        'Preparing',
+        '--awaitingWorkspaceStatus',
+        'Awaiting Workspace',
+        '--awaitingQualityCheckStatus',
+        'Awaiting QC',
+        '--configFilePath',
+        '/path/to/config.yml',
+        '--thresholdForAutoReject',
+        'abc',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --thresholdForAutoReject. It must be a positive integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
   });
 
   it('should exit with error when GH_TOKEN is missing for startDaemon', async () => {
@@ -334,6 +438,8 @@ describe('CLI', () => {
         'Preparing',
         '--defaultAgentName',
         'agent1',
+        '--configFilePath',
+        '/path/to/config.yml',
       ]),
     ).rejects.toThrow('process.exit called');
 
@@ -366,8 +472,12 @@ describe('CLI', () => {
         'https://github.com/test/issue/1',
         '--preparationStatus',
         'Preparing',
+        '--awaitingWorkspaceStatus',
+        'Awaiting Workspace',
         '--awaitingQualityCheckStatus',
         'Awaiting QC',
+        '--configFilePath',
+        '/path/to/config.yml',
       ]),
     ).rejects.toThrow('process.exit called');
 

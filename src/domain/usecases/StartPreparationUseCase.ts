@@ -4,8 +4,11 @@ import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
 
 export class StartPreparationUseCase {
   constructor(
-    private readonly projectRepository: ProjectRepository,
-    private readonly issueRepository: IssueRepository,
+    private readonly projectRepository: Pick<ProjectRepository, 'getByUrl'>,
+    private readonly issueRepository: Pick<
+      IssueRepository,
+      'getAllOpened' | 'update'
+    >,
     private readonly localCommandRunner: LocalCommandRunner,
   ) {}
 

@@ -1,9 +1,57 @@
+export type StoryOption = FieldOption;
+export type FieldOption = {
+  id: string;
+  name: string;
+  color:
+    | 'GRAY'
+    | 'BLUE'
+    | 'GREEN'
+    | 'YELLOW'
+    | 'ORANGE'
+    | 'RED'
+    | 'PINK'
+    | 'PURPLE';
+  description: string;
+};
 export type Project = {
-    id: string;
-    url: string;
+  id: string;
+  url: string;
+  databaseId: number;
+  name: string;
+  status: {
     name: string;
-    statuses: string[];
-    customFieldNames: string[];
-    statusFieldId: string | null;
+    fieldId: string;
+    statuses: FieldOption[];
+  };
+  nextActionDate: {
+    name: string;
+    fieldId: string;
+  } | null;
+  nextActionHour: {
+    name: string;
+    fieldId: string;
+  } | null;
+  story: {
+    name: string;
+    fieldId: string;
+    databaseId: number;
+    stories: FieldOption[];
+    workflowManagementStory: {
+      id: string;
+      name: string;
+    };
+  } | null;
+  remainingEstimationMinutes: {
+    name: string;
+    fieldId: string;
+  } | null;
+  dependedIssueUrlSeparatedByComma: {
+    name: string;
+    fieldId: string;
+  } | null;
+  completionDate50PercentConfidence: {
+    name: string;
+    fieldId: string;
+  } | null;
 };
 //# sourceMappingURL=Project.d.ts.map
