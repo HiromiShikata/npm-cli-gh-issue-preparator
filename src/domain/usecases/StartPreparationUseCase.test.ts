@@ -168,25 +168,22 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
     });
-    // Both awaiting issues should be updated (pop returns url2 first, then url1)
+    // Both awaiting issues should be updated (forward iteration: url1 first, then url2)
     expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
-      url: 'url2',
+      url: 'url1',
       status: 'Preparation',
     });
     expect(mockIssueRepository.update.mock.calls[1][0]).toMatchObject({
-      url: 'url1',
+      url: 'url2',
       status: 'Preparation',
     });
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(2);
   });
   it('should stop assigning after maximum preparing issues count is reached', async () => {
-    // When we already have 6 preparation issues and max is 6, the loop will:
-    // 1. Pop the awaiting issue
-    // 2. Update it (count becomes 7)
-    // 3. Check 7 >= 6, break
-    // So 1 issue is updated before breaking
+    // When we already have 6 preparation issues and max is 6 (default),
+    // the loop condition prevents processing any new issues
     const preparationIssues: Issue[] = Array.from({ length: 6 }, (_, i) =>
       createMockIssue({
         url: `url${i + 1}`,
@@ -223,12 +220,9 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
     });
-    // The loop updates the awaiting issue before checking the count
-    const issue7UpdateCalls = mockIssueRepository.update.mock.calls.filter(
-      (call) => call[0].url === 'url7',
-    );
-    expect(issue7UpdateCalls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    // Loop doesn't run because we're already at max (6 >= 6)
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
   it('should append logFilePath to aw command when provided', async () => {
     const awaitingIssues: Issue[] = [

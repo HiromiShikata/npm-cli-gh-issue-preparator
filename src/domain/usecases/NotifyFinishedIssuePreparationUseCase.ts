@@ -88,23 +88,28 @@ export class NotifyFinishedIssuePreparationUseCase {
       rejectedReasons.push('NO_REPORT');
     }
 
-    const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(
-      issue.url,
+    const hasCategoryLabel = issue.labels.some((label) =>
+      label.startsWith('category:'),
     );
-    if (relatedOpenPrs.length <= 0) {
-      rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
-    } else if (relatedOpenPrs.length > 1) {
-      rejectedReasons.push('MULTIPLE_PULL_REQUESTS_FOUND');
-    } else {
-      const pr = relatedOpenPrs[0];
-      if (pr.isConflicted) {
-        rejectedReasons.push('PULL_REQUEST_CONFLICTED');
-      }
-      if (!pr.isPassedAllCiJob) {
-        rejectedReasons.push('ANY_CI_JOB_FAILED');
-      }
-      if (!pr.isResolvedAllReviewComments) {
-        rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
+    if (!hasCategoryLabel) {
+      const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(
+        issue.url,
+      );
+      if (relatedOpenPrs.length <= 0) {
+        rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
+      } else if (relatedOpenPrs.length > 1) {
+        rejectedReasons.push('MULTIPLE_PULL_REQUESTS_FOUND');
+      } else {
+        const pr = relatedOpenPrs[0];
+        if (pr.isConflicted) {
+          rejectedReasons.push('PULL_REQUEST_CONFLICTED');
+        }
+        if (!pr.isPassedAllCiJob) {
+          rejectedReasons.push('ANY_CI_JOB_FAILED');
+        }
+        if (!pr.isResolvedAllReviewComments) {
+          rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
+        }
       }
     }
 
