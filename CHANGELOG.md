@@ -1,3 +1,11 @@
+## [1.10.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.10.0...v1.10.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* **core:** skip PR checks for issues with category label ([8f69604](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/8f6960443da3a0ed4485391acce0984bb5d2db4a))
+* **core:** skip PR checks for issues with category label and fix max count loop ([1a439ba](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/1a439ba2a38466e2bf2fe09cbec84853533bd233))
+
 # [1.10.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.9.0...v1.10.0) (2026-02-13)
 
 
