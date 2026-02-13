@@ -40,7 +40,12 @@ export class StartPreparationUseCase {
     ).length;
     let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
 
-    for (let i = 0; i < awaitingWorkspaceIssues.length; i++) {
+    for (
+      let i = 0;
+      i < awaitingWorkspaceIssues.length &&
+      updatedCurrentPreparationIssueCount < maximumPreparingIssuesCount;
+      i++
+    ) {
       const issue = awaitingWorkspaceIssues[i];
       const blockerIssueUrls: string[] =
         repositoryBlockerIssues.find((blocker) =>
@@ -67,12 +72,6 @@ export class StartPreparationUseCase {
         `aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
       );
       updatedCurrentPreparationIssueCount++;
-      if (
-        maximumPreparingIssuesCount !== null &&
-        updatedCurrentPreparationIssueCount >= maximumPreparingIssuesCount
-      ) {
-        break;
-      }
     }
   };
   createWorkflowBockerIsues = (

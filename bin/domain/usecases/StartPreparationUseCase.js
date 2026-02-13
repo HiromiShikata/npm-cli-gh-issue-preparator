@@ -18,7 +18,8 @@ class StartPreparationUseCase {
                 .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
             let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
-            for (let i = 0; i < awaitingWorkspaceIssues.length; i++) {
+            for (let i = 0; i < awaitingWorkspaceIssues.length &&
+                updatedCurrentPreparationIssueCount < maximumPreparingIssuesCount; i++) {
                 const issue = awaitingWorkspaceIssues[i];
                 const blockerIssueUrls = repositoryBlockerIssues.find((blocker) => issue.url.includes(blocker.orgRepo))?.blockerIssueUrls || [];
                 if (blockerIssueUrls.length > 0 &&
@@ -36,10 +37,6 @@ class StartPreparationUseCase {
                     : '';
                 await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`);
                 updatedCurrentPreparationIssueCount++;
-                if (maximumPreparingIssuesCount !== null &&
-                    updatedCurrentPreparationIssueCount >= maximumPreparingIssuesCount) {
-                    break;
-                }
             }
         };
         this.createWorkflowBockerIsues = (storyObjectMap) => {
