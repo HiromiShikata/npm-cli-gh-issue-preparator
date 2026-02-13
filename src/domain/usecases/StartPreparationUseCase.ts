@@ -40,11 +40,8 @@ export class StartPreparationUseCase {
     ).length;
     let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
 
-    for (let i = 0; i < maximumPreparingIssuesCount; i++) {
-      const issue = awaitingWorkspaceIssues.pop();
-      if (!issue) {
-        break;
-      }
+    for (let i = 0; i < awaitingWorkspaceIssues.length; i++) {
+      const issue = awaitingWorkspaceIssues[i];
       const blockerIssueUrls: string[] =
         repositoryBlockerIssues.find((blocker) =>
           issue.url.includes(blocker.orgRepo),

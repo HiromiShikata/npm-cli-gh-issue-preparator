@@ -168,14 +168,14 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
     });
-    // Both awaiting issues should be updated (pop returns url2 first, then url1)
+    // Both awaiting issues should be updated (forward iteration: url1 first, then url2)
     expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
-      url: 'url2',
+      url: 'url1',
       status: 'Preparation',
     });
     expect(mockIssueRepository.update.mock.calls[1][0]).toMatchObject({
-      url: 'url1',
+      url: 'url2',
       status: 'Preparation',
     });
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
