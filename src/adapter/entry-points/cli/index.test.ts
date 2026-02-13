@@ -4,7 +4,19 @@ import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/
 
 jest.mock('../../../domain/usecases/StartPreparationUseCase');
 jest.mock('../../../domain/usecases/NotifyFinishedIssuePreparationUseCase');
-jest.mock('../../repositories/TowerDefenceIssueRepository');
+jest.mock('../../repositories/TowerDefenceIssueRepository', () => ({
+  TowerDefenceIssueRepository: jest.fn().mockImplementation(() => ({
+    getAllOpened: jest.fn(),
+    getStoryObjectMap: jest.fn(),
+  })),
+}));
+jest.mock('../../repositories/GraphqlIssueRepository', () => ({
+  GraphqlIssueRepository: jest.fn().mockImplementation(() => ({
+    get: jest.fn(),
+    update: jest.fn(),
+    findRelatedOpenPRs: jest.fn(),
+  })),
+}));
 jest.mock('../../repositories/TowerDefenceProjectRepository');
 jest.mock('../../repositories/GitHubIssueCommentRepository');
 jest.mock('../../repositories/NodeLocalCommandRunner');

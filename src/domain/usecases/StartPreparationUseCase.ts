@@ -1,13 +1,15 @@
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
 import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
+import { Issue } from '../entities/Issue';
+import { StoryObject, StoryObjectMap } from '../entities/StoryObjectMap';
 
 export class StartPreparationUseCase {
   constructor(
     private readonly projectRepository: Pick<ProjectRepository, 'getByUrl'>,
     private readonly issueRepository: Pick<
       IssueRepository,
-      'getAllOpened' | 'update'
+      'getAllOpened' | 'getStoryObjectMap' | 'update'
     >,
     private readonly localCommandRunner: LocalCommandRunner,
   ) {}
@@ -22,28 +24,36 @@ export class StartPreparationUseCase {
   }): Promise<void> => {
     const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
     const project = await this.projectRepository.getByUrl(params.projectUrl);
-
+    const storyObjectMap =
+      await this.issueRepository.getStoryObjectMap(project);
     const allIssues = await this.issueRepository.getAllOpened(project);
 
-    const awaitingWorkspaceIssues = allIssues.filter(
-      (issue) => issue.status === params.awaitingWorkspaceStatus,
-    );
+    const repositoryBlockerIssues =
+      this.createWorkflowBockerIsues(storyObjectMap);
+
+    const awaitingWorkspaceIssues: Issue[] = Array.from(storyObjectMap.values())
+      .map((storyObject) => storyObject.issues)
+      .flat()
+      .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
     const currentPreparationIssueCount = allIssues.filter(
       (issue) => issue.status === params.preparationStatus,
     ).length;
+    let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
 
-    for (
-      let i = currentPreparationIssueCount;
-      i <
-      Math.min(
-        maximumPreparingIssuesCount,
-        awaitingWorkspaceIssues.length + currentPreparationIssueCount,
-      );
-      i++
-    ) {
+    for (let i = 0; i < maximumPreparingIssuesCount; i++) {
       const issue = awaitingWorkspaceIssues.pop();
       if (!issue) {
         break;
+      }
+      const blockerIssueUrls: string[] =
+        repositoryBlockerIssues.find((blocker) =>
+          issue.url.includes(blocker.orgRepo),
+        )?.blockerIssueUrls || [];
+      if (
+        blockerIssueUrls.length > 0 &&
+        !blockerIssueUrls.includes(issue.url)
+      ) {
+        continue;
       }
       const agent =
         issue.labels
@@ -59,6 +69,44 @@ export class StartPreparationUseCase {
       await this.localCommandRunner.runCommand(
         `aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
       );
+      updatedCurrentPreparationIssueCount++;
+      if (
+        maximumPreparingIssuesCount !== null &&
+        updatedCurrentPreparationIssueCount >= maximumPreparingIssuesCount
+      ) {
+        break;
+      }
     }
+  };
+  createWorkflowBockerIsues = (
+    storyObjectMap: StoryObjectMap,
+  ): {
+    orgRepo: string;
+    blockerIssueUrls: string[];
+  }[] => {
+    const workflowBlockerStory: StoryObject['story']['name'][] = Array.from(
+      storyObjectMap.keys(),
+    ).filter((storyName) =>
+      storyName.toLowerCase().includes('workflow blocker'),
+    );
+    if (workflowBlockerStory.length === 0) {
+      return [];
+    }
+
+    const result: {
+      orgRepo: string;
+      blockerIssueUrls: string[];
+    }[] =
+      storyObjectMap
+        .get(workflowBlockerStory[0])
+        ?.issues.filter((issue) => issue.state === 'OPEN')
+        .map((issue) => {
+          const orgRepo = issue.url.split('/issues')[0].split('github.com/')[1];
+          return {
+            orgRepo,
+            blockerIssueUrls: [issue.url],
+          };
+        }) || [];
+    return result;
   };
 }

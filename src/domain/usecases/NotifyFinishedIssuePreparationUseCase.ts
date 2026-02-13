@@ -20,11 +20,21 @@ export class IllegalIssueStatusError extends Error {
     this.name = 'IllegalIssueStatusError';
   }
 }
+type RejectedReasonType =
+  | 'NO_REPORT'
+  | 'PULL_REQUEST_NOT_FOUND'
+  | 'MULTIPLE_PULL_REQUESTS_FOUND'
+  | 'PULL_REQUEST_CONFLICTED'
+  | 'ANY_CI_JOB_FAILED'
+  | 'ANY_REVIEW_COMMENT_NOT_RESOLVED';
 
 export class NotifyFinishedIssuePreparationUseCase {
   constructor(
     private readonly projectRepository: Pick<ProjectRepository, 'getByUrl'>,
-    private readonly issueRepository: Pick<IssueRepository, 'get' | 'update'>,
+    private readonly issueRepository: Pick<
+      IssueRepository,
+      'get' | 'update' | 'findRelatedOpenPRs'
+    >,
     private readonly issueCommentRepository: Pick<
       IssueCommentRepository,
       'getCommentsFromIssue' | 'createComment'
@@ -55,12 +65,13 @@ export class NotifyFinishedIssuePreparationUseCase {
     const comments =
       await this.issueCommentRepository.getCommentsFromIssue(issue);
 
-    const lastThreeComments = comments.slice(-params.thresholdForAutoReject);
+    const lastTargetComments = comments.slice(
+      -params.thresholdForAutoReject * 2,
+    );
     if (
-      lastThreeComments.length === params.thresholdForAutoReject &&
-      lastThreeComments.every((comment) =>
+      lastTargetComments.filter((comment) =>
         comment.content.startsWith('Auto Status Check: REJECTED'),
-      )
+      ).length >= params.thresholdForAutoReject
     ) {
       issue.status = params.awaitingQualityCheckStatus;
       await this.issueRepository.update(issue, project);
@@ -71,13 +82,33 @@ export class NotifyFinishedIssuePreparationUseCase {
       return;
     }
 
-    const rejectReason: 'NO_REPORT'[] = [];
+    const rejectedReasons: RejectedReasonType[] = [];
     const lastComment = comments[comments.length - 1];
     if (!lastComment || !lastComment.content.startsWith('From: ')) {
-      rejectReason.push('NO_REPORT');
+      rejectedReasons.push('NO_REPORT');
     }
 
-    if (rejectReason.length <= 0) {
+    const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(
+      issue.url,
+    );
+    if (relatedOpenPrs.length <= 0) {
+      rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
+    } else if (relatedOpenPrs.length > 1) {
+      rejectedReasons.push('MULTIPLE_PULL_REQUESTS_FOUND');
+    } else {
+      const pr = relatedOpenPrs[0];
+      if (pr.isConflicted) {
+        rejectedReasons.push('PULL_REQUEST_CONFLICTED');
+      }
+      if (!pr.isPassedAllCiJob) {
+        rejectedReasons.push('ANY_CI_JOB_FAILED');
+      }
+      if (!pr.isResolvedAllReviewComments) {
+        rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
+      }
+    }
+
+    if (rejectedReasons.length <= 0) {
       issue.status = params.awaitingQualityCheckStatus;
       await this.issueRepository.update(issue, project);
       return;
@@ -90,7 +121,7 @@ export class NotifyFinishedIssuePreparationUseCase {
       issue,
       `
 Auto Status Check: REJECTED
-${JSON.stringify(rejectReason)}`,
+${JSON.stringify(rejectedReasons)}`,
     );
   };
 }
