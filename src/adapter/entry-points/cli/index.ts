@@ -6,6 +6,7 @@ import { Command } from 'commander';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
 import { TowerDefenceIssueRepository } from '../../repositories/TowerDefenceIssueRepository';
+import { GraphqlIssueRepository } from '../../repositories/GraphqlIssueRepository';
 import { TowerDefenceProjectRepository } from '../../repositories/TowerDefenceProjectRepository';
 import { GitHubIssueCommentRepository } from '../../repositories/GitHubIssueCommentRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
@@ -68,15 +69,24 @@ program
       options.configFilePath,
       token,
     );
-    const issueRepository = new TowerDefenceIssueRepository(
+    const towerDefenceIssueRepository = new TowerDefenceIssueRepository(
       options.configFilePath,
       token,
     );
+    const graphqlIssueRepository = new GraphqlIssueRepository(token);
     const localCommandRunner = new NodeLocalCommandRunner();
 
     const useCase = new StartPreparationUseCase(
       projectRepository,
-      issueRepository,
+      {
+        getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(
+          towerDefenceIssueRepository,
+        ),
+        getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(
+          towerDefenceIssueRepository,
+        ),
+        update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+      },
       localCommandRunner,
     );
 
@@ -142,15 +152,12 @@ program
       options.configFilePath,
       token,
     );
-    const issueRepository = new TowerDefenceIssueRepository(
-      options.configFilePath,
-      token,
-    );
+    const graphqlIssueRepository = new GraphqlIssueRepository(token);
     const issueCommentRepository = new GitHubIssueCommentRepository(token);
 
     const useCase = new NotifyFinishedIssuePreparationUseCase(
       projectRepository,
-      issueRepository,
+      graphqlIssueRepository,
       issueCommentRepository,
     );
 
