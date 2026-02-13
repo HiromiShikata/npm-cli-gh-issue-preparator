@@ -30,20 +30,38 @@ class NotifyFinishedIssuePreparationUseCase {
                 throw new IllegalIssueStatusError(params.issueUrl, issue.status, params.preparationStatus);
             }
             const comments = await this.issueCommentRepository.getCommentsFromIssue(issue);
-            const lastThreeComments = comments.slice(-params.thresholdForAutoReject);
-            if (lastThreeComments.length === params.thresholdForAutoReject &&
-                lastThreeComments.every((comment) => comment.content.startsWith('Auto Status Check: REJECTED'))) {
+            const lastTargetComments = comments.slice(-params.thresholdForAutoReject * 2);
+            if (lastTargetComments.filter((comment) => comment.content.startsWith('Auto Status Check: REJECTED')).length >= params.thresholdForAutoReject) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
                 await this.issueCommentRepository.createComment(issue, `Failed to pass the check autimatically for ${params.thresholdForAutoReject} times`);
                 return;
             }
-            const rejectReason = [];
+            const rejectedReasons = [];
             const lastComment = comments[comments.length - 1];
             if (!lastComment || !lastComment.content.startsWith('From: ')) {
-                rejectReason.push('NO_REPORT');
+                rejectedReasons.push('NO_REPORT');
             }
-            if (rejectReason.length <= 0) {
+            const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(issue.url);
+            if (relatedOpenPrs.length <= 0) {
+                rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
+            }
+            else if (relatedOpenPrs.length > 1) {
+                rejectedReasons.push('MULTIPLE_PULL_REQUESTS_FOUND');
+            }
+            else {
+                const pr = relatedOpenPrs[0];
+                if (pr.isConflicted) {
+                    rejectedReasons.push('PULL_REQUEST_CONFLICTED');
+                }
+                if (!pr.isPassedAllCiJob) {
+                    rejectedReasons.push('ANY_CI_JOB_FAILED');
+                }
+                if (!pr.isResolvedAllReviewComments) {
+                    rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
+                }
+            }
+            if (rejectedReasons.length <= 0) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
                 return;
@@ -52,7 +70,7 @@ class NotifyFinishedIssuePreparationUseCase {
             await this.issueRepository.update(issue, project);
             await this.issueCommentRepository.createComment(issue, `
 Auto Status Check: REJECTED
-${JSON.stringify(rejectReason)}`);
+${JSON.stringify(rejectedReasons)}`);
         };
     }
 }

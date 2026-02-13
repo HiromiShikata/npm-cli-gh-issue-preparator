@@ -11,6 +11,7 @@ const commander_1 = require("commander");
 const StartPreparationUseCase_1 = require("../../../domain/usecases/StartPreparationUseCase");
 const NotifyFinishedIssuePreparationUseCase_1 = require("../../../domain/usecases/NotifyFinishedIssuePreparationUseCase");
 const TowerDefenceIssueRepository_1 = require("../../repositories/TowerDefenceIssueRepository");
+const GraphqlIssueRepository_1 = require("../../repositories/GraphqlIssueRepository");
 const TowerDefenceProjectRepository_1 = require("../../repositories/TowerDefenceProjectRepository");
 const GitHubIssueCommentRepository_1 = require("../../repositories/GitHubIssueCommentRepository");
 const NodeLocalCommandRunner_1 = require("../../repositories/NodeLocalCommandRunner");
@@ -36,9 +37,14 @@ program
         process.exit(1);
     }
     const projectRepository = new TowerDefenceProjectRepository_1.TowerDefenceProjectRepository(options.configFilePath, token);
-    const issueRepository = new TowerDefenceIssueRepository_1.TowerDefenceIssueRepository(options.configFilePath, token);
+    const towerDefenceIssueRepository = new TowerDefenceIssueRepository_1.TowerDefenceIssueRepository(options.configFilePath, token);
+    const graphqlIssueRepository = new GraphqlIssueRepository_1.GraphqlIssueRepository(token);
     const localCommandRunner = new NodeLocalCommandRunner_1.NodeLocalCommandRunner();
-    const useCase = new StartPreparationUseCase_1.StartPreparationUseCase(projectRepository, issueRepository, localCommandRunner);
+    const useCase = new StartPreparationUseCase_1.StartPreparationUseCase(projectRepository, {
+        getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(towerDefenceIssueRepository),
+        getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(towerDefenceIssueRepository),
+        update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+    }, localCommandRunner);
     let maximumPreparingIssuesCount = null;
     if (options.maximumPreparingIssuesCount !== undefined) {
         const parsedCount = Number(options.maximumPreparingIssuesCount);
@@ -76,9 +82,9 @@ program
         process.exit(1);
     }
     const projectRepository = new TowerDefenceProjectRepository_1.TowerDefenceProjectRepository(options.configFilePath, token);
-    const issueRepository = new TowerDefenceIssueRepository_1.TowerDefenceIssueRepository(options.configFilePath, token);
+    const graphqlIssueRepository = new GraphqlIssueRepository_1.GraphqlIssueRepository(token);
     const issueCommentRepository = new GitHubIssueCommentRepository_1.GitHubIssueCommentRepository(token);
-    const useCase = new NotifyFinishedIssuePreparationUseCase_1.NotifyFinishedIssuePreparationUseCase(projectRepository, issueRepository, issueCommentRepository);
+    const useCase = new NotifyFinishedIssuePreparationUseCase_1.NotifyFinishedIssuePreparationUseCase(projectRepository, graphqlIssueRepository, issueCommentRepository);
     let thresholdForAutoReject = 3;
     if (options.thresholdForAutoReject !== undefined) {
         const parsed = Number(options.thresholdForAutoReject);

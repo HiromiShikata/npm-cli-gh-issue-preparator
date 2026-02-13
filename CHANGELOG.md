@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.9.0...v1.10.0) (2026-02-13)
+
+
+### Features
+
+* **core:** add PR status checking to notify finished issue preparation ([72e5562](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/72e556229200a14669240e37da75da60a34530c0))
+
 # [1.9.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.8.0...v1.9.0) (2026-02-11)
 
 

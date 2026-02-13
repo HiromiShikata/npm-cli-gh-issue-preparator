@@ -9,14 +9,24 @@ class StartPreparationUseCase {
         this.run = async (params) => {
             const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
             const project = await this.projectRepository.getByUrl(params.projectUrl);
+            const storyObjectMap = await this.issueRepository.getStoryObjectMap(project);
             const allIssues = await this.issueRepository.getAllOpened(project);
-            const awaitingWorkspaceIssues = allIssues.filter((issue) => issue.status === params.awaitingWorkspaceStatus);
+            const repositoryBlockerIssues = this.createWorkflowBockerIsues(storyObjectMap);
+            const awaitingWorkspaceIssues = Array.from(storyObjectMap.values())
+                .map((storyObject) => storyObject.issues)
+                .flat()
+                .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
-            for (let i = currentPreparationIssueCount; i <
-                Math.min(maximumPreparingIssuesCount, awaitingWorkspaceIssues.length + currentPreparationIssueCount); i++) {
+            let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
+            for (let i = 0; i < maximumPreparingIssuesCount; i++) {
                 const issue = awaitingWorkspaceIssues.pop();
                 if (!issue) {
                     break;
+                }
+                const blockerIssueUrls = repositoryBlockerIssues.find((blocker) => issue.url.includes(blocker.orgRepo))?.blockerIssueUrls || [];
+                if (blockerIssueUrls.length > 0 &&
+                    !blockerIssueUrls.includes(issue.url)) {
+                    continue;
                 }
                 const agent = issue.labels
                     .find((label) => label.startsWith('category:'))
@@ -28,7 +38,29 @@ class StartPreparationUseCase {
                     ? `--logFilePath ${params.logFilePath}`
                     : '';
                 await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`);
+                updatedCurrentPreparationIssueCount++;
+                if (maximumPreparingIssuesCount !== null &&
+                    updatedCurrentPreparationIssueCount >= maximumPreparingIssuesCount) {
+                    break;
+                }
             }
+        };
+        this.createWorkflowBockerIsues = (storyObjectMap) => {
+            const workflowBlockerStory = Array.from(storyObjectMap.keys()).filter((storyName) => storyName.toLowerCase().includes('workflow blocker'));
+            if (workflowBlockerStory.length === 0) {
+                return [];
+            }
+            const result = storyObjectMap
+                .get(workflowBlockerStory[0])
+                ?.issues.filter((issue) => issue.state === 'OPEN')
+                .map((issue) => {
+                const orgRepo = issue.url.split('/issues')[0].split('github.com/')[1];
+                return {
+                    orgRepo,
+                    blockerIssueUrls: [issue.url],
+                };
+            }) || [];
+            return result;
         };
     }
 }
