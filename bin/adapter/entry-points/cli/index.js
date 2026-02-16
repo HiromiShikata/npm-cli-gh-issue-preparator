@@ -15,6 +15,7 @@ const GraphqlIssueRepository_1 = require("../../repositories/GraphqlIssueReposit
 const TowerDefenceProjectRepository_1 = require("../../repositories/TowerDefenceProjectRepository");
 const GitHubIssueCommentRepository_1 = require("../../repositories/GitHubIssueCommentRepository");
 const NodeLocalCommandRunner_1 = require("../../repositories/NodeLocalCommandRunner");
+const OauthAPIClaudeRepository_1 = require("../../repositories/OauthAPIClaudeRepository");
 const program = new commander_1.Command();
 exports.program = program;
 program
@@ -39,12 +40,13 @@ program
     const projectRepository = new TowerDefenceProjectRepository_1.TowerDefenceProjectRepository(options.configFilePath, token);
     const towerDefenceIssueRepository = new TowerDefenceIssueRepository_1.TowerDefenceIssueRepository(options.configFilePath, token);
     const graphqlIssueRepository = new GraphqlIssueRepository_1.GraphqlIssueRepository(token);
+    const claudeRepository = new OauthAPIClaudeRepository_1.OauthAPIClaudeRepository();
     const localCommandRunner = new NodeLocalCommandRunner_1.NodeLocalCommandRunner();
     const useCase = new StartPreparationUseCase_1.StartPreparationUseCase(projectRepository, {
         getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(towerDefenceIssueRepository),
         getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(towerDefenceIssueRepository),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
-    }, localCommandRunner);
+    }, claudeRepository, localCommandRunner);
     let maximumPreparingIssuesCount = null;
     if (options.maximumPreparingIssuesCount !== undefined) {
         const parsedCount = Number(options.maximumPreparingIssuesCount);

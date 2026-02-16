@@ -39,7 +39,7 @@ class NotifyFinishedIssuePreparationUseCase {
             }
             const rejectedReasons = [];
             const lastComment = comments[comments.length - 1];
-            if (!lastComment || !lastComment.content.startsWith('From: ')) {
+            if (!lastComment || lastComment.content.startsWith('Auto Status Check: ')) {
                 rejectedReasons.push('NO_REPORT');
             }
             const hasCategoryLabel = issue.labels.some((label) => label.startsWith('category:'));

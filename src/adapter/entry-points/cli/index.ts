@@ -10,6 +10,7 @@ import { GraphqlIssueRepository } from '../../repositories/GraphqlIssueRepositor
 import { TowerDefenceProjectRepository } from '../../repositories/TowerDefenceProjectRepository';
 import { GitHubIssueCommentRepository } from '../../repositories/GitHubIssueCommentRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
+import { OauthAPIClaudeRepository } from '../../repositories/OauthAPIClaudeRepository';
 
 type StartDaemonOptions = {
   projectUrl: string;
@@ -74,6 +75,7 @@ program
       token,
     );
     const graphqlIssueRepository = new GraphqlIssueRepository(token);
+    const claudeRepository = new OauthAPIClaudeRepository();
     const localCommandRunner = new NodeLocalCommandRunner();
 
     const useCase = new StartPreparationUseCase(
@@ -87,6 +89,7 @@ program
         ),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
       },
+      claudeRepository,
       localCommandRunner,
     );
 

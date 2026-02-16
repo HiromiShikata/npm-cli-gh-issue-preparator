@@ -3,6 +3,7 @@ import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
 import { Issue } from '../entities/Issue';
 import { StoryObject, StoryObjectMap } from '../entities/StoryObjectMap';
+import { ClaudeRepository } from './adapter-interfaces/ClaudeRepository';
 
 export class StartPreparationUseCase {
   constructor(
@@ -11,6 +12,7 @@ export class StartPreparationUseCase {
       IssueRepository,
       'getAllOpened' | 'getStoryObjectMap' | 'update'
     >,
+    private readonly claudeRepository: Pick<ClaudeRepository, 'getUsage'>,
     private readonly localCommandRunner: LocalCommandRunner,
   ) {}
 
@@ -22,6 +24,18 @@ export class StartPreparationUseCase {
     logFilePath?: string;
     maximumPreparingIssuesCount: number | null;
   }): Promise<void> => {
+    try {
+      const claudeUsages = await this.claudeRepository.getUsage();
+      if (claudeUsages.some((usage) => usage.utilizationPercentage > 90)) {
+        console.warn(
+          'Claude usage limit exceeded. Skipping starting preparation.',
+        );
+        return;
+      }
+    } catch (error) {
+      console.warn('Failed to check Claude usage:', error);
+    }
+
     const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
     const project = await this.projectRepository.getByUrl(params.projectUrl);
     const storyObjectMap =

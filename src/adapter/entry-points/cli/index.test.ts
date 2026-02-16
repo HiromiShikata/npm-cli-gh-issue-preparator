@@ -20,6 +20,12 @@ jest.mock('../../repositories/GraphqlIssueRepository', () => ({
 jest.mock('../../repositories/TowerDefenceProjectRepository');
 jest.mock('../../repositories/GitHubIssueCommentRepository');
 jest.mock('../../repositories/NodeLocalCommandRunner');
+jest.mock('../../repositories/OauthAPIClaudeRepository', () => ({
+  OauthAPIClaudeRepository: jest.fn().mockImplementation(() => ({
+    getUsage: jest.fn(),
+    isClaudeAvailable: jest.fn(),
+  })),
+}));
 
 describe('CLI', () => {
   const originalEnv = process.env;
