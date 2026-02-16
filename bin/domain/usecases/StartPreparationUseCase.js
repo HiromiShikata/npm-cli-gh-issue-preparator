@@ -2,11 +2,22 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StartPreparationUseCase = void 0;
 class StartPreparationUseCase {
-    constructor(projectRepository, issueRepository, localCommandRunner) {
+    constructor(projectRepository, issueRepository, claudeRepository, localCommandRunner) {
         this.projectRepository = projectRepository;
         this.issueRepository = issueRepository;
+        this.claudeRepository = claudeRepository;
         this.localCommandRunner = localCommandRunner;
         this.run = async (params) => {
+            try {
+                const claudeUsages = await this.claudeRepository.getUsage();
+                if (claudeUsages.some((usage) => usage.utilizationPercentage > 90)) {
+                    console.warn('Claude usage limit exceeded. Skipping starting preparation.');
+                    return;
+                }
+            }
+            catch (error) {
+                console.warn('Failed to check Claude usage:', error);
+            }
             const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
             const project = await this.projectRepository.getByUrl(params.projectUrl);
             const storyObjectMap = await this.issueRepository.getStoryObjectMap(project);

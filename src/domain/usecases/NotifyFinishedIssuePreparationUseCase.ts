@@ -84,7 +84,7 @@ export class NotifyFinishedIssuePreparationUseCase {
 
     const rejectedReasons: RejectedReasonType[] = [];
     const lastComment = comments[comments.length - 1];
-    if (!lastComment || !lastComment.content.startsWith('From: ')) {
+    if (!lastComment || lastComment.content.startsWith('Auto Status Check: ')) {
       rejectedReasons.push('NO_REPORT');
     }
 
