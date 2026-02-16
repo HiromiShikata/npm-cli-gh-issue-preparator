@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.10.2...v1.11.0) (2026-02-16)
+
+
+### Features
+
+* **core:** skip aw command if claude usage over threshold and fix report detection ([ffbca9e](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ffbca9ee4dd35889d0548ccdb9009f19a184142a))
+
 ## [1.10.2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.10.1...v1.10.2) (2026-02-16)
 
 
