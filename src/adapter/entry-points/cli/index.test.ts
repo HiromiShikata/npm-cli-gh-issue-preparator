@@ -26,6 +26,11 @@ jest.mock('../../repositories/OauthAPIClaudeRepository', () => ({
     isClaudeAvailable: jest.fn(),
   })),
 }));
+jest.mock('../../repositories/Xfce4TerminalCopilotRepository', () => ({
+  Xfce4TerminalCopilotRepository: jest.fn().mockImplementation(() => ({
+    run: jest.fn(),
+  })),
+}));
 
 describe('CLI', () => {
   const originalEnv = process.env;
@@ -332,10 +337,14 @@ describe('CLI', () => {
       'https://github.com/test/issue/1',
       '--preparationStatus',
       'Preparing',
+      '--awaitingAutoQualityCheckStatus',
+      'Awaiting Auto QC',
       '--awaitingWorkspaceStatus',
       'Awaiting Workspace',
       '--awaitingQualityCheckStatus',
       'Awaiting QC',
+      '--commentCountThreshold',
+      '5',
       '--configFilePath',
       '/path/to/config.yml',
     ]);
@@ -345,8 +354,10 @@ describe('CLI', () => {
       projectUrl: 'https://github.com/test/project',
       issueUrl: 'https://github.com/test/issue/1',
       preparationStatus: 'Preparing',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto QC',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting QC',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
   });
@@ -374,10 +385,14 @@ describe('CLI', () => {
       'https://github.com/test/issue/1',
       '--preparationStatus',
       'Preparing',
+      '--awaitingAutoQualityCheckStatus',
+      'Awaiting Auto QC',
       '--awaitingWorkspaceStatus',
       'Awaiting Workspace',
       '--awaitingQualityCheckStatus',
       'Awaiting QC',
+      '--commentCountThreshold',
+      '5',
       '--configFilePath',
       '/path/to/config.yml',
       '--thresholdForAutoReject',
@@ -389,8 +404,10 @@ describe('CLI', () => {
       projectUrl: 'https://github.com/test/project',
       issueUrl: 'https://github.com/test/issue/1',
       preparationStatus: 'Preparing',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto QC',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting QC',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 5,
     });
   });
@@ -414,10 +431,14 @@ describe('CLI', () => {
         'https://github.com/test/issue/1',
         '--preparationStatus',
         'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
         '--awaitingWorkspaceStatus',
         'Awaiting Workspace',
         '--awaitingQualityCheckStatus',
         'Awaiting QC',
+        '--commentCountThreshold',
+        '5',
         '--configFilePath',
         '/path/to/config.yml',
         '--thresholdForAutoReject',
@@ -427,6 +448,47 @@ describe('CLI', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Invalid value for --thresholdForAutoReject. It must be a positive integer.',
+    );
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+
+    consoleErrorSpy.mockRestore();
+    processExitSpy.mockRestore();
+  });
+
+  it('should exit with error for invalid commentCountThreshold', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    const processExitSpy = jest
+      .spyOn(process, 'exit')
+      .mockImplementation(() => {
+        throw new Error('process.exit called');
+      });
+
+    await expect(
+      program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--projectUrl',
+        'https://github.com/test/project',
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--preparationStatus',
+        'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
+        '--awaitingWorkspaceStatus',
+        'Awaiting Workspace',
+        '--awaitingQualityCheckStatus',
+        'Awaiting QC',
+        '--commentCountThreshold',
+        'abc',
+        '--configFilePath',
+        '/path/to/config.yml',
+      ]),
+    ).rejects.toThrow('process.exit called');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Invalid value for --commentCountThreshold. It must be a non-negative integer.',
     );
     expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -490,10 +552,14 @@ describe('CLI', () => {
         'https://github.com/test/issue/1',
         '--preparationStatus',
         'Preparing',
+        '--awaitingAutoQualityCheckStatus',
+        'Awaiting Auto QC',
         '--awaitingWorkspaceStatus',
         'Awaiting Workspace',
         '--awaitingQualityCheckStatus',
         'Awaiting QC',
+        '--commentCountThreshold',
+        '5',
         '--configFilePath',
         '/path/to/config.yml',
       ]),

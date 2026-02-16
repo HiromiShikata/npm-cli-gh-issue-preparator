@@ -1,4 +1,5 @@
 import { NotifyFinishedIssuePreparationUseCase } from './NotifyFinishedIssuePreparationUseCase';
+import { CopilotRepository } from './adapter-interfaces/CopilotRepository';
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
 import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { IssueCommentRepository } from './adapter-interfaces/IssueCommentRepository';
@@ -65,6 +66,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
   let mockProjectRepository: Mocked<ProjectRepository>;
   let mockIssueRepository: Mocked<IssueRepository>;
   let mockIssueCommentRepository: Mocked<IssueCommentRepository>;
+  let mockCopilotRepository: Mocked<CopilotRepository>;
   let mockProject: Project;
 
   beforeEach(() => {
@@ -90,14 +92,19 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createComment: jest.fn(),
     };
 
+    mockCopilotRepository = {
+      run: jest.fn(),
+    };
+
     useCase = new NotifyFinishedIssuePreparationUseCase(
       mockProjectRepository,
       mockIssueRepository,
       mockIssueCommentRepository,
+      mockCopilotRepository,
     );
   });
 
-  it('should update issue status from Preparation to Awaiting Quality Check when last comment starts with From:', async () => {
+  it('should update issue status from Preparation to Awaiting Auto Quality Check and call Copilot when all checks pass', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
@@ -122,8 +129,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -131,10 +140,56 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     expect(mockIssueRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://github.com/user/repo/issues/1',
-        status: 'Awaiting Quality Check',
+        status: 'Awaiting Auto Quality Check',
       }),
       mockProject,
     );
+    expect(mockCopilotRepository.run).toHaveBeenCalledTimes(1);
+    expect(mockCopilotRepository.run).toHaveBeenCalledWith(
+      expect.stringContaining('https://github.com/user/repo/issues/1'),
+      'gpt-5-mini',
+      'Test Issue',
+    );
+  });
+
+  it('should include correct parameters in Copilot prompt', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 10,
+      thresholdForAutoReject: 3,
+    });
+
+    const promptArg = mockCopilotRepository.run.mock.calls[0][0];
+    expect(promptArg).toContain('Awaiting Quality Check');
+    expect(promptArg).toContain('Preparation');
+    expect(promptArg).toContain('10');
+    expect(promptArg).toContain('project-1');
+    expect(promptArg).toContain('field-1');
   });
 
   it('should throw IssueNotFoundError when issue does not exist', async () => {
@@ -146,13 +201,17 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         projectUrl: 'https://github.com/users/user/projects/1',
         issueUrl: 'https://github.com/user/repo/issues/999',
         preparationStatus: 'Preparation',
+        awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        commentCountThreshold: 5,
         thresholdForAutoReject: 3,
       }),
     ).rejects.toThrow(
       'Issue not found: https://github.com/user/repo/issues/999',
     );
+
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should throw IllegalIssueStatusError when issue status is not Preparation', async () => {
@@ -169,13 +228,17 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         projectUrl: 'https://github.com/users/user/projects/1',
         issueUrl: 'https://github.com/user/repo/issues/1',
         preparationStatus: 'Preparation',
+        awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        commentCountThreshold: 5,
         thresholdForAutoReject: 3,
       }),
     ).rejects.toThrow(
       'Illegal issue status for https://github.com/user/repo/issues/1: expected Preparation, but got Done',
     );
+
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should reject and set status to Awaiting Workspace when last comment starts with Auto Status Check:', async () => {
@@ -205,8 +268,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -222,6 +287,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('Auto Status Check: REJECTED'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should pass when last comment does not start with Auto Status Check or From:', async () => {
@@ -249,17 +315,20 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
     expect(mockIssueRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: 'Awaiting Quality Check',
+        status: 'Awaiting Auto Quality Check',
       }),
       mockProject,
     );
+    expect(mockCopilotRepository.run).toHaveBeenCalledTimes(1);
   });
 
   it('should reject and set status to Awaiting Workspace when no comments exist', async () => {
@@ -285,8 +354,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -297,6 +368,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockProject,
     );
     expect(mockIssueCommentRepository.createComment).toHaveBeenCalled();
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should auto-escalate to Awaiting Quality Check after threshold rejections', async () => {
@@ -317,8 +389,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -336,6 +410,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         'Failed to pass the check autimatically for 3 times',
       ),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should not auto-escalate when rejections are below threshold', async () => {
@@ -364,8 +439,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -394,8 +471,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -411,6 +490,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('PULL_REQUEST_NOT_FOUND'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should reject when multiple PRs are found', async () => {
@@ -445,8 +525,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -462,6 +544,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('MULTIPLE_PULL_REQUESTS_FOUND'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should reject when PR is conflicted', async () => {
@@ -489,8 +572,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -506,6 +591,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('PULL_REQUEST_CONFLICTED'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should reject when CI job failed', async () => {
@@ -533,8 +619,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -550,6 +638,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('ANY_CI_JOB_FAILED'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
   it('should reject when review comments are not resolved', async () => {
@@ -577,8 +666,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -594,9 +685,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('ANY_REVIEW_COMMENT_NOT_RESOLVED'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 
-  it('should skip PR checks and update to Awaiting Quality Check when issue has category label', async () => {
+  it('should skip PR checks and update to Awaiting Auto Quality Check when issue has category label', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
@@ -613,18 +705,21 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
     expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
     expect(mockIssueRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: 'Awaiting Quality Check',
+        status: 'Awaiting Auto Quality Check',
       }),
       mockProject,
     );
+    expect(mockCopilotRepository.run).toHaveBeenCalledTimes(1);
   });
 
   it('should still check for report comment even when issue has category label', async () => {
@@ -646,8 +741,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       projectUrl: 'https://github.com/users/user/projects/1',
       issueUrl: 'https://github.com/user/repo/issues/1',
       preparationStatus: 'Preparation',
+      awaitingAutoQualityCheckStatus: 'Awaiting Auto Quality Check',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      commentCountThreshold: 5,
       thresholdForAutoReject: 3,
     });
 
@@ -664,5 +761,6 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       expect.stringContaining('NO_REPORT'),
     );
+    expect(mockCopilotRepository.run).not.toHaveBeenCalled();
   });
 });

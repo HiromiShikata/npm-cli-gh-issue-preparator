@@ -11,6 +11,7 @@ import { TowerDefenceProjectRepository } from '../../repositories/TowerDefencePr
 import { GitHubIssueCommentRepository } from '../../repositories/GitHubIssueCommentRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
 import { OauthAPIClaudeRepository } from '../../repositories/OauthAPIClaudeRepository';
+import { Xfce4TerminalCopilotRepository } from '../../repositories/Xfce4TerminalCopilotRepository';
 
 type StartDaemonOptions = {
   projectUrl: string;
@@ -26,8 +27,10 @@ type NotifyFinishedOptions = {
   projectUrl: string;
   issueUrl: string;
   preparationStatus: string;
+  awaitingAutoQualityCheckStatus: string;
   awaitingWorkspaceStatus: string;
   awaitingQualityCheckStatus: string;
+  commentCountThreshold: string;
   thresholdForAutoReject?: string;
   configFilePath: string;
 };
@@ -133,8 +136,16 @@ program
     'Status for issues awaiting workspace',
   )
   .requiredOption(
+    '--awaitingAutoQualityCheckStatus <status>',
+    'Status for issues awaiting auto quality check',
+  )
+  .requiredOption(
     '--awaitingQualityCheckStatus <status>',
     'Status for issues awaiting quality check',
+  )
+  .requiredOption(
+    '--commentCountThreshold <count>',
+    'Threshold of comment count to trigger manual quality check',
   )
   .requiredOption(
     '--configFilePath <path>',
@@ -151,17 +162,31 @@ program
       process.exit(1);
     }
 
+    const commentCountThreshold = Number(options.commentCountThreshold);
+    if (
+      !Number.isFinite(commentCountThreshold) ||
+      !Number.isInteger(commentCountThreshold) ||
+      commentCountThreshold < 0
+    ) {
+      console.error(
+        'Invalid value for --commentCountThreshold. It must be a non-negative integer.',
+      );
+      process.exit(1);
+    }
+
     const projectRepository = new TowerDefenceProjectRepository(
       options.configFilePath,
       token,
     );
     const graphqlIssueRepository = new GraphqlIssueRepository(token);
     const issueCommentRepository = new GitHubIssueCommentRepository(token);
+    const copilotRepository = new Xfce4TerminalCopilotRepository();
 
     const useCase = new NotifyFinishedIssuePreparationUseCase(
       projectRepository,
       graphqlIssueRepository,
       issueCommentRepository,
+      copilotRepository,
     );
 
     let thresholdForAutoReject = 3;
@@ -184,8 +209,10 @@ program
       projectUrl: options.projectUrl,
       issueUrl: options.issueUrl,
       preparationStatus: options.preparationStatus,
+      awaitingAutoQualityCheckStatus: options.awaitingAutoQualityCheckStatus,
       awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
       awaitingQualityCheckStatus: options.awaitingQualityCheckStatus,
+      commentCountThreshold,
       thresholdForAutoReject,
     });
   });

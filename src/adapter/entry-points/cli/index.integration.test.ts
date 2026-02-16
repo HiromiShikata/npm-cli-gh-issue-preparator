@@ -67,7 +67,7 @@ workingReport:
 
       try {
         execSync(
-          `npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl ${projectUrl} --issueUrl ${notifyFinishedIssueUrl} --preparationStatus "Preparation" --awaitingWorkspaceStatus "Awaiting workspace" --awaitingQualityCheckStatus "Awaiting quality check" --configFilePath ${configFilePath} 2>&1`,
+          `npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl ${projectUrl} --issueUrl ${notifyFinishedIssueUrl} --preparationStatus "Preparation" --awaitingAutoQualityCheckStatus "Awaiting auto quality check" --awaitingWorkspaceStatus "Awaiting workspace" --awaitingQualityCheckStatus "Awaiting quality check" --commentCountThreshold 5 --configFilePath ${configFilePath} 2>&1`,
           { encoding: 'utf-8', timeout: 600000 },
         );
       } catch (err) {
