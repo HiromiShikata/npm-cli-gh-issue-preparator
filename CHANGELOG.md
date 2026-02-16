@@ -1,3 +1,10 @@
+## [1.10.2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.10.1...v1.10.2) (2026-02-16)
+
+
+### Bug Fixes
+
+* **readme:** update section title from 'Start daemon' to 'Start preparation'fix ([6fbd069](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/6fbd069cf531a021e48ece7f0ac85f8cdeb183c1))
+
 ## [1.10.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.10.0...v1.10.1) (2026-02-13)
 
 
