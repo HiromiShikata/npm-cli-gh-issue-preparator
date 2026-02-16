@@ -28,7 +28,7 @@ Commands:
 
 Here's a quick example to illustrate its usage:
 
-### Start daemon
+### Start preparation
 
 ```
 npx npm-cli-gh-issue-preparator startDaemon --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"
