@@ -65,6 +65,7 @@ type TimelineItem = {
     number?: number;
     state?: string;
     mergeable?: string;
+    mergeStateStatus?: string;
     baseRefName?: string;
     headRefName?: string;
     commits?: {
@@ -511,6 +512,7 @@ export class GraphqlIssueRepository implements Pick<
                       number
                       state
                       mergeable
+                      mergeStateStatus
                       baseRefName
                       headRefName
                       commits(last: 1) {
@@ -599,7 +601,9 @@ export class GraphqlIssueRepository implements Pick<
 
         const lastCommit = pr.commits?.nodes[0]?.commit;
         const ciState = lastCommit?.statusCheckRollup?.state;
-        const isPassedAllCiJob = ciState === 'SUCCESS';
+        const mergeStateStatus = pr.mergeStateStatus;
+        const isPassedAllCiJob =
+          ciState === 'SUCCESS' && mergeStateStatus !== 'BLOCKED';
 
         const reviewThreads = pr.reviewThreads?.nodes || [];
         const isResolvedAllReviewComments =

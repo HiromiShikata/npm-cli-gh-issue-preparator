@@ -39,11 +39,11 @@ class NotifyFinishedIssuePreparationUseCase {
             }
             const rejectedReasons = [];
             const lastComment = comments[comments.length - 1];
-            if (!lastComment || lastComment.content.startsWith('Auto Status Check: ')) {
-                rejectedReasons.push('NO_REPORT');
+            if (!lastComment || !lastComment.content.startsWith('From:')) {
+                rejectedReasons.push('NO_REPORT_FROM_AGENT_BOT');
             }
-            const hasCategoryLabel = issue.labels.some((label) => label.startsWith('category:'));
-            if (!hasCategoryLabel) {
+            const categoryLabels = issue.labels.filter((label) => label.startsWith('category:'));
+            if (categoryLabels.length <= 0 || categoryLabels.includes('category:e2e')) {
                 const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(issue.url);
                 if (relatedOpenPrs.length <= 0) {
                     rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
@@ -57,7 +57,7 @@ class NotifyFinishedIssuePreparationUseCase {
                         rejectedReasons.push('PULL_REQUEST_CONFLICTED');
                     }
                     if (!pr.isPassedAllCiJob) {
-                        rejectedReasons.push('ANY_CI_JOB_FAILED');
+                        rejectedReasons.push('ANY_CI_JOB_FAILED_OR_IN_PROGRESS');
                     }
                     if (!pr.isResolvedAllReviewComments) {
                         rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
@@ -71,9 +71,7 @@ class NotifyFinishedIssuePreparationUseCase {
             }
             issue.status = params.awaitingWorkspaceStatus;
             await this.issueRepository.update(issue, project);
-            await this.issueCommentRepository.createComment(issue, `
-Auto Status Check: REJECTED
-${JSON.stringify(rejectedReasons)}`);
+            await this.issueCommentRepository.createComment(issue, `Auto Status Check: REJECTED\n${rejectedReasons.map((v) => `- ${v}`).join('\n')}`);
         };
     }
 }

@@ -459,6 +459,7 @@ describe('GraphqlIssueRepository', () => {
                         number: 1,
                         state: 'OPEN',
                         mergeable: 'MERGEABLE',
+                        mergeStateStatus: 'CLEAN',
                         baseRefName: 'main',
                         headRefName: 'feature',
                         commits: {
@@ -998,6 +999,54 @@ describe('GraphqlIssueRepository', () => {
                             {
                               commit: {
                                 statusCheckRollup: { state: 'FAILURE' },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+    });
+
+    it('should return isPassedAllCiJob as false when mergeStateStatus is BLOCKED even with SUCCESS CI', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        mergeStateStatus: 'BLOCKED',
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: { state: 'SUCCESS' },
                               },
                             },
                           ],

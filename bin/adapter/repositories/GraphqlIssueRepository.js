@@ -317,6 +317,7 @@ class GraphqlIssueRepository {
                       number
                       state
                       mergeable
+                      mergeStateStatus
                       baseRefName
                       headRefName
                       commits(last: 1) {
@@ -391,7 +392,8 @@ class GraphqlIssueRepository {
                 const isConflicted = pr.mergeable === 'CONFLICTING';
                 const lastCommit = pr.commits?.nodes[0]?.commit;
                 const ciState = lastCommit?.statusCheckRollup?.state;
-                const isPassedAllCiJob = ciState === 'SUCCESS';
+                const mergeStateStatus = pr.mergeStateStatus;
+                const isPassedAllCiJob = ciState === 'SUCCESS' && mergeStateStatus !== 'BLOCKED';
                 const reviewThreads = pr.reviewThreads?.nodes || [];
                 const isResolvedAllReviewComments = reviewThreads.length === 0 ||
                     reviewThreads.every((thread) => thread.isResolved);

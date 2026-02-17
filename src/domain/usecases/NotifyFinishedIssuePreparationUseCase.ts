@@ -21,11 +21,11 @@ export class IllegalIssueStatusError extends Error {
   }
 }
 type RejectedReasonType =
-  | 'NO_REPORT'
+  | 'NO_REPORT_FROM_AGENT_BOT'
   | 'PULL_REQUEST_NOT_FOUND'
   | 'MULTIPLE_PULL_REQUESTS_FOUND'
   | 'PULL_REQUEST_CONFLICTED'
-  | 'ANY_CI_JOB_FAILED'
+  | 'ANY_CI_JOB_FAILED_OR_IN_PROGRESS'
   | 'ANY_REVIEW_COMMENT_NOT_RESOLVED';
 
 export class NotifyFinishedIssuePreparationUseCase {
@@ -84,14 +84,14 @@ export class NotifyFinishedIssuePreparationUseCase {
 
     const rejectedReasons: RejectedReasonType[] = [];
     const lastComment = comments[comments.length - 1];
-    if (!lastComment || lastComment.content.startsWith('Auto Status Check: ')) {
-      rejectedReasons.push('NO_REPORT');
+    if (!lastComment || !lastComment.content.startsWith('From:')) {
+      rejectedReasons.push('NO_REPORT_FROM_AGENT_BOT');
     }
 
-    const hasCategoryLabel = issue.labels.some((label) =>
+    const categoryLabels = issue.labels.filter((label) =>
       label.startsWith('category:'),
     );
-    if (!hasCategoryLabel) {
+    if (categoryLabels.length <= 0 || categoryLabels.includes('category:e2e')) {
       const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(
         issue.url,
       );
@@ -105,7 +105,7 @@ export class NotifyFinishedIssuePreparationUseCase {
           rejectedReasons.push('PULL_REQUEST_CONFLICTED');
         }
         if (!pr.isPassedAllCiJob) {
-          rejectedReasons.push('ANY_CI_JOB_FAILED');
+          rejectedReasons.push('ANY_CI_JOB_FAILED_OR_IN_PROGRESS');
         }
         if (!pr.isResolvedAllReviewComments) {
           rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
@@ -124,9 +124,7 @@ export class NotifyFinishedIssuePreparationUseCase {
 
     await this.issueCommentRepository.createComment(
       issue,
-      `
-Auto Status Check: REJECTED
-${JSON.stringify(rejectedReasons)}`,
+      `Auto Status Check: REJECTED\n${rejectedReasons.map((v) => `- ${v}`).join('\n')}`,
     );
   };
 }
