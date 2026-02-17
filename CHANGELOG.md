@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.11.0...v1.12.0) (2026-02-17)
+
+
+### Features
+
+* **core:** change ANY_CI_JOB_FAILED to ANY_CI_JOB_FAILED_OR_IN_PROGRESS ([9e3cb16](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/9e3cb163b88e0c069edaaadf67cd23ceee41ff9d))
+
 # [1.11.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.10.2...v1.11.0) (2026-02-16)
 
 
