@@ -158,5 +158,14 @@ describe('GraphqlIssueRepository Integration Tests', () => {
 
       expect(result).toHaveLength(1);
     });
+
+    it('should return isPassedAllCiJob as false for issue with PR that has not passed all required CI', async () => {
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/HiromiShikata/test-repository/issues/1967',
+      );
+
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      expect(result.some((pr) => pr.isPassedAllCiJob === false)).toBe(true);
+    });
   });
 });

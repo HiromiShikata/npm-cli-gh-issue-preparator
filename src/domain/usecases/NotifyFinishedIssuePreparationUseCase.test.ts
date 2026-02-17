@@ -224,7 +224,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
-  it('should pass when last comment does not start with Auto Status Check or From:', async () => {
+  it('should reject when last comment does not start with From:', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
@@ -256,9 +256,15 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
 
     expect(mockIssueRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: 'Awaiting Quality Check',
+        status: 'Awaiting Workspace',
       }),
       mockProject,
+    );
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('NO_REPORT_FROM_AGENT_BOT'),
     );
   });
 
@@ -548,7 +554,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       expect.objectContaining({
         url: 'https://github.com/user/repo/issues/1',
       }),
-      expect.stringContaining('ANY_CI_JOB_FAILED'),
+      expect.stringContaining('ANY_CI_JOB_FAILED_OR_IN_PROGRESS'),
     );
   });
 
@@ -627,6 +633,46 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should check PRs when issue has category:e2e label', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      labels: ['category:e2e'],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueRepository.findRelatedOpenPRs).toHaveBeenCalled();
+    expect(mockIssueRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
   it('should still check for report comment even when issue has category label', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
@@ -662,7 +708,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       expect.objectContaining({
         url: 'https://github.com/user/repo/issues/1',
       }),
-      expect.stringContaining('NO_REPORT'),
+      expect.stringContaining('NO_REPORT_FROM_AGENT_BOT'),
     );
   });
 });
