@@ -383,6 +383,88 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should not auto-escalate when retry comment exists even if threshold met', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
+      createMockComment({ content: 'retry' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueRepository.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
+  it('should handle case-insensitive retry comment', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
+      createMockComment({ content: 'Retry please' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueRepository.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
   it('should reject when PR is not found', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
