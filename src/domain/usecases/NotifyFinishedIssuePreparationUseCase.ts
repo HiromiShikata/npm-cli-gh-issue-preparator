@@ -71,7 +71,10 @@ export class NotifyFinishedIssuePreparationUseCase {
     if (
       lastTargetComments.filter((comment) =>
         comment.content.startsWith('Auto Status Check: REJECTED'),
-      ).length >= params.thresholdForAutoReject
+      ).length >= params.thresholdForAutoReject &&
+      !lastTargetComments.some((comment) =>
+        comment.content.toLowerCase().startsWith('retry'),
+      )
     ) {
       issue.status = params.awaitingQualityCheckStatus;
       await this.issueRepository.update(issue, project);

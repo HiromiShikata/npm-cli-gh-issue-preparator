@@ -31,7 +31,8 @@ class NotifyFinishedIssuePreparationUseCase {
             }
             const comments = await this.issueCommentRepository.getCommentsFromIssue(issue);
             const lastTargetComments = comments.slice(-params.thresholdForAutoReject * 2);
-            if (lastTargetComments.filter((comment) => comment.content.startsWith('Auto Status Check: REJECTED')).length >= params.thresholdForAutoReject) {
+            if (lastTargetComments.filter((comment) => comment.content.startsWith('Auto Status Check: REJECTED')).length >= params.thresholdForAutoReject &&
+                !lastTargetComments.some((comment) => comment.content.toLowerCase().startsWith('retry'))) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
                 await this.issueCommentRepository.createComment(issue, `Failed to pass the check autimatically for ${params.thresholdForAutoReject} times`);
