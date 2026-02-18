@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.12.0...v1.13.0) (2026-02-18)
+
+
+### Features
+
+* **core:** add retry comment to skip auto-escalation ([38c3302](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/38c330264356833a28b8364db937140b152eea62))
+
 # [1.12.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.11.0...v1.12.0) (2026-02-17)
 
 
