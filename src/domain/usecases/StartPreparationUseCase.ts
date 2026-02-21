@@ -54,6 +54,8 @@ export class StartPreparationUseCase {
     ).length;
     let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
 
+    const currentHour = new Date().getHours();
+
     for (
       let i = 0;
       i < awaitingWorkspaceIssues.length &&
@@ -69,6 +71,12 @@ export class StartPreparationUseCase {
         blockerIssueUrls.length > 0 &&
         !blockerIssueUrls.includes(issue.url)
       ) {
+        continue;
+      }
+      if (issue.dependedIssueUrls.length > 0) {
+        continue;
+      }
+      if (issue.nextActionHour !== null && currentHour < issue.nextActionHour) {
         continue;
       }
       const agent =

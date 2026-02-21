@@ -29,12 +29,19 @@ class StartPreparationUseCase {
                 .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
             let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
+            const currentHour = new Date().getHours();
             for (let i = 0; i < awaitingWorkspaceIssues.length &&
                 updatedCurrentPreparationIssueCount < maximumPreparingIssuesCount; i++) {
                 const issue = awaitingWorkspaceIssues[i];
                 const blockerIssueUrls = repositoryBlockerIssues.find((blocker) => issue.url.includes(blocker.orgRepo))?.blockerIssueUrls || [];
                 if (blockerIssueUrls.length > 0 &&
                     !blockerIssueUrls.includes(issue.url)) {
+                    continue;
+                }
+                if (issue.dependedIssueUrls.length > 0) {
+                    continue;
+                }
+                if (issue.nextActionHour !== null && currentHour < issue.nextActionHour) {
                     continue;
                 }
                 const agent = issue.labels
