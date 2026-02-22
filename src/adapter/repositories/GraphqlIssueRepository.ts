@@ -601,9 +601,7 @@ export class GraphqlIssueRepository implements Pick<
 
         const lastCommit = pr.commits?.nodes[0]?.commit;
         const ciState = lastCommit?.statusCheckRollup?.state;
-        const mergeStateStatus = pr.mergeStateStatus;
-        const isPassedAllCiJob =
-          ciState === 'SUCCESS' && mergeStateStatus !== 'BLOCKED';
+        const isPassedAllCiJob = ciState === 'SUCCESS';
 
         const reviewThreads = pr.reviewThreads?.nodes || [];
         const isResolvedAllReviewComments =
