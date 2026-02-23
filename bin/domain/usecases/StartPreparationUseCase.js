@@ -29,7 +29,10 @@ class StartPreparationUseCase {
                 .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
             let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
-            const currentHour = new Date().getHours();
+            const now = new Date();
+            const currentHour = now.getHours();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const tomorrowStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + 1);
             for (let i = 0; i < awaitingWorkspaceIssues.length &&
                 updatedCurrentPreparationIssueCount < maximumPreparingIssuesCount; i++) {
                 const issue = awaitingWorkspaceIssues[i];
@@ -39,6 +42,10 @@ class StartPreparationUseCase {
                     continue;
                 }
                 if (issue.dependedIssueUrls.length > 0) {
+                    continue;
+                }
+                if (issue.nextActionDate !== null &&
+                    issue.nextActionDate >= tomorrowStart) {
                     continue;
                 }
                 if (issue.nextActionHour !== null && currentHour < issue.nextActionHour) {

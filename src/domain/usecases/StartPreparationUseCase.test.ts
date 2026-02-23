@@ -798,6 +798,152 @@ describe('StartPreparationUseCase', () => {
     }
   });
 
+  it('should skip issues where nextActionDate is tomorrow or more future', async () => {
+    jest.useFakeTimers();
+    try {
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+
+      const issueWithFutureNextActionDate = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        title: 'Issue with future next action date',
+        labels: [],
+        status: 'Awaiting Workspace',
+        nextActionDate: new Date('2024-01-16'),
+      });
+      const issueWithoutNextActionDate = createMockIssue({
+        url: 'https://github.com/user/repo/issues/2',
+        title: 'Issue without next action date',
+        labels: [],
+        status: 'Awaiting Workspace',
+        nextActionDate: null,
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+        createMockStoryObjectMap([
+          issueWithFutureNextActionDate,
+          issueWithoutNextActionDate,
+        ]),
+      );
+      mockIssueRepository.getAllOpened.mockResolvedValueOnce([
+        issueWithFutureNextActionDate,
+        issueWithoutNextActionDate,
+      ]);
+      mockLocalCommandRunner.runCommand.mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      await useCase.run({
+        projectUrl: 'https://github.com/user/repo',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        preparationStatus: 'Preparation',
+        defaultAgentName: 'agent1',
+        maximumPreparingIssuesCount: null,
+      });
+
+      expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
+      expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+        url: 'https://github.com/user/repo/issues/2',
+        status: 'Preparation',
+      });
+      expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('should not skip issues where nextActionDate is today', async () => {
+    jest.useFakeTimers();
+    try {
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+
+      const issueWithTodayNextActionDate = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        title: 'Issue with today next action date',
+        labels: [],
+        status: 'Awaiting Workspace',
+        nextActionDate: new Date('2024-01-15'),
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+        createMockStoryObjectMap([issueWithTodayNextActionDate]),
+      );
+      mockIssueRepository.getAllOpened.mockResolvedValueOnce([
+        issueWithTodayNextActionDate,
+      ]);
+      mockLocalCommandRunner.runCommand.mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      await useCase.run({
+        projectUrl: 'https://github.com/user/repo',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        preparationStatus: 'Preparation',
+        defaultAgentName: 'agent1',
+        maximumPreparingIssuesCount: null,
+      });
+
+      expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
+      expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+      expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('should not skip issues where nextActionDate is in the past', async () => {
+    jest.useFakeTimers();
+    try {
+      jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+
+      const issueWithPastNextActionDate = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        title: 'Issue with past next action date',
+        labels: [],
+        status: 'Awaiting Workspace',
+        nextActionDate: new Date('2024-01-14'),
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+        createMockStoryObjectMap([issueWithPastNextActionDate]),
+      );
+      mockIssueRepository.getAllOpened.mockResolvedValueOnce([
+        issueWithPastNextActionDate,
+      ]);
+      mockLocalCommandRunner.runCommand.mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      await useCase.run({
+        projectUrl: 'https://github.com/user/repo',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        preparationStatus: 'Preparation',
+        defaultAgentName: 'agent1',
+        maximumPreparingIssuesCount: null,
+      });
+
+      expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
+      expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+      expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('should not skip issues where nextActionHour is in the past or current hour', async () => {
     jest.useFakeTimers();
     try {
