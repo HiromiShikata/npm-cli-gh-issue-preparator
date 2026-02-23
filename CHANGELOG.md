@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.14.0...v1.15.0) (2026-02-23)
+
+
+### Features
+
+* **core:** skip aw command when issue nextActionDate is tomorrow or future ([610b6e7](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/610b6e74f7e31d3746943df1bcbc73754db9f3e7))
+
 # [1.14.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.13.0...v1.14.0) (2026-02-23)
 
 
