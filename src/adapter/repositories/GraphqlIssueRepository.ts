@@ -121,38 +121,41 @@ function isIssueTimelineResponse(
   return true;
 }
 
+type IssueOrPullRequestData = {
+  number: number;
+  title: string;
+  state: string;
+  body: string;
+  createdAt: string;
+  url: string;
+  assignees: {
+    nodes: Array<{
+      login: string;
+    }>;
+  };
+  labels: {
+    nodes: Array<{
+      name: string;
+    }>;
+  };
+  projectItems?: {
+    nodes: Array<{
+      id: string;
+      project?: {
+        number: number;
+      };
+      fieldValueByName?: {
+        name?: string;
+      } | null;
+    }>;
+  };
+};
+
 type IssueResponse = {
   data?: {
     repository?: {
-      issue?: {
-        number: number;
-        title: string;
-        state: string;
-        body: string;
-        createdAt: string;
-        url: string;
-        assignees: {
-          nodes: Array<{
-            login: string;
-          }>;
-        };
-        labels: {
-          nodes: Array<{
-            name: string;
-          }>;
-        };
-        projectItems?: {
-          nodes: Array<{
-            id: string;
-            project?: {
-              number: number;
-            };
-            fieldValueByName?: {
-              name?: string;
-            } | null;
-          }>;
-        };
-      };
+      issue?: IssueOrPullRequestData;
+      pullRequest?: IssueOrPullRequestData;
     };
   };
 };
@@ -169,13 +172,14 @@ export class GraphqlIssueRepository implements Pick<
   constructor(private readonly token: string) {}
 
   async get(issueUrl: string, project: Project): Promise<Issue | null> {
-    const { owner, repo, issueNumber } = this.parseIssueUrl(issueUrl);
+    const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issueUrl);
     const { projectNumber } = this.parseProjectUrl(project.url);
 
+    const entityType = isPr ? 'pullRequest' : 'issue';
     const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!) {
         repository(owner: $owner, name: $repo) {
-          issue(number: $issueNumber) {
+          ${entityType}(number: $issueNumber) {
             number
             title
             state
@@ -237,7 +241,9 @@ export class GraphqlIssueRepository implements Pick<
       throw new Error('Unexpected response shape when fetching issue');
     }
 
-    const issueData = responseData.data?.repository?.issue;
+    const issueData = isPr
+      ? responseData.data?.repository?.pullRequest
+      : responseData.data?.repository?.issue;
     if (!issueData) {
       return null;
     }
@@ -272,7 +278,7 @@ export class GraphqlIssueRepository implements Pick<
       repo: repo,
       body: issueData.body,
       itemId: projectItem?.id ?? '',
-      isPr: false,
+      isPr,
       isInProgress: false,
       isClosed: issueData.state === 'CLOSED',
       createdAt: new Date(issueData.createdAt),
@@ -475,9 +481,10 @@ export class GraphqlIssueRepository implements Pick<
     owner: string;
     repo: string;
     issueNumber: number;
+    isPr: boolean;
   } {
     const urlMatch = issueUrl.match(
-      /github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/,
+      /github\.com\/([^/]+)\/([^/]+)\/(issues|pull)\/(\d+)/,
     );
     if (!urlMatch) {
       throw new Error(`Invalid GitHub issue URL: ${issueUrl}`);
@@ -485,12 +492,18 @@ export class GraphqlIssueRepository implements Pick<
     return {
       owner: urlMatch[1],
       repo: urlMatch[2],
-      issueNumber: parseInt(urlMatch[3], 10),
+      issueNumber: parseInt(urlMatch[4], 10),
+      isPr: urlMatch[3] === 'pull',
     };
   }
 
   async findRelatedOpenPRs(issueUrl: string): Promise<RelatedPullRequest[]> {
-    const { owner, repo, issueNumber } = this.parseIssueUrl(issueUrl);
+    const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issueUrl);
+    if (isPr) {
+      throw new Error(
+        'findRelatedOpenPRs only supports issue URLs, not pull request URLs',
+      );
+    }
 
     const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!, $after: String) {

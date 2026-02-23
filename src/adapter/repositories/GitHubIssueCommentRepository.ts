@@ -10,18 +10,21 @@ type CommentNode = {
   createdAt: string;
 };
 
+type CommentsData = {
+  comments: {
+    pageInfo: {
+      endCursor: string;
+      hasNextPage: boolean;
+    };
+    nodes: CommentNode[];
+  };
+};
+
 type IssueCommentsResponse = {
   data?: {
     repository?: {
-      issue?: {
-        comments: {
-          pageInfo: {
-            endCursor: string;
-            hasNextPage: boolean;
-          };
-          nodes: CommentNode[];
-        };
-      };
+      issue?: CommentsData;
+      pullRequest?: CommentsData;
     };
   };
 };
@@ -43,6 +46,9 @@ type IssueIdResponse = {
   data?: {
     repository?: {
       issue?: {
+        id: string;
+      };
+      pullRequest?: {
         id: string;
       };
     };
@@ -75,9 +81,10 @@ export class GitHubIssueCommentRepository implements IssueCommentRepository {
     owner: string;
     repo: string;
     issueNumber: number;
+    isPr: boolean;
   } {
     const urlMatch = issue.url.match(
-      /github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/,
+      /github\.com\/([^/]+)\/([^/]+)\/(issues|pull)\/(\d+)/,
     );
     if (!urlMatch) {
       throw new Error(`Invalid GitHub issue URL: ${issue.url}`);
@@ -85,17 +92,19 @@ export class GitHubIssueCommentRepository implements IssueCommentRepository {
     return {
       owner: urlMatch[1],
       repo: urlMatch[2],
-      issueNumber: parseInt(urlMatch[3], 10),
+      issueNumber: parseInt(urlMatch[4], 10),
+      isPr: urlMatch[3] === 'pull',
     };
   }
 
   async getCommentsFromIssue(issue: Issue): Promise<Comment[]> {
-    const { owner, repo, issueNumber } = this.parseIssueUrl(issue);
+    const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issue);
 
+    const entityType = isPr ? 'pullRequest' : 'issue';
     const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!, $after: String) {
         repository(owner: $owner, name: $repo) {
-          issue(number: $issueNumber) {
+          ${entityType}(number: $issueNumber) {
             comments(first: 100, after: $after) {
               pageInfo {
                 endCursor
@@ -149,10 +158,12 @@ export class GitHubIssueCommentRepository implements IssueCommentRepository {
         );
       }
 
-      const issueData = responseData.data?.repository?.issue;
+      const issueData = isPr
+        ? responseData.data?.repository?.pullRequest
+        : responseData.data?.repository?.issue;
       if (!issueData) {
         throw new Error(
-          'Issue not found when fetching comments from GitHub GraphQL API',
+          `${isPr ? 'Pull request' : 'Issue'} not found when fetching comments from GitHub GraphQL API`,
         );
       }
 
@@ -173,12 +184,13 @@ export class GitHubIssueCommentRepository implements IssueCommentRepository {
   }
 
   private async getIssueNodeId(issue: Issue): Promise<string> {
-    const { owner, repo, issueNumber } = this.parseIssueUrl(issue);
+    const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issue);
 
+    const entityType = isPr ? 'pullRequest' : 'issue';
     const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!) {
         repository(owner: $owner, name: $repo) {
-          issue(number: $issueNumber) {
+          ${entityType}(number: $issueNumber) {
             id
           }
         }
@@ -214,10 +226,12 @@ export class GitHubIssueCommentRepository implements IssueCommentRepository {
       );
     }
 
-    const issueId = responseData.data?.repository?.issue?.id;
+    const issueId = isPr
+      ? responseData.data?.repository?.pullRequest?.id
+      : responseData.data?.repository?.issue?.id;
     if (!issueId) {
       throw new Error(
-        'Issue not found when fetching issue ID from GitHub GraphQL API',
+        `${isPr ? 'Pull request' : 'Issue'} not found when fetching issue ID from GitHub GraphQL API`,
       );
     }
 
