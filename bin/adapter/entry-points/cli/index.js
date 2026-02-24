@@ -31,6 +31,7 @@ program
     .requiredOption('--configFilePath <path>', 'Path to config file for tower defence management')
     .option('--logFilePath <path>', 'Path to log file')
     .option('--maximumPreparingIssuesCount <count>', 'Maximum number of issues in preparation status (default: 6)')
+    .option('--utilizationPercentageThreshold <percentage>', 'Claude usage percentage threshold for skipping preparation (default: 90)')
     .action(async (options) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -58,6 +59,17 @@ program
         }
         maximumPreparingIssuesCount = parsedCount;
     }
+    let utilizationPercentageThreshold = 90;
+    if (options.utilizationPercentageThreshold !== undefined) {
+        const parsedThreshold = Number(options.utilizationPercentageThreshold);
+        if (!Number.isFinite(parsedThreshold) ||
+            parsedThreshold < 0 ||
+            parsedThreshold > 100) {
+            console.error('Invalid value for --utilizationPercentageThreshold. It must be a number between 0 and 100.');
+            process.exit(1);
+        }
+        utilizationPercentageThreshold = parsedThreshold;
+    }
     await useCase.run({
         projectUrl: options.projectUrl,
         awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
@@ -65,6 +77,7 @@ program
         defaultAgentName: options.defaultAgentName,
         logFilePath: options.logFilePath,
         maximumPreparingIssuesCount,
+        utilizationPercentageThreshold,
     });
 });
 program
