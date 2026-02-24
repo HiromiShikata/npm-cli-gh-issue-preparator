@@ -130,6 +130,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
     expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
@@ -173,6 +174,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     // Both awaiting issues should be updated (forward iteration: url1 first, then url2)
     expect(mockIssueRepository.update.mock.calls).toHaveLength(2);
@@ -225,6 +227,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     // Loop doesn't run because we're already at max (6 >= 6)
     expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
@@ -256,6 +259,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       logFilePath: '/path/to/log.txt',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
@@ -287,6 +291,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
@@ -319,6 +324,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     // No issues are in 'Awaiting Workspace' status, so no updates should happen
     expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
@@ -349,6 +355,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: 3,
+      utilizationPercentageThreshold: 90,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(3);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(3);
@@ -378,6 +385,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(6);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(6);
@@ -443,6 +451,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     // The blocked issue should be skipped (continue statement), but the blocker issue itself should be processed
@@ -494,6 +503,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     // The blocker issue should be processed since it's the blocker itself
@@ -562,6 +572,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     // The awaiting issue should be processed since there are no blockers (undefined returned empty array [])
@@ -597,6 +608,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
@@ -635,6 +647,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -653,6 +666,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     expect(mockProjectRepository.getByUrl).not.toHaveBeenCalled();
@@ -690,6 +704,77 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+    });
+
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+  });
+
+  it('should skip preparation when Claude usage exceeds custom threshold', async () => {
+    mockClaudeRepository.getUsage.mockResolvedValue([
+      { hour: 5, utilizationPercentage: 75, resetsAt: new Date() },
+    ]);
+
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 70,
+    });
+
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    expect(mockProjectRepository.getByUrl).not.toHaveBeenCalled();
+  });
+
+  it('should proceed with preparation when Claude usage is under custom threshold', async () => {
+    mockClaudeRepository.getUsage.mockResolvedValue([
+      { hour: 5, utilizationPercentage: 75, resetsAt: new Date() },
+    ]);
+
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 80,
     });
 
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -732,6 +817,7 @@ describe('StartPreparationUseCase', () => {
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
       maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
     });
 
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -785,6 +871,7 @@ describe('StartPreparationUseCase', () => {
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
         maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
       });
 
       expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -841,6 +928,7 @@ describe('StartPreparationUseCase', () => {
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
         maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
       });
 
       expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -886,6 +974,7 @@ describe('StartPreparationUseCase', () => {
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
         maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
       });
 
       expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -931,6 +1020,7 @@ describe('StartPreparationUseCase', () => {
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
         maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
       });
 
       expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -976,6 +1066,7 @@ describe('StartPreparationUseCase', () => {
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
         maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
       });
 
       expect(mockIssueRepository.update.mock.calls).toHaveLength(1);

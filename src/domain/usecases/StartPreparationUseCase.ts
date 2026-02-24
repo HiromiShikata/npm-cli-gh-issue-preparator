@@ -23,10 +23,16 @@ export class StartPreparationUseCase {
     defaultAgentName: string;
     logFilePath?: string;
     maximumPreparingIssuesCount: number | null;
+    utilizationPercentageThreshold: number;
   }): Promise<void> => {
     try {
       const claudeUsages = await this.claudeRepository.getUsage();
-      if (claudeUsages.some((usage) => usage.utilizationPercentage > 90)) {
+      if (
+        claudeUsages.some(
+          (usage) =>
+            usage.utilizationPercentage > params.utilizationPercentageThreshold,
+        )
+      ) {
         console.warn(
           'Claude usage limit exceeded. Skipping starting preparation.',
         );

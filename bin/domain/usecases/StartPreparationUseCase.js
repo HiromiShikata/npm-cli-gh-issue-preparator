@@ -10,7 +10,7 @@ class StartPreparationUseCase {
         this.run = async (params) => {
             try {
                 const claudeUsages = await this.claudeRepository.getUsage();
-                if (claudeUsages.some((usage) => usage.utilizationPercentage > 90)) {
+                if (claudeUsages.some((usage) => usage.utilizationPercentage > params.utilizationPercentageThreshold)) {
                     console.warn('Claude usage limit exceeded. Skipping starting preparation.');
                     return;
                 }

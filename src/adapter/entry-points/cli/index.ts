@@ -19,6 +19,7 @@ type StartDaemonOptions = {
   defaultAgentName: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
+  utilizationPercentageThreshold?: string;
   configFilePath: string;
 };
 
@@ -58,6 +59,10 @@ program
   .option(
     '--maximumPreparingIssuesCount <count>',
     'Maximum number of issues in preparation status (default: 6)',
+  )
+  .option(
+    '--utilizationPercentageThreshold <percentage>',
+    'Claude usage percentage threshold for skipping preparation (default: 90)',
   )
   .action(async (options: StartDaemonOptions) => {
     const token = process.env.GH_TOKEN;
@@ -109,6 +114,22 @@ program
       maximumPreparingIssuesCount = parsedCount;
     }
 
+    let utilizationPercentageThreshold = 90;
+    if (options.utilizationPercentageThreshold !== undefined) {
+      const parsedThreshold = Number(options.utilizationPercentageThreshold);
+      if (
+        !Number.isFinite(parsedThreshold) ||
+        parsedThreshold < 0 ||
+        parsedThreshold > 100
+      ) {
+        console.error(
+          'Invalid value for --utilizationPercentageThreshold. It must be a number between 0 and 100.',
+        );
+        process.exit(1);
+      }
+      utilizationPercentageThreshold = parsedThreshold;
+    }
+
     await useCase.run({
       projectUrl: options.projectUrl,
       awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
@@ -116,6 +137,7 @@ program
       defaultAgentName: options.defaultAgentName,
       logFilePath: options.logFilePath,
       maximumPreparingIssuesCount,
+      utilizationPercentageThreshold,
     });
   });
 
