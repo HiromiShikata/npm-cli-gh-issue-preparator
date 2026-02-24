@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.15.1...v1.16.0) (2026-02-24)
+
+
+### Features
+
+* **core:** add utilizationPercentageThreshold CLI option to startDaemon ([746aaba](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/746aaba045108e2e8d10846562958ebe5923e2dd))
+
 ## [1.15.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.15.0...v1.15.1) (2026-02-24)
 
 
