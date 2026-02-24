@@ -225,6 +225,63 @@ describe('GitHubIssueCommentRepository', () => {
         'Unexpected response shape',
       );
     });
+
+    it('should return comments from pull request', async () => {
+      const mockIssue = createMockIssue({
+        url: 'https://github.com/user/repo/pull/5',
+        isPr: true,
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              pullRequest: {
+                comments: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      author: { login: 'pr-user' },
+                      body: 'PR comment',
+                      createdAt: '2024-01-01T00:00:00Z',
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.getCommentsFromIssue(mockIssue);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].author).toBe('pr-user');
+      expect(result[0].content).toBe('PR comment');
+    });
+
+    it('should throw error when pull request is not found', async () => {
+      const mockIssue = createMockIssue({
+        url: 'https://github.com/user/repo/pull/5',
+        isPr: true,
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              pullRequest: null,
+            },
+          },
+        }),
+      });
+
+      await expect(repository.getCommentsFromIssue(mockIssue)).rejects.toThrow(
+        'Pull request not found when fetching comments',
+      );
+    });
   });
 
   describe('createComment', () => {
@@ -385,6 +442,67 @@ describe('GitHubIssueCommentRepository', () => {
       await expect(
         repository.createComment(mockIssue, 'Test comment'),
       ).rejects.toThrow('Unexpected response shape');
+    });
+
+    it('should create a comment on pull request', async () => {
+      const mockIssue = createMockIssue({
+        url: 'https://github.com/user/repo/pull/5',
+        isPr: true,
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                pullRequest: {
+                  id: 'pr-node-id',
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              addComment: {
+                commentEdge: {
+                  node: {
+                    id: 'comment-id',
+                  },
+                },
+              },
+            },
+          }),
+        });
+
+      await repository.createComment(mockIssue, 'Test PR comment');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw error when pull request node ID is not found', async () => {
+      const mockIssue = createMockIssue({
+        url: 'https://github.com/user/repo/pull/5',
+        isPr: true,
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              pullRequest: null,
+            },
+          },
+        }),
+      });
+
+      await expect(
+        repository.createComment(mockIssue, 'Test comment'),
+      ).rejects.toThrow('Pull request not found when fetching issue ID');
     });
 
     it('should throw error for invalid response shape when creating comment', async () => {

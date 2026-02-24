@@ -113,6 +113,56 @@ describe('GraphqlIssueRepository', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
+    it('should update PR status via GraphQL', async () => {
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+        url: 'https://github.com/user/repo/pull/5',
+        isPr: true,
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [
+                          { id: 'opt-1', name: 'Backlog' },
+                          { id: 'opt-2', name: 'Preparation' },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await repository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
     it('should throw error for invalid project URL', async () => {
       const mockIssue = createMockIssue({ status: 'Preparation' });
 
@@ -692,6 +742,14 @@ describe('GraphqlIssueRepository', () => {
       await expect(
         repository.findRelatedOpenPRs('invalid-url'),
       ).rejects.toThrow('Invalid GitHub issue URL');
+    });
+
+    it('should throw error when called with a pull request URL', async () => {
+      await expect(
+        repository.findRelatedOpenPRs('https://github.com/user/repo/pull/5'),
+      ).rejects.toThrow(
+        'findRelatedOpenPRs only supports issue URLs, not pull request URLs',
+      );
     });
 
     it('should throw error when API response is not ok', async () => {
@@ -1346,6 +1404,104 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).not.toBeNull();
       expect(result?.state).toBe('MERGED');
+    });
+
+    it('should return PR data from GitHub GraphQL API when URL is a pull request', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              pullRequest: {
+                number: 5,
+                title: 'Test PR',
+                state: 'OPEN',
+                body: 'PR body',
+                createdAt: '2024-01-01T00:00:00Z',
+                url: 'https://github.com/user/repo/pull/5',
+                assignees: { nodes: [{ login: 'user1' }] },
+                labels: { nodes: [{ name: 'enhancement' }] },
+                projectItems: {
+                  nodes: [
+                    {
+                      id: 'item-456',
+                      project: { number: 1 },
+                      fieldValueByName: { name: 'Preparation' },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/user/repo/pull/5',
+        createMockProject(),
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.number).toBe(5);
+      expect(result?.title).toBe('Test PR');
+      expect(result?.state).toBe('OPEN');
+      expect(result?.status).toBe('Preparation');
+      expect(result?.itemId).toBe('item-456');
+      expect(result?.isPr).toBe(true);
+      expect(result?.assignees).toEqual(['user1']);
+      expect(result?.labels).toEqual(['enhancement']);
+    });
+
+    it('should return null when PR is not found', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              pullRequest: null,
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/user/repo/pull/999',
+        createMockProject(),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle MERGED state for PR', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              pullRequest: {
+                number: 5,
+                title: 'Merged PR',
+                state: 'MERGED',
+                body: 'PR body',
+                createdAt: '2024-01-01T00:00:00Z',
+                url: 'https://github.com/user/repo/pull/5',
+                assignees: { nodes: [] },
+                labels: { nodes: [] },
+                projectItems: { nodes: [] },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/user/repo/pull/5',
+        createMockProject(),
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.state).toBe('MERGED');
+      expect(result?.isPr).toBe(true);
     });
 
     it('should default to OPEN state for unknown states', async () => {
