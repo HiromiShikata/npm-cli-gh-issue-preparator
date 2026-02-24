@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.15.0...v1.15.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* **core:** support PR URLs when changing status in GitHub project ([c6ea157](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c6ea157c1698131b22eeb55d7b43e785b51550fc))
+
 # [1.15.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.14.0...v1.15.0) (2026-02-23)
 
 

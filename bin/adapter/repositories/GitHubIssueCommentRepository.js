@@ -21,22 +21,24 @@ class GitHubIssueCommentRepository {
         this.token = token;
     }
     parseIssueUrl(issue) {
-        const urlMatch = issue.url.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/);
+        const urlMatch = issue.url.match(/github\.com\/([^/]+)\/([^/]+)\/(issues|pull)\/(\d+)/);
         if (!urlMatch) {
             throw new Error(`Invalid GitHub issue URL: ${issue.url}`);
         }
         return {
             owner: urlMatch[1],
             repo: urlMatch[2],
-            issueNumber: parseInt(urlMatch[3], 10),
+            issueNumber: parseInt(urlMatch[4], 10),
+            isPr: urlMatch[3] === 'pull',
         };
     }
     async getCommentsFromIssue(issue) {
-        const { owner, repo, issueNumber } = this.parseIssueUrl(issue);
+        const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issue);
+        const entityType = isPr ? 'pullRequest' : 'issue';
         const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!, $after: String) {
         repository(owner: $owner, name: $repo) {
-          issue(number: $issueNumber) {
+          ${entityType}(number: $issueNumber) {
             comments(first: 100, after: $after) {
               pageInfo {
                 endCursor
@@ -81,9 +83,11 @@ class GitHubIssueCommentRepository {
             if (!isIssueCommentsResponse(responseData)) {
                 throw new Error('Unexpected response shape when fetching comments from GitHub GraphQL API');
             }
-            const issueData = responseData.data?.repository?.issue;
+            const issueData = isPr
+                ? responseData.data?.repository?.pullRequest
+                : responseData.data?.repository?.issue;
             if (!issueData) {
-                throw new Error('Issue not found when fetching comments from GitHub GraphQL API');
+                throw new Error(`${isPr ? 'Pull request' : 'Issue'} not found when fetching comments from GitHub GraphQL API`);
             }
             const commentNodes = issueData.comments.nodes;
             for (const node of commentNodes) {
@@ -99,11 +103,12 @@ class GitHubIssueCommentRepository {
         return comments;
     }
     async getIssueNodeId(issue) {
-        const { owner, repo, issueNumber } = this.parseIssueUrl(issue);
+        const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issue);
+        const entityType = isPr ? 'pullRequest' : 'issue';
         const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!) {
         repository(owner: $owner, name: $repo) {
-          issue(number: $issueNumber) {
+          ${entityType}(number: $issueNumber) {
             id
           }
         }
@@ -131,9 +136,11 @@ class GitHubIssueCommentRepository {
         if (!isIssueIdResponse(responseData)) {
             throw new Error('Unexpected response shape when fetching issue ID from GitHub GraphQL API');
         }
-        const issueId = responseData.data?.repository?.issue?.id;
+        const issueId = isPr
+            ? responseData.data?.repository?.pullRequest?.id
+            : responseData.data?.repository?.issue?.id;
         if (!issueId) {
-            throw new Error('Issue not found when fetching issue ID from GitHub GraphQL API');
+            throw new Error(`${isPr ? 'Pull request' : 'Issue'} not found when fetching issue ID from GitHub GraphQL API`);
         }
         return issueId;
     }

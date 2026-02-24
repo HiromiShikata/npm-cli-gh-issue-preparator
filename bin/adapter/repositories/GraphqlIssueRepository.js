@@ -26,12 +26,13 @@ class GraphqlIssueRepository {
         this.token = token;
     }
     async get(issueUrl, project) {
-        const { owner, repo, issueNumber } = this.parseIssueUrl(issueUrl);
+        const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issueUrl);
         const { projectNumber } = this.parseProjectUrl(project.url);
+        const entityType = isPr ? 'pullRequest' : 'issue';
         const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!) {
         repository(owner: $owner, name: $repo) {
-          issue(number: $issueNumber) {
+          ${entityType}(number: $issueNumber) {
             number
             title
             state
@@ -89,7 +90,9 @@ class GraphqlIssueRepository {
         if (!isIssueResponse(responseData)) {
             throw new Error('Unexpected response shape when fetching issue');
         }
-        const issueData = responseData.data?.repository?.issue;
+        const issueData = isPr
+            ? responseData.data?.repository?.pullRequest
+            : responseData.data?.repository?.issue;
         if (!issueData) {
             return null;
         }
@@ -122,7 +125,7 @@ class GraphqlIssueRepository {
             repo: repo,
             body: issueData.body,
             itemId: projectItem?.id ?? '',
-            isPr: false,
+            isPr,
             isInProgress: false,
             isClosed: issueData.state === 'CLOSED',
             createdAt: new Date(issueData.createdAt),
@@ -285,18 +288,22 @@ class GraphqlIssueRepository {
         }
     }
     parseIssueUrl(issueUrl) {
-        const urlMatch = issueUrl.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/);
+        const urlMatch = issueUrl.match(/github\.com\/([^/]+)\/([^/]+)\/(issues|pull)\/(\d+)/);
         if (!urlMatch) {
             throw new Error(`Invalid GitHub issue URL: ${issueUrl}`);
         }
         return {
             owner: urlMatch[1],
             repo: urlMatch[2],
-            issueNumber: parseInt(urlMatch[3], 10),
+            issueNumber: parseInt(urlMatch[4], 10),
+            isPr: urlMatch[3] === 'pull',
         };
     }
     async findRelatedOpenPRs(issueUrl) {
-        const { owner, repo, issueNumber } = this.parseIssueUrl(issueUrl);
+        const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issueUrl);
+        if (isPr) {
+            throw new Error('findRelatedOpenPRs only supports issue URLs, not pull request URLs');
+        }
         const query = `
       query($owner: String!, $repo: String!, $issueNumber: Int!, $after: String) {
         repository(owner: $owner, name: $repo) {
