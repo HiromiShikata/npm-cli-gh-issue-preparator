@@ -56,6 +56,58 @@ type UpdateItemResponse = {
   errors?: Array<{ message: string }>;
 };
 
+const fnmatch = (pattern: string, str: string): boolean => {
+  let regexStr = '^';
+  let i = 0;
+  while (i < pattern.length) {
+    const c = pattern[i];
+    if (c === '*') {
+      if (pattern[i + 1] === '*') {
+        regexStr += '.*';
+        i += 2;
+        if (pattern[i] === '/') {
+          i++;
+        }
+      } else {
+        regexStr += '[^/]*';
+        i++;
+      }
+    } else if (c === '?') {
+      regexStr += '[^/]';
+      i++;
+    } else if (c === '[') {
+      let j = i + 1;
+      while (j < pattern.length && pattern[j] !== ']') {
+        j++;
+      }
+      if (j >= pattern.length) {
+        regexStr += '\\[';
+        i++;
+        continue;
+      }
+      const content = pattern.slice(i + 1, j);
+      if (content.length > 0 && (content[0] === '!' || content[0] === '^')) {
+        const body = content.slice(1).replace(/\\/g, '\\\\');
+        regexStr += '[^' + body + ']';
+      } else {
+        const escapedContent = content.replace(/\\/g, '\\\\');
+        regexStr += '[' + escapedContent + ']';
+      }
+      i = j + 1;
+    } else {
+      regexStr += c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      i++;
+    }
+  }
+  regexStr += '$';
+  try {
+    const regex = new RegExp(regexStr);
+    return regex.test(str);
+  } catch {
+    return pattern === str;
+  }
+};
+
 type TimelineItem = {
   __typename: string;
   willCloseTarget?: boolean;
@@ -65,14 +117,34 @@ type TimelineItem = {
     number?: number;
     state?: string;
     mergeable?: string;
-    mergeStateStatus?: string;
     baseRefName?: string;
-    headRefName?: string;
+    baseRepository?: {
+      branchProtectionRules?: {
+        nodes: Array<{
+          pattern: string;
+          requiredStatusCheckContexts: string[];
+        }>;
+      };
+    };
     commits?: {
       nodes: Array<{
         commit: {
           statusCheckRollup?: {
             state: string;
+            contexts?: {
+              nodes: Array<
+                | {
+                    __typename: 'CheckRun';
+                    name: string;
+                    conclusion: string | null;
+                  }
+                | {
+                    __typename: 'StatusContext';
+                    context: string;
+                    state: string;
+                  }
+              >;
+            };
           } | null;
         };
       }>;
@@ -525,14 +597,33 @@ export class GraphqlIssueRepository implements Pick<
                       number
                       state
                       mergeable
-                      mergeStateStatus
                       baseRefName
-                      headRefName
+                      baseRepository {
+                        branchProtectionRules(first: 100) {
+                          nodes {
+                            pattern
+                            requiredStatusCheckContexts
+                          }
+                        }
+                      }
                       commits(last: 1) {
                         nodes {
                           commit {
                             statusCheckRollup {
                               state
+                              contexts(first: 100) {
+                                nodes {
+                                  __typename
+                                  ... on CheckRun {
+                                    name
+                                    conclusion
+                                  }
+                                  ... on StatusContext {
+                                    context
+                                    state
+                                  }
+                                }
+                              }
                             }
                           }
                         }
@@ -542,7 +633,6 @@ export class GraphqlIssueRepository implements Pick<
                           isResolved
                         }
                       }
-                      headRefName
                       baseRef {
                         name
                       }
@@ -614,9 +704,48 @@ export class GraphqlIssueRepository implements Pick<
 
         const lastCommit = pr.commits?.nodes[0]?.commit;
         const ciState = lastCommit?.statusCheckRollup?.state;
-        const mergeStateStatus = pr.mergeStateStatus;
+
+        const contexts = lastCommit?.statusCheckRollup?.contexts?.nodes || [];
+        const baseRefName = pr.baseRefName ?? pr.baseRef?.name;
+        const branchProtectionRules =
+          pr.baseRepository?.branchProtectionRules?.nodes || [];
+        const matchingRules = baseRefName
+          ? branchProtectionRules.filter(
+              (rule) =>
+                rule.pattern === baseRefName ||
+                fnmatch(rule.pattern, baseRefName),
+            )
+          : [];
+        const requiredCheckNamesSet = new Set<string>();
+        for (const rule of matchingRules) {
+          for (const name of rule.requiredStatusCheckContexts) {
+            requiredCheckNamesSet.add(name);
+          }
+        }
+        const requiredCheckNames = Array.from(requiredCheckNamesSet);
+
+        const passingConclusions = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
+
+        const passedContextNames = new Set<string>();
+        for (const ctx of contexts) {
+          if (
+            'name' in ctx &&
+            ctx.conclusion &&
+            passingConclusions.has(ctx.conclusion)
+          ) {
+            passedContextNames.add(ctx.name);
+          }
+          if ('context' in ctx && ctx.state === 'SUCCESS') {
+            passedContextNames.add(ctx.context);
+          }
+        }
+
+        const allRequiredChecksPassed =
+          requiredCheckNames.length === 0 ||
+          requiredCheckNames.every((name) => passedContextNames.has(name));
+
         const isPassedAllCiJob =
-          ciState === 'SUCCESS' && mergeStateStatus !== 'BLOCKED';
+          ciState === 'SUCCESS' && allRequiredChecksPassed;
 
         const reviewThreads = pr.reviewThreads?.nodes || [];
         const isResolvedAllReviewComments =
