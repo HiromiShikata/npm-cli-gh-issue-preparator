@@ -1,0 +1,21 @@
+org: HiromiShikata
+projectUrl: https://github.com/users/HiromiShikata/projects/49
+projectName: test-project
+manager: HiromiShikata
+allowIssueCacheMinutes: 0
+credentials:
+  ghToken: your_gh_token_here
+  bot:
+    github:
+      token: your_gh_token_here
+workingReport:
+  repo: test-repository
+  members:
+    - HiromiShikata
+  spreadsheetUrl: https://docs.google.com/spreadsheets/d/your-sheet-id
+  reportIssueLabels:
+    - report
+awaitingWorkspaceStatus: 'Awaiting workspace'
+preparationStatus: 'Preparation'
+defaultAgentName: 'impl'
+awaitingQualityCheckStatus: 'Awaiting quality check'

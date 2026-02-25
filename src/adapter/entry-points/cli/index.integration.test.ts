@@ -41,6 +41,10 @@ workingReport:
   spreadsheetUrl: https://docs.google.com/spreadsheets/d/test
   reportIssueLabels:
     - report
+awaitingWorkspaceStatus: "Awaiting workspace"
+preparationStatus: "Preparation"
+defaultAgentName: "impl"
+awaitingQualityCheckStatus: "Awaiting quality check"
 `;
     fs.writeFileSync(configFilePath, configContent);
   });
@@ -54,7 +58,7 @@ workingReport:
   describe('startDaemon', () => {
     it('executes without error', () => {
       const result = execSync(
-        `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --projectUrl ${projectUrl} --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl" --configFilePath ${configFilePath}`,
+        `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath}`,
         { encoding: 'utf-8', timeout: 600000 },
       );
       expect(result).toBeDefined();
@@ -67,7 +71,7 @@ workingReport:
 
       try {
         execSync(
-          `npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --projectUrl ${projectUrl} --issueUrl ${notifyFinishedIssueUrl} --preparationStatus "Preparation" --awaitingWorkspaceStatus "Awaiting workspace" --awaitingQualityCheckStatus "Awaiting quality check" --configFilePath ${configFilePath} 2>&1`,
+          `npx ts-node ./src/adapter/entry-points/cli/index.ts notifyFinishedIssuePreparation --issueUrl ${notifyFinishedIssueUrl} --configFilePath ${configFilePath} 2>&1`,
           { encoding: 'utf-8', timeout: 600000 },
         );
       } catch (err) {
