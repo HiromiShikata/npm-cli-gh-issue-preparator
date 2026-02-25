@@ -1,6 +1,63 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphqlIssueRepository = void 0;
+const fnmatch = (pattern, str) => {
+    let regexStr = '^';
+    let i = 0;
+    while (i < pattern.length) {
+        const c = pattern[i];
+        if (c === '*') {
+            if (pattern[i + 1] === '*') {
+                regexStr += '.*';
+                i += 2;
+                if (pattern[i] === '/') {
+                    i++;
+                }
+            }
+            else {
+                regexStr += '[^/]*';
+                i++;
+            }
+        }
+        else if (c === '?') {
+            regexStr += '[^/]';
+            i++;
+        }
+        else if (c === '[') {
+            let j = i + 1;
+            while (j < pattern.length && pattern[j] !== ']') {
+                j++;
+            }
+            if (j >= pattern.length) {
+                regexStr += '\\[';
+                i++;
+                continue;
+            }
+            const content = pattern.slice(i + 1, j);
+            if (content.length > 0 && (content[0] === '!' || content[0] === '^')) {
+                const body = content.slice(1).replace(/\\/g, '\\\\');
+                regexStr += '[^' + body + ']';
+            }
+            else {
+                const escapedContent = content.replace(/\\/g, '\\\\');
+                regexStr += '[' + escapedContent + ']';
+            }
+            i = j + 1;
+        }
+        else {
+            regexStr += c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            i++;
+        }
+    }
+    regexStr += '$';
+    try {
+        const regex = new RegExp(regexStr);
+        return regex.test(str);
+    }
+    catch {
+        return pattern === str;
+    }
+};
 function isStatusFieldsResponse(value) {
     if (typeof value !== 'object' || value === null)
         return false;
@@ -324,14 +381,33 @@ class GraphqlIssueRepository {
                       number
                       state
                       mergeable
-                      mergeStateStatus
                       baseRefName
-                      headRefName
+                      baseRepository {
+                        branchProtectionRules(first: 100) {
+                          nodes {
+                            pattern
+                            requiredStatusCheckContexts
+                          }
+                        }
+                      }
                       commits(last: 1) {
                         nodes {
                           commit {
                             statusCheckRollup {
                               state
+                              contexts(first: 100) {
+                                nodes {
+                                  __typename
+                                  ... on CheckRun {
+                                    name
+                                    conclusion
+                                  }
+                                  ... on StatusContext {
+                                    context
+                                    state
+                                  }
+                                }
+                              }
                             }
                           }
                         }
@@ -341,7 +417,6 @@ class GraphqlIssueRepository {
                           isResolved
                         }
                       }
-                      headRefName
                       baseRef {
                         name
                       }
@@ -399,8 +474,35 @@ class GraphqlIssueRepository {
                 const isConflicted = pr.mergeable === 'CONFLICTING';
                 const lastCommit = pr.commits?.nodes[0]?.commit;
                 const ciState = lastCommit?.statusCheckRollup?.state;
-                const mergeStateStatus = pr.mergeStateStatus;
-                const isPassedAllCiJob = ciState === 'SUCCESS' && mergeStateStatus !== 'BLOCKED';
+                const contexts = lastCommit?.statusCheckRollup?.contexts?.nodes || [];
+                const baseRefName = pr.baseRefName ?? pr.baseRef?.name;
+                const branchProtectionRules = pr.baseRepository?.branchProtectionRules?.nodes || [];
+                const matchingRules = baseRefName
+                    ? branchProtectionRules.filter((rule) => rule.pattern === baseRefName ||
+                        fnmatch(rule.pattern, baseRefName))
+                    : [];
+                const requiredCheckNamesSet = new Set();
+                for (const rule of matchingRules) {
+                    for (const name of rule.requiredStatusCheckContexts) {
+                        requiredCheckNamesSet.add(name);
+                    }
+                }
+                const requiredCheckNames = Array.from(requiredCheckNamesSet);
+                const passingConclusions = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
+                const passedContextNames = new Set();
+                for (const ctx of contexts) {
+                    if ('name' in ctx &&
+                        ctx.conclusion &&
+                        passingConclusions.has(ctx.conclusion)) {
+                        passedContextNames.add(ctx.name);
+                    }
+                    if ('context' in ctx && ctx.state === 'SUCCESS') {
+                        passedContextNames.add(ctx.context);
+                    }
+                }
+                const allRequiredChecksPassed = requiredCheckNames.length === 0 ||
+                    requiredCheckNames.every((name) => passedContextNames.has(name));
+                const isPassedAllCiJob = ciState === 'SUCCESS' && allRequiredChecksPassed;
                 const reviewThreads = pr.reviewThreads?.nodes || [];
                 const isResolvedAllReviewComments = reviewThreads.length === 0 ||
                     reviewThreads.every((thread) => thread.isResolved);

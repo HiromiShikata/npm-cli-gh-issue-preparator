@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.16.0...v1.16.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* **core:** verify required status checks before reporting CI as passed ([e8a3426](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/e8a3426ca3363f28f42664b6a9925f0fa282a991))
+
 # [1.16.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.15.1...v1.16.0) (2026-02-24)
 
 
