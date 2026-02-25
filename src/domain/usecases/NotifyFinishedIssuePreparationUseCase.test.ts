@@ -79,6 +79,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         .mockImplementation((_name: string, project: Project) =>
           Promise.resolve(project),
         ),
+      prepareCustomNumberField: jest.fn(),
     };
 
     mockIssueRepository = {
