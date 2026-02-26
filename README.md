@@ -24,20 +24,30 @@ Commands:
   help [command]                            display help for command
 ```
 
+## Configuration
+
+All parameters can be specified in a YAML config file. See [config.example.yml](./config.example.yml) for a complete example. CLI options override config file values.
+
 ## Example 📖
 
 Here's a quick example to illustrate its usage:
 
-### Start preparation
+### Using config file
 
 ```
-npx npm-cli-gh-issue-preparator startDaemon --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"
+npx npm-cli-gh-issue-preparator startDaemon --configFilePath ./config.yml
+```
+
+### Start preparation (with CLI overrides)
+
+```
+npx npm-cli-gh-issue-preparator startDaemon --configFilePath ./config.yml --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"
 ```
 
 ### Notify finished issue preparation
 
 ```
-npx npm-cli-gh-issue-preparator notifyFinishedIssuePreparation --projectUrl <projectUrl> --issueUrl <issueUrl> --preparationStatus "Preparation" --awaitingQualityCheckStatus "Awaiting quality check"
+npx npm-cli-gh-issue-preparator notifyFinishedIssuePreparation --configFilePath ./config.yml --issueUrl <issueUrl>
 ```
 
 ## Contributing

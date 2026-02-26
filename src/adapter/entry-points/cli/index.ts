@@ -2,6 +2,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
@@ -12,11 +14,23 @@ import { GitHubIssueCommentRepository } from '../../repositories/GitHubIssueComm
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
 import { OauthAPIClaudeRepository } from '../../repositories/OauthAPIClaudeRepository';
 
+type ConfigFile = {
+  projectUrl?: string;
+  awaitingWorkspaceStatus?: string;
+  preparationStatus?: string;
+  defaultAgentName?: string;
+  logFilePath?: string;
+  maximumPreparingIssuesCount?: number;
+  utilizationPercentageThreshold?: number;
+  awaitingQualityCheckStatus?: string;
+  thresholdForAutoReject?: number;
+};
+
 type StartDaemonOptions = {
-  projectUrl: string;
-  awaitingWorkspaceStatus: string;
-  preparationStatus: string;
-  defaultAgentName: string;
+  projectUrl?: string;
+  awaitingWorkspaceStatus?: string;
+  preparationStatus?: string;
+  defaultAgentName?: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
   utilizationPercentageThreshold?: string;
@@ -24,13 +38,71 @@ type StartDaemonOptions = {
 };
 
 type NotifyFinishedOptions = {
-  projectUrl: string;
   issueUrl: string;
-  preparationStatus: string;
-  awaitingWorkspaceStatus: string;
-  awaitingQualityCheckStatus: string;
+  projectUrl?: string;
+  preparationStatus?: string;
+  awaitingWorkspaceStatus?: string;
+  awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: string;
   configFilePath: string;
+};
+
+const getStringValue = (
+  obj: Record<string, unknown>,
+  key: string,
+): string | undefined => {
+  const value = obj[key];
+  return typeof value === 'string' ? value : undefined;
+};
+
+const getNumberValue = (
+  obj: Record<string, unknown>,
+  key: string,
+): number | undefined => {
+  const value = obj[key];
+  return typeof value === 'number' ? value : undefined;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const loadConfigFile = (configFilePath: string): ConfigFile => {
+  try {
+    const content = fs.readFileSync(configFilePath, 'utf-8');
+    const parsed: unknown = yaml.load(content);
+    if (!isRecord(parsed)) {
+      return {};
+    }
+    return {
+      projectUrl: getStringValue(parsed, 'projectUrl'),
+      awaitingWorkspaceStatus: getStringValue(
+        parsed,
+        'awaitingWorkspaceStatus',
+      ),
+      preparationStatus: getStringValue(parsed, 'preparationStatus'),
+      defaultAgentName: getStringValue(parsed, 'defaultAgentName'),
+      logFilePath: getStringValue(parsed, 'logFilePath'),
+      maximumPreparingIssuesCount: getNumberValue(
+        parsed,
+        'maximumPreparingIssuesCount',
+      ),
+      utilizationPercentageThreshold: getNumberValue(
+        parsed,
+        'utilizationPercentageThreshold',
+      ),
+      awaitingQualityCheckStatus: getStringValue(
+        parsed,
+        'awaitingQualityCheckStatus',
+      ),
+      thresholdForAutoReject: getNumberValue(parsed, 'thresholdForAutoReject'),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `Failed to load configuration file "${configFilePath}": ${message}`,
+    );
+    process.exit(1);
+  }
 };
 
 const program = new Command();
@@ -41,20 +113,17 @@ program
 program
   .command('startDaemon')
   .description('Start daemon to prepare GitHub issues')
-  .requiredOption('--projectUrl <url>', 'GitHub project URL')
-  .requiredOption(
-    '--awaitingWorkspaceStatus <status>',
-    'Status for issues awaiting workspace',
-  )
-  .requiredOption(
-    '--preparationStatus <status>',
-    'Status for issues in preparation',
-  )
-  .requiredOption('--defaultAgentName <name>', 'Default agent name')
   .requiredOption(
     '--configFilePath <path>',
     'Path to config file for tower defence management',
   )
+  .option('--projectUrl <url>', 'GitHub project URL')
+  .option(
+    '--awaitingWorkspaceStatus <status>',
+    'Status for issues awaiting workspace',
+  )
+  .option('--preparationStatus <status>', 'Status for issues in preparation')
+  .option('--defaultAgentName <name>', 'Default agent name')
   .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
@@ -68,6 +137,42 @@ program
     const token = process.env.GH_TOKEN;
     if (!token) {
       console.error('GH_TOKEN environment variable is required');
+      process.exit(1);
+    }
+
+    const config = loadConfigFile(options.configFilePath);
+
+    const projectUrl = options.projectUrl ?? config.projectUrl;
+    const awaitingWorkspaceStatus =
+      options.awaitingWorkspaceStatus ?? config.awaitingWorkspaceStatus;
+    const preparationStatus =
+      options.preparationStatus ?? config.preparationStatus;
+    const defaultAgentName =
+      options.defaultAgentName ?? config.defaultAgentName;
+    const logFilePath = options.logFilePath ?? config.logFilePath;
+
+    if (!projectUrl) {
+      console.error(
+        'projectUrl is required. Provide via --projectUrl or config file.',
+      );
+      process.exit(1);
+    }
+    if (!awaitingWorkspaceStatus) {
+      console.error(
+        'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus or config file.',
+      );
+      process.exit(1);
+    }
+    if (!preparationStatus) {
+      console.error(
+        'preparationStatus is required. Provide via --preparationStatus or config file.',
+      );
+      process.exit(1);
+    }
+    if (!defaultAgentName) {
+      console.error(
+        'defaultAgentName is required. Provide via --defaultAgentName or config file.',
+      );
       process.exit(1);
     }
 
@@ -99,8 +204,10 @@ program
     );
 
     let maximumPreparingIssuesCount: number | null = null;
-    if (options.maximumPreparingIssuesCount !== undefined) {
-      const parsedCount = Number(options.maximumPreparingIssuesCount);
+    const rawMaxCount =
+      options.maximumPreparingIssuesCount ?? config.maximumPreparingIssuesCount;
+    if (rawMaxCount !== undefined) {
+      const parsedCount = Number(rawMaxCount);
       if (
         !Number.isFinite(parsedCount) ||
         !Number.isInteger(parsedCount) ||
@@ -115,8 +222,11 @@ program
     }
 
     let utilizationPercentageThreshold = 90;
-    if (options.utilizationPercentageThreshold !== undefined) {
-      const parsedThreshold = Number(options.utilizationPercentageThreshold);
+    const rawThreshold =
+      options.utilizationPercentageThreshold ??
+      config.utilizationPercentageThreshold;
+    if (rawThreshold !== undefined) {
+      const parsedThreshold = Number(rawThreshold);
       if (
         !Number.isFinite(parsedThreshold) ||
         parsedThreshold < 0 ||
@@ -131,11 +241,11 @@ program
     }
 
     await useCase.run({
-      projectUrl: options.projectUrl,
-      awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
-      preparationStatus: options.preparationStatus,
-      defaultAgentName: options.defaultAgentName,
-      logFilePath: options.logFilePath,
+      projectUrl,
+      awaitingWorkspaceStatus,
+      preparationStatus,
+      defaultAgentName,
+      logFilePath,
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,
     });
@@ -144,23 +254,20 @@ program
 program
   .command('notifyFinishedIssuePreparation')
   .description('Notify that issue preparation is finished')
-  .requiredOption('--projectUrl <url>', 'GitHub project URL')
-  .requiredOption('--issueUrl <url>', 'GitHub issue URL')
-  .requiredOption(
-    '--preparationStatus <status>',
-    'Status for issues in preparation',
-  )
-  .requiredOption(
-    '--awaitingWorkspaceStatus <status>',
-    'Status for issues awaiting workspace',
-  )
-  .requiredOption(
-    '--awaitingQualityCheckStatus <status>',
-    'Status for issues awaiting quality check',
-  )
   .requiredOption(
     '--configFilePath <path>',
     'Path to config file for tower defence management',
+  )
+  .requiredOption('--issueUrl <url>', 'GitHub issue URL')
+  .option('--projectUrl <url>', 'GitHub project URL')
+  .option('--preparationStatus <status>', 'Status for issues in preparation')
+  .option(
+    '--awaitingWorkspaceStatus <status>',
+    'Status for issues awaiting workspace',
+  )
+  .option(
+    '--awaitingQualityCheckStatus <status>',
+    'Status for issues awaiting quality check',
   )
   .option(
     '--thresholdForAutoReject <count>',
@@ -170,6 +277,41 @@ program
     const token = process.env.GH_TOKEN;
     if (!token) {
       console.error('GH_TOKEN environment variable is required');
+      process.exit(1);
+    }
+
+    const config = loadConfigFile(options.configFilePath);
+
+    const projectUrl = options.projectUrl ?? config.projectUrl;
+    const preparationStatus =
+      options.preparationStatus ?? config.preparationStatus;
+    const awaitingWorkspaceStatus =
+      options.awaitingWorkspaceStatus ?? config.awaitingWorkspaceStatus;
+    const awaitingQualityCheckStatus =
+      options.awaitingQualityCheckStatus ?? config.awaitingQualityCheckStatus;
+
+    if (!projectUrl) {
+      console.error(
+        'projectUrl is required. Provide via --projectUrl or config file.',
+      );
+      process.exit(1);
+    }
+    if (!preparationStatus) {
+      console.error(
+        'preparationStatus is required. Provide via --preparationStatus or config file.',
+      );
+      process.exit(1);
+    }
+    if (!awaitingWorkspaceStatus) {
+      console.error(
+        'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus or config file.',
+      );
+      process.exit(1);
+    }
+    if (!awaitingQualityCheckStatus) {
+      console.error(
+        'awaitingQualityCheckStatus is required. Provide via --awaitingQualityCheckStatus or config file.',
+      );
       process.exit(1);
     }
 
@@ -187,8 +329,10 @@ program
     );
 
     let thresholdForAutoReject = 3;
-    if (options.thresholdForAutoReject !== undefined) {
-      const parsed = Number(options.thresholdForAutoReject);
+    const rawThreshold =
+      options.thresholdForAutoReject ?? config.thresholdForAutoReject;
+    if (rawThreshold !== undefined) {
+      const parsed = Number(rawThreshold);
       if (
         !Number.isFinite(parsed) ||
         !Number.isInteger(parsed) ||
@@ -203,11 +347,11 @@ program
     }
 
     await useCase.run({
-      projectUrl: options.projectUrl,
+      projectUrl,
       issueUrl: options.issueUrl,
-      preparationStatus: options.preparationStatus,
-      awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
-      awaitingQualityCheckStatus: options.awaitingQualityCheckStatus,
+      preparationStatus,
+      awaitingWorkspaceStatus,
+      awaitingQualityCheckStatus,
       thresholdForAutoReject,
     });
   });
@@ -217,4 +361,4 @@ if (process.argv && require.main === module) {
   program.parse(process.argv);
 }
 
-export { program };
+export { program, loadConfigFile };
