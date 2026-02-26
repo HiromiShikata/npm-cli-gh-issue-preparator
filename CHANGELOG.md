@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.16.1...v1.17.0) (2026-02-26)
+
+
+### Features
+
+* **cli:** move all CLI parameters to config YAML file ([bf4672c](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/bf4672cb1aca8c5003ac23c456d0c400ce0147f8))
+
 ## [1.16.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.16.0...v1.16.1) (2026-02-25)
 
 
