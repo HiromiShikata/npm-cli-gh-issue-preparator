@@ -83,7 +83,11 @@ describe('StartPreparationUseCase', () => {
     mockProject = createMockProject();
     mockProjectRepository = {
       getByUrl: jest.fn(),
-      prepareStatus: jest.fn(),
+      prepareStatus: jest
+        .fn()
+        .mockImplementation((_name: string, project: Project) =>
+          Promise.resolve(project),
+        ),
     };
     mockIssueRepository = {
       getAllOpened: jest.fn(),
@@ -103,6 +107,39 @@ describe('StartPreparationUseCase', () => {
       mockIssueRepository,
       mockClaudeRepository,
       mockLocalCommandRunner,
+    );
+  });
+  it('should call prepareStatus for awaitingWorkspaceStatus and preparationStatus with chained project objects', async () => {
+    const projectAfterFirstPrepare = createMockProject();
+    const projectAfterSecondPrepare = createMockProject();
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockProjectRepository.prepareStatus
+      .mockResolvedValueOnce(projectAfterFirstPrepare)
+      .mockResolvedValueOnce(projectAfterSecondPrepare);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap([]),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce([]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+    });
+
+    expect(mockProjectRepository.prepareStatus).toHaveBeenCalledTimes(2);
+    expect(mockProjectRepository.prepareStatus).toHaveBeenNthCalledWith(
+      1,
+      'Awaiting Workspace',
+      mockProject,
+    );
+    expect(mockProjectRepository.prepareStatus).toHaveBeenNthCalledWith(
+      2,
+      'Preparation',
+      projectAfterFirstPrepare,
     );
   });
   it('should run aw command for awaiting workspace issues', async () => {

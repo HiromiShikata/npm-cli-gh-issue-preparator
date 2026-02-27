@@ -30,7 +30,10 @@ type RejectedReasonType =
 
 export class NotifyFinishedIssuePreparationUseCase {
   constructor(
-    private readonly projectRepository: Pick<ProjectRepository, 'getByUrl'>,
+    private readonly projectRepository: Pick<
+      ProjectRepository,
+      'getByUrl' | 'prepareStatus'
+    >,
     private readonly issueRepository: Pick<
       IssueRepository,
       'get' | 'update' | 'findRelatedOpenPRs'
@@ -49,7 +52,19 @@ export class NotifyFinishedIssuePreparationUseCase {
     awaitingQualityCheckStatus: string;
     thresholdForAutoReject: number;
   }): Promise<void> => {
-    const project = await this.projectRepository.getByUrl(params.projectUrl);
+    let project = await this.projectRepository.getByUrl(params.projectUrl);
+    project = await this.projectRepository.prepareStatus(
+      params.preparationStatus,
+      project,
+    );
+    project = await this.projectRepository.prepareStatus(
+      params.awaitingWorkspaceStatus,
+      project,
+    );
+    project = await this.projectRepository.prepareStatus(
+      params.awaitingQualityCheckStatus,
+      project,
+    );
 
     const issue = await this.issueRepository.get(params.issueUrl, project);
 
