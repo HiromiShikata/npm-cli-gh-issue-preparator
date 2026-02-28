@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.17.0...v1.18.0) (2026-02-28)
+
+
+### Features
+
+* **core:** call prepareStatus for all provided statuses before use ([c2739f3](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c2739f3a3adfa64e97bb37ed25a18999b0f54b7c))
+
 # [1.17.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.16.1...v1.17.0) (2026-02-26)
 
 
