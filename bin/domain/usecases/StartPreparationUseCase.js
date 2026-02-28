@@ -19,7 +19,9 @@ class StartPreparationUseCase {
                 console.warn('Failed to check Claude usage:', error);
             }
             const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
-            const project = await this.projectRepository.getByUrl(params.projectUrl);
+            let project = await this.projectRepository.getByUrl(params.projectUrl);
+            project = await this.projectRepository.prepareStatus(params.awaitingWorkspaceStatus, project);
+            project = await this.projectRepository.prepareStatus(params.preparationStatus, project);
             const storyObjectMap = await this.issueRepository.getStoryObjectMap(project);
             const allIssues = await this.issueRepository.getAllOpened(project);
             const repositoryBlockerIssues = this.createWorkflowBockerIsues(storyObjectMap);

@@ -7,7 +7,10 @@ import { ClaudeRepository } from './adapter-interfaces/ClaudeRepository';
 
 export class StartPreparationUseCase {
   constructor(
-    private readonly projectRepository: Pick<ProjectRepository, 'getByUrl'>,
+    private readonly projectRepository: Pick<
+      ProjectRepository,
+      'getByUrl' | 'prepareStatus'
+    >,
     private readonly issueRepository: Pick<
       IssueRepository,
       'getAllOpened' | 'getStoryObjectMap' | 'update'
@@ -43,7 +46,15 @@ export class StartPreparationUseCase {
     }
 
     const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
-    const project = await this.projectRepository.getByUrl(params.projectUrl);
+    let project = await this.projectRepository.getByUrl(params.projectUrl);
+    project = await this.projectRepository.prepareStatus(
+      params.awaitingWorkspaceStatus,
+      project,
+    );
+    project = await this.projectRepository.prepareStatus(
+      params.preparationStatus,
+      project,
+    );
     const storyObjectMap =
       await this.issueRepository.getStoryObjectMap(project);
     const allIssues = await this.issueRepository.getAllOpened(project);

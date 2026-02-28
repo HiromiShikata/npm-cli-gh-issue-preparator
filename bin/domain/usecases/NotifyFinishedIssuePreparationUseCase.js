@@ -21,7 +21,10 @@ class NotifyFinishedIssuePreparationUseCase {
         this.issueRepository = issueRepository;
         this.issueCommentRepository = issueCommentRepository;
         this.run = async (params) => {
-            const project = await this.projectRepository.getByUrl(params.projectUrl);
+            let project = await this.projectRepository.getByUrl(params.projectUrl);
+            project = await this.projectRepository.prepareStatus(params.preparationStatus, project);
+            project = await this.projectRepository.prepareStatus(params.awaitingWorkspaceStatus, project);
+            project = await this.projectRepository.prepareStatus(params.awaitingQualityCheckStatus, project);
             const issue = await this.issueRepository.get(params.issueUrl, project);
             if (!issue) {
                 throw new IssueNotFoundError(params.issueUrl);
