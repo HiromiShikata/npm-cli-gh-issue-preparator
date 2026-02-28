@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.18.0...v1.19.0) (2026-02-28)
+
+
+### Features
+
+* **core:** add prepareCustomNumberField method to ProjectRepository ([ea39e42](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ea39e426c6505c638ee338743580a7e59eb0727d))
+
 # [1.18.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.17.0...v1.18.0) (2026-02-28)
 
 
