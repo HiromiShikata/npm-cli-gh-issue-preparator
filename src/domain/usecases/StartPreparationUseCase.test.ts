@@ -88,6 +88,7 @@ describe('StartPreparationUseCase', () => {
         .mockImplementation((_name: string, project: Project) =>
           Promise.resolve(project),
         ),
+      prepareCustomNumberField: jest.fn(),
     };
     mockIssueRepository = {
       getAllOpened: jest.fn(),

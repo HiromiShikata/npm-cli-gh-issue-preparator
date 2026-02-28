@@ -212,4 +212,33 @@ describe('TowerDefenceProjectRepository', () => {
       expect(result).toBe(mockProject);
     });
   });
+
+  describe('prepareCustomNumberField', () => {
+    it('should return the project unchanged', async () => {
+      const mockProject: Project = {
+        id: 'project-1',
+        url: 'https://github.com/users/user/projects/1',
+        databaseId: 123,
+        name: 'Test Project',
+        status: {
+          name: 'Status',
+          fieldId: 'status-field-id',
+          statuses: [],
+        },
+        nextActionDate: null,
+        nextActionHour: null,
+        story: null,
+        remainingEstimationMinutes: null,
+        dependedIssueUrlSeparatedByComma: null,
+        completionDate50PercentConfidence: null,
+      };
+
+      const result = await repository.prepareCustomNumberField(
+        'Custom Number',
+        mockProject,
+      );
+
+      expect(result).toBe(mockProject);
+    });
+  });
 });

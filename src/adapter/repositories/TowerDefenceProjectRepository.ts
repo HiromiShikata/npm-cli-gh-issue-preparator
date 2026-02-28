@@ -55,4 +55,11 @@ export class TowerDefenceProjectRepository implements ProjectRepository {
         towerDefenceProject.completionDate50PercentConfidence,
     };
   }
+
+  async prepareCustomNumberField(
+    _fieldName: string,
+    project: Project,
+  ): Promise<Project> {
+    return project;
+  }
 }

@@ -40,6 +40,9 @@ class TowerDefenceProjectRepository {
             completionDate50PercentConfidence: towerDefenceProject.completionDate50PercentConfidence,
         };
     }
+    async prepareCustomNumberField(_fieldName, project) {
+        return project;
+    }
 }
 exports.TowerDefenceProjectRepository = TowerDefenceProjectRepository;
 //# sourceMappingURL=TowerDefenceProjectRepository.js.map
