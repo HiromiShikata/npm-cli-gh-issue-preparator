@@ -17,6 +17,7 @@ export declare class StartPreparationUseCase {
         logFilePath?: string;
         maximumPreparingIssuesCount: number | null;
         utilizationPercentageThreshold: number;
+        allowedIssueAuthors: string[] | null;
     }) => Promise<void>;
     createWorkflowBockerIsues: (storyObjectMap: StoryObjectMap) => {
         orgRepo: string;

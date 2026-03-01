@@ -8,6 +8,7 @@ type ConfigFile = {
     logFilePath?: string;
     maximumPreparingIssuesCount?: number;
     utilizationPercentageThreshold?: number;
+    allowedIssueAuthors?: string;
     awaitingQualityCheckStatus?: string;
     thresholdForAutoReject?: number;
 };

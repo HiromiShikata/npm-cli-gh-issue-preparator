@@ -122,6 +122,42 @@ describe('TowerDefenceIssueRepository', () => {
       expect(result[1].url).toBe('https://github.com/user/repo/issues/3');
     });
 
+    it('should map author field when present on tower defence issue', async () => {
+      const issueWithAuthor = {
+        ...createMockIssue({ state: 'OPEN' }),
+        author: 'someuser',
+      };
+      const mockIssues = [issueWithAuthor];
+
+      mockedGetStoryObjectMap.mockResolvedValue({
+        project: createMockTowerDefenceProject(),
+        issues: mockIssues,
+        cacheUsed: false,
+        storyObjectMap: createMockStoryObjectMap(),
+      });
+
+      const result = await repository.getAllOpened(createMockProject());
+
+      expect(result).toHaveLength(1);
+      expect(result[0].author).toBe('someuser');
+    });
+
+    it('should default author to empty string when not present', async () => {
+      const mockIssues: Issue[] = [createMockIssue({ state: 'OPEN' })];
+
+      mockedGetStoryObjectMap.mockResolvedValue({
+        project: createMockTowerDefenceProject(),
+        issues: mockIssues,
+        cacheUsed: false,
+        storyObjectMap: createMockStoryObjectMap(),
+      });
+
+      const result = await repository.getAllOpened(createMockProject());
+
+      expect(result).toHaveLength(1);
+      expect(result[0].author).toBe('');
+    });
+
     it('should use cached data on subsequent calls', async () => {
       const mockIssues: Issue[] = [createMockIssue({ state: 'OPEN' })];
 

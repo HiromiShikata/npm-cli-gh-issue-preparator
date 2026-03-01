@@ -50,6 +50,7 @@ const createMockIssue = (overrides: Partial<Issue> = {}): Issue => ({
   isInProgress: false,
   isClosed: false,
   createdAt: new Date(),
+  author: 'testuser',
   ...overrides,
 });
 
