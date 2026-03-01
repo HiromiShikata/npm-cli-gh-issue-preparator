@@ -125,6 +125,33 @@ type TimelineItem = {
           requiredStatusCheckContexts: string[];
         }>;
       };
+      defaultBranchRef?: {
+        name: string;
+      } | null;
+      rulesets?: {
+        nodes: Array<{
+          name: string;
+          enforcement: string;
+          conditions: {
+            refName: {
+              include: string[];
+              exclude: string[];
+            };
+          };
+          rules: {
+            nodes: Array<{
+              type: string;
+              parameters:
+                | {
+                    requiredStatusChecks: Array<{
+                      context: string;
+                    }>;
+                  }
+                | Record<string, never>;
+            }>;
+          };
+        }>;
+      };
     };
     commits?: {
       nodes: Array<{
@@ -605,6 +632,33 @@ export class GraphqlIssueRepository implements Pick<
                             requiredStatusCheckContexts
                           }
                         }
+                        defaultBranchRef {
+                          name
+                        }
+                        rulesets(first: 100) {
+                          nodes {
+                            name
+                            enforcement
+                            conditions {
+                              refName {
+                                include
+                                exclude
+                              }
+                            }
+                            rules(first: 100) {
+                              nodes {
+                                type
+                                parameters {
+                                  ... on RequiredStatusChecksParameters {
+                                    requiredStatusChecks {
+                                      context
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       }
                       commits(last: 1) {
                         nodes {
@@ -722,6 +776,53 @@ export class GraphqlIssueRepository implements Pick<
             requiredCheckNamesSet.add(name);
           }
         }
+
+        const rulesets = pr.baseRepository?.rulesets?.nodes || [];
+        const defaultBranchName =
+          pr.baseRepository?.defaultBranchRef?.name || '';
+        for (const ruleset of rulesets) {
+          if (ruleset.enforcement !== 'ACTIVE') continue;
+          const refIncludes = ruleset.conditions.refName.include;
+          const refExcludes = ruleset.conditions.refName.exclude;
+          const matchesInclude =
+            baseRefName !== undefined &&
+            refIncludes.some((pattern) => {
+              if (pattern === '~DEFAULT_BRANCH') {
+                return baseRefName === defaultBranchName;
+              }
+              if (pattern === '~ALL') {
+                return true;
+              }
+              const branchPattern = pattern.replace(/^refs\/heads\//, '');
+              return (
+                branchPattern === baseRefName ||
+                fnmatch(branchPattern, baseRefName)
+              );
+            });
+          if (!matchesInclude) continue;
+          const matchesExclude =
+            baseRefName !== undefined &&
+            refExcludes.some((pattern) => {
+              if (pattern === '~DEFAULT_BRANCH') {
+                return baseRefName === defaultBranchName;
+              }
+              const branchPattern = pattern.replace(/^refs\/heads\//, '');
+              return (
+                branchPattern === baseRefName ||
+                fnmatch(branchPattern, baseRefName)
+              );
+            });
+          if (matchesExclude) continue;
+          for (const rule of ruleset.rules.nodes) {
+            if (rule.type !== 'REQUIRED_STATUS_CHECKS') continue;
+            if ('requiredStatusChecks' in rule.parameters) {
+              for (const check of rule.parameters.requiredStatusChecks) {
+                requiredCheckNamesSet.add(check.context);
+              }
+            }
+          }
+        }
+
         const requiredCheckNames = Array.from(requiredCheckNamesSet);
 
         const passingConclusions = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);

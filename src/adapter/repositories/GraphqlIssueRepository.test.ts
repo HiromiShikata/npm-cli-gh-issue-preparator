@@ -2237,6 +2237,1177 @@ describe('GraphqlIssueRepository', () => {
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(true);
     });
+
+    it('should detect required checks from rulesets with ~DEFAULT_BRANCH condition', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'CI checks',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'ci (20)' },
+                                          { context: 'wip-check' },
+                                          { context: 'merge-reports' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'ci (20)',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'wip-check',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'merge-reports',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should return isPassedAllCiJob as false when required checks from rulesets are not passing', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'CI checks',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'ci (20)' },
+                                          { context: 'wip-check' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'ci (20)',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+    });
+
+    it('should skip rulesets with non-ACTIVE enforcement', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'Disabled checks',
+                                enforcement: 'DISABLED',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'should-not-be-required' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should skip rulesets that do not match the PR base branch', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'develop',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'Main branch checks',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'test' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'develop' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should match rulesets with refs/heads/ prefix pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'staging',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'Staging checks',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['refs/heads/staging'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'deploy-check' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'deploy-check',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'staging' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should exclude rulesets matching exclude pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'All except main',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~ALL'],
+                                    exclude: ['~DEFAULT_BRANCH'],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'should-not-apply' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should merge required checks from both branch protection rules and rulesets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: {
+                            nodes: [
+                              {
+                                pattern: 'main',
+                                requiredStatusCheckContexts: ['legacy-test'],
+                              },
+                            ],
+                          },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'CI checks',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'ruleset-test' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'legacy-test',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+    });
+
+    it('should match rulesets with ~ALL include pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'any-branch',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'All branches',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~ALL'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'universal-check' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'universal-check',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'any-branch' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should skip non-REQUIRED_STATUS_CHECKS rules in rulesets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'Mixed rules',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'PULL_REQUEST',
+                                      parameters: {},
+                                    },
+                                    {
+                                      type: 'REQUIRED_LINEAR_HISTORY',
+                                      parameters: {},
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should handle rulesets with refs/heads/ exclude pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'staging',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'All except staging',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~ALL'],
+                                    exclude: ['refs/heads/staging'],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'excluded-check' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'staging' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should match rulesets with glob pattern in include', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'release/v2.0',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'Release checks',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['refs/heads/release/*'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'release-test' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'release-test',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'release/v2.0' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should exclude rulesets matching glob pattern in exclude', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'hotfix/urgent',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'All except hotfix',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~ALL'],
+                                    exclude: ['refs/heads/hotfix/*'],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {
+                                        requiredStatusChecks: [
+                                          { context: 'should-not-apply' },
+                                        ],
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'hotfix/urgent' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should handle rulesets with empty parameters in REQUIRED_STATUS_CHECKS rule', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                          defaultBranchRef: { name: 'main' },
+                          rulesets: {
+                            nodes: [
+                              {
+                                name: 'Empty params ruleset',
+                                enforcement: 'ACTIVE',
+                                conditions: {
+                                  refName: {
+                                    include: ['~DEFAULT_BRANCH'],
+                                    exclude: [],
+                                  },
+                                },
+                                rules: {
+                                  nodes: [
+                                    {
+                                      type: 'REQUIRED_STATUS_CHECKS',
+                                      parameters: {},
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should handle PR with no rulesets in baseRepository', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: { nodes: [] },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'SUCCESS',
+                                  contexts: { nodes: [] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(true);
+    });
   });
 
   describe('get', () => {
