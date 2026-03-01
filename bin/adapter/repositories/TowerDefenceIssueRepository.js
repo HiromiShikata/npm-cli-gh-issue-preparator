@@ -40,6 +40,7 @@ class TowerDefenceIssueRepository {
     mapToIssue(towerDefenceIssue) {
         return {
             ...towerDefenceIssue,
+            author: 'author' in towerDefenceIssue ? String(towerDefenceIssue.author) : '',
         };
     }
 }

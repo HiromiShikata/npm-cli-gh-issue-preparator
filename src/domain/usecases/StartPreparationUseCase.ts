@@ -1,7 +1,6 @@
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
 import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { LocalCommandRunner } from './adapter-interfaces/LocalCommandRunner';
-import { Issue } from '../entities/Issue';
 import { StoryObject, StoryObjectMap } from '../entities/StoryObjectMap';
 import { ClaudeRepository } from './adapter-interfaces/ClaudeRepository';
 
@@ -27,6 +26,7 @@ export class StartPreparationUseCase {
     logFilePath?: string;
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
+    allowedIssueAuthors: string[] | null;
   }): Promise<void> => {
     try {
       const claudeUsages = await this.claudeRepository.getUsage();
@@ -62,10 +62,17 @@ export class StartPreparationUseCase {
     const repositoryBlockerIssues =
       this.createWorkflowBockerIsues(storyObjectMap);
 
-    const awaitingWorkspaceIssues: Issue[] = Array.from(storyObjectMap.values())
+    const awaitingWorkspaceIssues = Array.from(storyObjectMap.values())
       .map((storyObject) => storyObject.issues)
       .flat()
-      .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
+      .filter((issue) => issue.status === params.awaitingWorkspaceStatus)
+      .map((issue) => ({
+        ...issue,
+        author:
+          'author' in issue && typeof issue.author === 'string'
+            ? issue.author
+            : '',
+      }));
     const currentPreparationIssueCount = allIssues.filter(
       (issue) => issue.status === params.preparationStatus,
     ).length;
@@ -111,6 +118,13 @@ export class StartPreparationUseCase {
         continue;
       }
       if (issue.nextActionHour !== null && currentHour < issue.nextActionHour) {
+        continue;
+      }
+      if (
+        params.allowedIssueAuthors !== null &&
+        issue.author !== '' &&
+        !params.allowedIssueAuthors.includes(issue.author)
+      ) {
         continue;
       }
       const agent =

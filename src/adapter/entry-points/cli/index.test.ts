@@ -89,6 +89,7 @@ describe('CLI', () => {
         utilizationPercentageThreshold: 75,
         awaitingQualityCheckStatus: 'Awaiting QC',
         thresholdForAutoReject: 5,
+        allowedIssueAuthors: 'user1,user2',
       };
       writeConfig(config);
 
@@ -262,6 +263,7 @@ describe('CLI', () => {
         logFilePath: undefined,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -299,6 +301,7 @@ describe('CLI', () => {
         logFilePath: undefined,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -338,6 +341,7 @@ describe('CLI', () => {
         logFilePath: '/path/to/log.txt',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -379,6 +383,7 @@ describe('CLI', () => {
         logFilePath: '/path/to/cli-log.txt',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -418,6 +423,7 @@ describe('CLI', () => {
         logFilePath: undefined,
         maximumPreparingIssuesCount: 10,
         utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -459,6 +465,7 @@ describe('CLI', () => {
         logFilePath: undefined,
         maximumPreparingIssuesCount: 20,
         utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -614,6 +621,7 @@ describe('CLI', () => {
         logFilePath: undefined,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 75,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -655,6 +663,7 @@ describe('CLI', () => {
         logFilePath: undefined,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 50,
+        allowedIssueAuthors: null,
       });
     });
 
@@ -907,6 +916,128 @@ describe('CLI', () => {
 
       consoleErrorSpy.mockRestore();
       processExitSpy.mockRestore();
+    });
+
+    it('should pass allowedIssueAuthors from config file', async () => {
+      const configWithAuthors = {
+        ...defaultConfig,
+        allowedIssueAuthors: 'user1,user2',
+      };
+      writeConfig(configWithAuthors);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+        logFilePath: undefined,
+        maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: ['user1', 'user2'],
+      });
+    });
+
+    it('should normalize empty allowedIssueAuthors to null', async () => {
+      const configWithEmptyAuthors = {
+        ...defaultConfig,
+        allowedIssueAuthors: '',
+      };
+      writeConfig(configWithEmptyAuthors);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+        logFilePath: undefined,
+        maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
+      });
+    });
+
+    it('should pass allowedIssueAuthors from CLI overriding config', async () => {
+      const configWithAuthors = {
+        ...defaultConfig,
+        allowedIssueAuthors: 'user1,user2',
+      };
+      writeConfig(configWithAuthors);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+        '--allowedIssueAuthors',
+        'user3,user4',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+        logFilePath: undefined,
+        maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: ['user3', 'user4'],
+      });
     });
   });
 

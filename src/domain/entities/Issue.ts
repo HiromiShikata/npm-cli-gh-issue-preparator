@@ -23,4 +23,5 @@ export type Issue = {
   isInProgress: boolean;
   isClosed: boolean;
   createdAt: Date;
+  author: string;
 };

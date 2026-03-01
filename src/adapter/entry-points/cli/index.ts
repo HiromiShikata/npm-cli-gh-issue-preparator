@@ -22,6 +22,7 @@ type ConfigFile = {
   logFilePath?: string;
   maximumPreparingIssuesCount?: number;
   utilizationPercentageThreshold?: number;
+  allowedIssueAuthors?: string;
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: number;
 };
@@ -34,6 +35,7 @@ type StartDaemonOptions = {
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
   utilizationPercentageThreshold?: string;
+  allowedIssueAuthors?: string;
   configFilePath: string;
 };
 
@@ -90,6 +92,7 @@ const loadConfigFile = (configFilePath: string): ConfigFile => {
         parsed,
         'utilizationPercentageThreshold',
       ),
+      allowedIssueAuthors: getStringValue(parsed, 'allowedIssueAuthors'),
       awaitingQualityCheckStatus: getStringValue(
         parsed,
         'awaitingQualityCheckStatus',
@@ -132,6 +135,10 @@ program
   .option(
     '--utilizationPercentageThreshold <percentage>',
     'Claude usage percentage threshold for skipping preparation (default: 90)',
+  )
+  .option(
+    '--allowedIssueAuthors <authors>',
+    'Comma-separated list of allowed issue authors (default: all authors allowed)',
   )
   .action(async (options: StartDaemonOptions) => {
     const token = process.env.GH_TOKEN;
@@ -240,6 +247,19 @@ program
       utilizationPercentageThreshold = parsedThreshold;
     }
 
+    const rawAllowedAuthors =
+      options.allowedIssueAuthors ?? config.allowedIssueAuthors;
+    const parsedAllowedIssueAuthors = rawAllowedAuthors
+      ? rawAllowedAuthors
+          .split(',')
+          .map((a) => a.trim())
+          .filter((a) => a.length > 0)
+      : null;
+    const allowedIssueAuthors: string[] | null =
+      parsedAllowedIssueAuthors && parsedAllowedIssueAuthors.length > 0
+        ? parsedAllowedIssueAuthors
+        : null;
+
     await useCase.run({
       projectUrl,
       awaitingWorkspaceStatus,
@@ -248,6 +268,7 @@ program
       logFilePath,
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,
+      allowedIssueAuthors,
     });
   });
 
