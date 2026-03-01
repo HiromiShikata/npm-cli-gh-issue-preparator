@@ -583,6 +583,44 @@ describe('GraphqlIssueRepository', () => {
       expect(result[0].isBranchOutOfDate).toBe(false);
     });
 
+    it('should treat UNKNOWN mergeable state as conflicted', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'UNKNOWN',
+                        commits: { nodes: [] },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result[0].isConflicted).toBe(true);
+    });
+
     it('should handle unresolved review comments', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
