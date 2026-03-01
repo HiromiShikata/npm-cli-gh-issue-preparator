@@ -1,3 +1,10 @@
+## [1.19.2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.1...v1.19.2) (2026-03-01)
+
+
+### Bug Fixes
+
+* **core:** support GitHub Rulesets for required status check detection in findRelatedOpenPRs ([723e6d4](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/723e6d44324fc764f3e4c73d3630626479530317))
+
 ## [1.19.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.0...v1.19.1) (2026-03-01)
 
 
