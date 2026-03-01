@@ -471,7 +471,7 @@ class GraphqlIssueRepository {
                     continue;
                 const pr = item.source;
                 const prUrl = pr.url || '';
-                const isConflicted = pr.mergeable === 'CONFLICTING';
+                const isConflicted = pr.mergeable !== 'MERGEABLE';
                 const lastCommit = pr.commits?.nodes[0]?.commit;
                 const ciState = lastCommit?.statusCheckRollup?.state;
                 const contexts = lastCommit?.statusCheckRollup?.contexts?.nodes || [];

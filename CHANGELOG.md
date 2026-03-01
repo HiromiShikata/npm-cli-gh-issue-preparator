@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.0...v1.19.1) (2026-03-01)
+
+
+### Bug Fixes
+
+* **core:** detect conflict when mergeable state is UNKNOWN ([a503f51](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/a503f512b429d2e5466d392f489ef652298af572))
+
 # [1.19.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.18.0...v1.19.0) (2026-02-28)
 
 
