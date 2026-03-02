@@ -145,20 +145,24 @@ export class StartPreparationUseCase {
       return [];
     }
 
-    const result: {
-      orgRepo: string;
-      blockerIssueUrls: string[];
-    }[] =
-      storyObjectMap
-        .get(workflowBlockerStory[0])
-        ?.issues.filter((issue) => issue.state === 'OPEN')
-        .map((issue) => {
-          const orgRepo = issue.url.split('/issues')[0].split('github.com/')[1];
-          return {
-            orgRepo,
-            blockerIssueUrls: [issue.url],
-          };
-        }) || [];
-    return result;
+    const aggregated = new Map<string, string[]>();
+    workflowBlockerStory.forEach((storyName) => {
+      const issues =
+        storyObjectMap
+          .get(storyName)
+          ?.issues.filter((issue) => issue.state === 'OPEN') || [];
+      issues.forEach((issue) => {
+        const orgRepo = issue.url.split('/issues')[0].split('github.com/')[1];
+        const existing = aggregated.get(orgRepo) || [];
+        existing.push(issue.url);
+        aggregated.set(orgRepo, existing);
+      });
+    });
+    return Array.from(aggregated.entries()).map(
+      ([orgRepo, blockerIssueUrls]) => ({
+        orgRepo,
+        blockerIssueUrls,
+      }),
+    );
   };
 }
