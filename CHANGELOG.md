@@ -1,3 +1,11 @@
+## [1.19.3](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.2...v1.19.3) (2026-03-02)
+
+
+### Bug Fixes
+
+* **core:** aggregate blocker URLs per orgRepo in createWorkflowBockerIsues ([832523b](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/832523b19e52717202734cb01a48ba8d297030c7))
+* **core:** iterate all workflow blocker stories in createWorkflowBockerIsues ([2435494](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/2435494af5a771416519ba19ac0d829ee8f2ee27))
+
 ## [1.19.2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.1...v1.19.2) (2026-03-01)
 
 
