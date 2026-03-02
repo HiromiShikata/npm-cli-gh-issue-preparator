@@ -44,6 +44,7 @@ type NotifyFinishedOptions = {
   awaitingWorkspaceStatus?: string;
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: string;
+  workflowBlockerRepos?: string;
   configFilePath: string;
 };
 
@@ -273,6 +274,10 @@ program
     '--thresholdForAutoReject <count>',
     'Threshold for auto-escalation after consecutive rejections (default: 3)',
   )
+  .option(
+    '--workflowBlockerRepos <repos>',
+    'Comma-separated list of org/repo with active workflow blockers',
+  )
   .action(async (options: NotifyFinishedOptions) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -346,6 +351,13 @@ program
       thresholdForAutoReject = parsed;
     }
 
+    const workflowBlockerRepos = options.workflowBlockerRepos
+      ? options.workflowBlockerRepos
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter((r: string) => r.length > 0)
+      : undefined;
+
     await useCase.run({
       projectUrl,
       issueUrl: options.issueUrl,
@@ -353,6 +365,7 @@ program
       awaitingWorkspaceStatus,
       awaitingQualityCheckStatus,
       thresholdForAutoReject,
+      workflowBlockerRepos,
     });
   });
 

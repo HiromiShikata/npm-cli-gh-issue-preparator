@@ -73,9 +73,14 @@ class NotifyFinishedIssuePreparationUseCase {
                 await this.issueRepository.update(issue, project);
                 return;
             }
+            const orgRepo = `${issue.org}/${issue.repo}`;
+            const hasWorkflowBlocker = (params.workflowBlockerRepos ?? []).includes(orgRepo);
             issue.status = params.awaitingWorkspaceStatus;
             await this.issueRepository.update(issue, project);
             await this.issueCommentRepository.createComment(issue, `Auto Status Check: REJECTED\n${rejectedReasons.map((v) => `- ${v}`).join('\n')}`);
+            if (hasWorkflowBlocker) {
+                await this.issueCommentRepository.createComment(issue, 'retry after resolved workflow blocker issue');
+            }
         };
     }
 }

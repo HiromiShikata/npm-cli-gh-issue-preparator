@@ -185,6 +185,7 @@ program
     .option('--awaitingWorkspaceStatus <status>', 'Status for issues awaiting workspace')
     .option('--awaitingQualityCheckStatus <status>', 'Status for issues awaiting quality check')
     .option('--thresholdForAutoReject <count>', 'Threshold for auto-escalation after consecutive rejections (default: 3)')
+    .option('--workflowBlockerRepos <repos>', 'Comma-separated list of org/repo with active workflow blockers')
     .action(async (options) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -228,6 +229,12 @@ program
         }
         thresholdForAutoReject = parsed;
     }
+    const workflowBlockerRepos = options.workflowBlockerRepos
+        ? options.workflowBlockerRepos
+            .split(',')
+            .map((r) => r.trim())
+            .filter((r) => r.length > 0)
+        : undefined;
     await useCase.run({
         projectUrl,
         issueUrl: options.issueUrl,
@@ -235,6 +242,7 @@ program
         awaitingWorkspaceStatus,
         awaitingQualityCheckStatus,
         thresholdForAutoReject,
+        workflowBlockerRepos,
     });
 });
 /* istanbul ignore next */

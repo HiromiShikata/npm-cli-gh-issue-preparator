@@ -1234,6 +1234,74 @@ describe('CLI', () => {
       processExitSpy.mockRestore();
     });
 
+    it('should pass workflowBlockerRepos from CLI as parsed array', async () => {
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--workflowBlockerRepos',
+        'org/repo1,org/repo2',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        issueUrl: 'https://github.com/test/issue/1',
+        preparationStatus: 'Preparing',
+        awaitingWorkspaceStatus: 'Awaiting',
+        awaitingQualityCheckStatus: 'Awaiting QC',
+        thresholdForAutoReject: 3,
+        workflowBlockerRepos: ['org/repo1', 'org/repo2'],
+      });
+    });
+
+    it('should not pass workflowBlockerRepos when not provided', async () => {
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workflowBlockerRepos: undefined,
+        }),
+      );
+    });
+
     it('should exit with error when awaitingQualityCheckStatus is missing from both CLI and config', async () => {
       const configMissing = {
         projectUrl: 'https://github.com/test/project',
