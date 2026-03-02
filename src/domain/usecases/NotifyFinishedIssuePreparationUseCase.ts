@@ -51,6 +51,7 @@ export class NotifyFinishedIssuePreparationUseCase {
     awaitingWorkspaceStatus: string;
     awaitingQualityCheckStatus: string;
     thresholdForAutoReject: number;
+    workflowBlockerRepos?: string[];
   }): Promise<void> => {
     let project = await this.projectRepository.getByUrl(params.projectUrl);
     project = await this.projectRepository.prepareStatus(
@@ -137,6 +138,11 @@ export class NotifyFinishedIssuePreparationUseCase {
       return;
     }
 
+    const orgRepo = `${issue.org}/${issue.repo}`;
+    const hasWorkflowBlocker = (params.workflowBlockerRepos ?? []).includes(
+      orgRepo,
+    );
+
     issue.status = params.awaitingWorkspaceStatus;
     await this.issueRepository.update(issue, project);
 
@@ -144,5 +150,12 @@ export class NotifyFinishedIssuePreparationUseCase {
       issue,
       `Auto Status Check: REJECTED\n${rejectedReasons.map((v) => `- ${v}`).join('\n')}`,
     );
+
+    if (hasWorkflowBlocker) {
+      await this.issueCommentRepository.createComment(
+        issue,
+        'retry after resolved workflow blocker issue',
+      );
+    }
   };
 }

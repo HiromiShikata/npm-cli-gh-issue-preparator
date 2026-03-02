@@ -815,6 +815,258 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should add retry comment when issue is rejected and repo has active workflow blocker', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      org: 'user',
+      repo: 'repo',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerRepos: ['user/repo'],
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledTimes(2);
+    expect(mockIssueCommentRepository.createComment).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('Auto Status Check: REJECTED'),
+    );
+    expect(mockIssueCommentRepository.createComment).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should not add retry comment when issue is rejected but repo is not in workflow blocker list', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      org: 'user',
+      repo: 'repo',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerRepos: ['other-org/other-repo'],
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledTimes(1);
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('Auto Status Check: REJECTED'),
+    );
+  });
+
+  it('should not add retry comment when workflowBlockerRepos is not provided', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      org: 'user',
+      repo: 'repo',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not add retry comment when workflowBlockerRepos is empty', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      org: 'user',
+      repo: 'repo',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerRepos: [],
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledTimes(1);
+  });
+
+  it('should add retry comment when issue repo matches one of multiple workflow blocker repos', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/org/target-repo/issues/42',
+      org: 'org',
+      repo: 'target-repo',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/org/target-repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/org/target-repo/issues/42',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerRepos: [
+        'org/other-repo',
+        'org/target-repo',
+        'org/another-repo',
+      ],
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledTimes(2);
+    expect(mockIssueCommentRepository.createComment).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        url: 'https://github.com/org/target-repo/issues/42',
+      }),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should not add retry comment when issue passes all checks even if repo has workflow blocker', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      org: 'user',
+      repo: 'repo',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerRepos: ['user/repo'],
+    });
+
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalled();
+    expect(mockIssueRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
   it('should still check for report comment even when issue has category label', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
