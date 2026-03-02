@@ -552,6 +552,117 @@ describe('StartPreparationUseCase', () => {
     });
   });
 
+  it('should collect blocker issues from multiple workflow blocker stories', async () => {
+    const blockerIssueRepo1 = createMockIssue({
+      url: 'https://github.com/user/repo1/issues/100',
+      title: 'Blocker Issue Repo1',
+      labels: [],
+      status: 'Awaiting Workspace',
+      state: 'OPEN',
+    });
+
+    const blockerIssueRepo2 = createMockIssue({
+      url: 'https://github.com/user/repo2/issues/200',
+      title: 'Blocker Issue Repo2',
+      labels: [],
+      status: 'Awaiting Workspace',
+      state: 'OPEN',
+    });
+
+    const blockedIssueRepo1 = createMockIssue({
+      url: 'https://github.com/user/repo1/issues/101',
+      title: 'Blocked Issue in Repo1',
+      labels: [],
+      status: 'Awaiting Workspace',
+      state: 'OPEN',
+    });
+
+    const blockedIssueRepo2 = createMockIssue({
+      url: 'https://github.com/user/repo2/issues/201',
+      title: 'Blocked Issue in Repo2',
+      labels: [],
+      status: 'Awaiting Workspace',
+      state: 'OPEN',
+    });
+
+    const unblockedIssue = createMockIssue({
+      url: 'https://github.com/user/repo3/issues/300',
+      title: 'Unblocked Issue',
+      labels: [],
+      status: 'Awaiting Workspace',
+      state: 'OPEN',
+    });
+
+    const multiBlockerMap: StoryObjectMap = new Map();
+    multiBlockerMap.set('Workflow blocker A', {
+      story: {
+        id: 'story-blocker-a',
+        name: 'Workflow blocker A',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [blockerIssueRepo1],
+    });
+    multiBlockerMap.set('Workflow blocker B', {
+      story: {
+        id: 'story-blocker-b',
+        name: 'Workflow blocker B',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [blockerIssueRepo2],
+    });
+    multiBlockerMap.set('Default Story', {
+      story: {
+        id: 'story-1',
+        name: 'Default Story',
+        color: 'GRAY',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [blockedIssueRepo1, blockedIssueRepo2, unblockedIssue],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(multiBlockerMap);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce([
+      blockerIssueRepo1,
+      blockerIssueRepo2,
+      blockedIssueRepo1,
+      blockedIssueRepo2,
+      unblockedIssue,
+    ]);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+    });
+
+    const updatedUrls = mockIssueRepository.update.mock.calls.map(
+      (call) => call[0].url,
+    );
+    expect(updatedUrls).toContain('https://github.com/user/repo1/issues/100');
+    expect(updatedUrls).toContain('https://github.com/user/repo2/issues/200');
+    expect(updatedUrls).toContain('https://github.com/user/repo3/issues/300');
+    expect(updatedUrls).not.toContain(
+      'https://github.com/user/repo1/issues/101',
+    );
+    expect(updatedUrls).not.toContain(
+      'https://github.com/user/repo2/issues/201',
+    );
+  });
+
   it('should handle workflow blocker story with undefined storyObject (|| [] fallback)', async () => {
     // Create an awaiting issue that should be processed
     const awaitingIssue = createMockIssue({

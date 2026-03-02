@@ -148,17 +148,21 @@ export class StartPreparationUseCase {
     const result: {
       orgRepo: string;
       blockerIssueUrls: string[];
-    }[] =
-      storyObjectMap
-        .get(workflowBlockerStory[0])
-        ?.issues.filter((issue) => issue.state === 'OPEN')
-        .map((issue) => {
-          const orgRepo = issue.url.split('/issues')[0].split('github.com/')[1];
-          return {
-            orgRepo,
-            blockerIssueUrls: [issue.url],
-          };
-        }) || [];
+    }[] = workflowBlockerStory.flatMap(
+      (storyName) =>
+        storyObjectMap
+          .get(storyName)
+          ?.issues.filter((issue) => issue.state === 'OPEN')
+          .map((issue) => {
+            const orgRepo = issue.url
+              .split('/issues')[0]
+              .split('github.com/')[1];
+            return {
+              orgRepo,
+              blockerIssueUrls: [issue.url],
+            };
+          }) || [],
+    );
     return result;
   };
 }
