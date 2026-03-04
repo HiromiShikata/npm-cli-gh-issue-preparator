@@ -3425,6 +3425,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [{ login: 'user1' }] },
                 labels: { nodes: [{ name: 'bug' }] },
                 projectItems: {
@@ -3455,6 +3456,47 @@ describe('GraphqlIssueRepository', () => {
       expect(result?.itemId).toBe('item-123');
       expect(result?.assignees).toEqual(['user1']);
       expect(result?.labels).toEqual(['bug']);
+      expect(result?.author).toBe('testauthor');
+    });
+
+    it('should default author to empty string when author is null', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                number: 1,
+                title: 'Test Issue',
+                state: 'OPEN',
+                body: 'Test body',
+                createdAt: '2024-01-01T00:00:00Z',
+                url: 'https://github.com/user/repo/issues/1',
+                author: null,
+                assignees: { nodes: [{ login: 'user1' }] },
+                labels: { nodes: [{ name: 'bug' }] },
+                projectItems: {
+                  nodes: [
+                    {
+                      id: 'item-123',
+                      project: { number: 1 },
+                      fieldValueByName: { name: 'Preparation' },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/user/repo/issues/1',
+        createMockProject(),
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.author).toBe('');
     });
 
     it('should return null when issue is not found', async () => {
@@ -3505,6 +3547,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: { nodes: [] },
@@ -3537,6 +3580,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: {
@@ -3597,6 +3641,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: { nodes: [] },
@@ -3629,6 +3674,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: {
@@ -3669,6 +3715,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: { nodes: [] },
@@ -3700,6 +3747,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'PR body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/pull/5',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [{ login: 'user1' }] },
                 labels: { nodes: [{ name: 'enhancement' }] },
                 projectItems: {
@@ -3766,6 +3814,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'PR body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/pull/5',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: { nodes: [] },
@@ -3798,6 +3847,7 @@ describe('GraphqlIssueRepository', () => {
                 body: 'Test body',
                 createdAt: '2024-01-01T00:00:00Z',
                 url: 'https://github.com/user/repo/issues/1',
+                author: { login: 'testauthor' },
                 assignees: { nodes: [] },
                 labels: { nodes: [] },
                 projectItems: { nodes: [] },

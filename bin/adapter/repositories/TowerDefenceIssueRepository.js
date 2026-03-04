@@ -38,8 +38,13 @@ class TowerDefenceIssueRepository {
             .map((issue) => this.mapToIssue(issue));
     }
     mapToIssue(towerDefenceIssue) {
+        const author = 'author' in towerDefenceIssue &&
+            typeof towerDefenceIssue.author === 'string'
+            ? towerDefenceIssue.author
+            : '';
         return {
             ...towerDefenceIssue,
+            author,
         };
     }
 }

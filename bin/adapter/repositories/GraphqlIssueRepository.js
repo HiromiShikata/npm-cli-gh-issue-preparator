@@ -96,6 +96,9 @@ class GraphqlIssueRepository {
             body
             createdAt
             url
+            author {
+              login
+            }
             assignees(first: 100) {
               nodes {
                 login
@@ -186,6 +189,7 @@ class GraphqlIssueRepository {
             isInProgress: false,
             isClosed: issueData.state === 'CLOSED',
             createdAt: new Date(issueData.createdAt),
+            author: issueData.author?.login ?? '',
         };
         return issue;
     }

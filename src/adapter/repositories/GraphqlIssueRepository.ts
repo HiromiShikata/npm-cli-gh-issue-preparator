@@ -227,9 +227,9 @@ type IssueOrPullRequestData = {
   body: string;
   createdAt: string;
   url: string;
-  author?: {
+  author: {
     login: string;
-  };
+  } | null;
   assignees: {
     nodes: Array<{
       login: string;

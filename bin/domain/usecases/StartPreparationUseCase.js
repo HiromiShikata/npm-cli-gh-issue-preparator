@@ -28,7 +28,13 @@ class StartPreparationUseCase {
             const awaitingWorkspaceIssues = Array.from(storyObjectMap.values())
                 .map((storyObject) => storyObject.issues)
                 .flat()
-                .filter((issue) => issue.status === params.awaitingWorkspaceStatus);
+                .filter((issue) => issue.status === params.awaitingWorkspaceStatus)
+                .map((issue) => ({
+                ...issue,
+                author: 'author' in issue && typeof issue.author === 'string'
+                    ? issue.author
+                    : '',
+            }));
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
             let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
             const now = new Date();
@@ -51,6 +57,11 @@ class StartPreparationUseCase {
                     continue;
                 }
                 if (issue.nextActionHour !== null && currentHour < issue.nextActionHour) {
+                    continue;
+                }
+                if (params.allowedIssueAuthors !== null &&
+                    issue.author !== '' &&
+                    !params.allowedIssueAuthors.includes(issue.author)) {
                     continue;
                 }
                 const agent = issue.labels
