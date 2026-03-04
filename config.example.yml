@@ -18,4 +18,5 @@ workingReport:
 awaitingWorkspaceStatus: 'Awaiting workspace'
 preparationStatus: 'Preparation'
 defaultAgentName: 'impl'
+allowedIssueAuthors: 'HiromiShikata,other-author'
 awaitingQualityCheckStatus: 'Awaiting quality check'

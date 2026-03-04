@@ -227,6 +227,9 @@ type IssueOrPullRequestData = {
   body: string;
   createdAt: string;
   url: string;
+  author?: {
+    login: string;
+  };
   assignees: {
     nodes: Array<{
       login: string;
@@ -285,6 +288,9 @@ export class GraphqlIssueRepository implements Pick<
             body
             createdAt
             url
+            author {
+              login
+            }
             assignees(first: 100) {
               nodes {
                 login
@@ -381,6 +387,7 @@ export class GraphqlIssueRepository implements Pick<
       isInProgress: false,
       isClosed: issueData.state === 'CLOSED',
       createdAt: new Date(issueData.createdAt),
+      author: issueData.author?.login ?? '',
     };
 
     return issue;

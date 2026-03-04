@@ -61,6 +61,8 @@ export class TowerDefenceIssueRepository implements Pick<
   private mapToIssue(towerDefenceIssue: TowerDefenceIssue): Issue {
     return {
       ...towerDefenceIssue,
+      author:
+        'author' in towerDefenceIssue ? String(towerDefenceIssue.author) : '',
     };
   }
 }
