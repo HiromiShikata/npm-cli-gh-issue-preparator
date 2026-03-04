@@ -75,6 +75,7 @@ const loadConfigFile = (configFilePath) => {
             logFilePath: getStringValue(parsed, 'logFilePath'),
             maximumPreparingIssuesCount: getNumberValue(parsed, 'maximumPreparingIssuesCount'),
             utilizationPercentageThreshold: getNumberValue(parsed, 'utilizationPercentageThreshold'),
+            allowedIssueAuthors: getStringValue(parsed, 'allowedIssueAuthors'),
             awaitingQualityCheckStatus: getStringValue(parsed, 'awaitingQualityCheckStatus'),
             thresholdForAutoReject: getNumberValue(parsed, 'thresholdForAutoReject'),
         };
@@ -102,6 +103,7 @@ program
     .option('--logFilePath <path>', 'Path to log file')
     .option('--maximumPreparingIssuesCount <count>', 'Maximum number of issues in preparation status (default: 6)')
     .option('--utilizationPercentageThreshold <percentage>', 'Claude usage percentage threshold for skipping preparation (default: 90)')
+    .option('--allowedIssueAuthors <authors>', 'Comma-separated list of allowed issue authors (default: all authors allowed)')
     .action(async (options) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -165,6 +167,16 @@ program
         }
         utilizationPercentageThreshold = parsedThreshold;
     }
+    const rawAllowedAuthors = options.allowedIssueAuthors ?? config.allowedIssueAuthors;
+    const parsedAllowedIssueAuthors = rawAllowedAuthors
+        ? rawAllowedAuthors
+            .split(',')
+            .map((a) => a.trim())
+            .filter((a) => a.length > 0)
+        : null;
+    const allowedIssueAuthors = parsedAllowedIssueAuthors && parsedAllowedIssueAuthors.length > 0
+        ? parsedAllowedIssueAuthors
+        : null;
     await useCase.run({
         projectUrl,
         awaitingWorkspaceStatus,
@@ -173,6 +185,7 @@ program
         logFilePath,
         maximumPreparingIssuesCount,
         utilizationPercentageThreshold,
+        allowedIssueAuthors,
     });
 });
 program
