@@ -1,3 +1,15 @@
+# [1.20.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.3...v1.20.0) (2026-03-04)
+
+
+### Bug Fixes
+
+* **core:** address review comments on author mapping and test coverage ([10e4e87](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/10e4e8771c0b3d8c8fd79359e63e3a7d11542e3b))
+
+
+### Features
+
+* **core:** add allowed issue authors filter for startDaemon ([6f3a608](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/6f3a6083d7a3cac189ef57e3a12711de44b1c90a))
+
 ## [1.19.3](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.2...v1.19.3) (2026-03-02)
 
 
