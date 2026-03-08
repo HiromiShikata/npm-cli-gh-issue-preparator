@@ -834,22 +834,25 @@ export class GraphqlIssueRepository implements Pick<
 
         const passingConclusions = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
 
+        const seenContextNames = new Set<string>();
         const passedContextNames = new Set<string>();
         for (const ctx of contexts) {
-          if (
-            'name' in ctx &&
-            ctx.conclusion &&
-            passingConclusions.has(ctx.conclusion)
-          ) {
-            passedContextNames.add(ctx.name);
+          if ('name' in ctx) {
+            seenContextNames.add(ctx.name);
+            if (ctx.conclusion && passingConclusions.has(ctx.conclusion)) {
+              passedContextNames.add(ctx.name);
+            }
           }
-          if ('context' in ctx && ctx.state === 'SUCCESS') {
-            passedContextNames.add(ctx.context);
+          if ('context' in ctx) {
+            seenContextNames.add(ctx.context);
+            if (ctx.state === 'SUCCESS') {
+              passedContextNames.add(ctx.context);
+            }
           }
         }
 
         const missingRequiredCheckNames = requiredCheckNames.filter(
-          (name) => !passedContextNames.has(name),
+          (name) => !seenContextNames.has(name),
         );
 
         const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;

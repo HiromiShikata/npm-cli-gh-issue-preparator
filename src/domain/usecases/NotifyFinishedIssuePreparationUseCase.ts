@@ -101,12 +101,13 @@ export class NotifyFinishedIssuePreparationUseCase {
       return;
     }
 
-    const rejectedReasons: RejectedReasonType[] = [];
-    const rejectedReasonDetails: string[] = [];
+    const rejections: { type: RejectedReasonType; detail: string }[] = [];
     const lastComment = comments[comments.length - 1];
     if (!lastComment || !lastComment.content.startsWith('From:')) {
-      rejectedReasons.push('NO_REPORT_FROM_AGENT_BOT');
-      rejectedReasonDetails.push('NO_REPORT_FROM_AGENT_BOT');
+      rejections.push({
+        type: 'NO_REPORT_FROM_AGENT_BOT',
+        detail: 'NO_REPORT_FROM_AGENT_BOT',
+      });
     }
 
     const categoryLabels = issue.labels.filter((label) =>
@@ -117,42 +118,46 @@ export class NotifyFinishedIssuePreparationUseCase {
         issue.url,
       );
       if (relatedOpenPrs.length <= 0) {
-        rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
-        rejectedReasonDetails.push('PULL_REQUEST_NOT_FOUND');
+        rejections.push({
+          type: 'PULL_REQUEST_NOT_FOUND',
+          detail: 'PULL_REQUEST_NOT_FOUND',
+        });
       } else if (relatedOpenPrs.length > 1) {
-        rejectedReasons.push('MULTIPLE_PULL_REQUESTS_FOUND');
-        rejectedReasonDetails.push(
-          `MULTIPLE_PULL_REQUESTS_FOUND: ${relatedOpenPrs.map((pr) => pr.url).join(', ')}`,
-        );
+        rejections.push({
+          type: 'MULTIPLE_PULL_REQUESTS_FOUND',
+          detail: `MULTIPLE_PULL_REQUESTS_FOUND: ${relatedOpenPrs.map((pr) => pr.url).join(', ')}`,
+        });
       } else {
         const pr = relatedOpenPrs[0];
         if (pr.isConflicted) {
-          rejectedReasons.push('PULL_REQUEST_CONFLICTED');
-          rejectedReasonDetails.push(`PULL_REQUEST_CONFLICTED: ${pr.url}`);
+          rejections.push({
+            type: 'PULL_REQUEST_CONFLICTED',
+            detail: `PULL_REQUEST_CONFLICTED: ${pr.url}`,
+          });
         }
         if (!pr.isPassedAllCiJob) {
           if (pr.missingRequiredCheckNames.length > 0) {
-            rejectedReasons.push('REQUIRED_CI_JOB_NEVER_STARTED');
-            rejectedReasonDetails.push(
-              `REQUIRED_CI_JOB_NEVER_STARTED: ${pr.url} (missing: ${pr.missingRequiredCheckNames.join(', ')})`,
-            );
+            rejections.push({
+              type: 'REQUIRED_CI_JOB_NEVER_STARTED',
+              detail: `REQUIRED_CI_JOB_NEVER_STARTED: ${pr.url} (missing: ${pr.missingRequiredCheckNames.join(', ')})`,
+            });
           } else {
-            rejectedReasons.push('ANY_CI_JOB_FAILED_OR_IN_PROGRESS');
-            rejectedReasonDetails.push(
-              `ANY_CI_JOB_FAILED_OR_IN_PROGRESS: ${pr.url}`,
-            );
+            rejections.push({
+              type: 'ANY_CI_JOB_FAILED_OR_IN_PROGRESS',
+              detail: `ANY_CI_JOB_FAILED_OR_IN_PROGRESS: ${pr.url}`,
+            });
           }
         }
         if (!pr.isResolvedAllReviewComments) {
-          rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
-          rejectedReasonDetails.push(
-            `ANY_REVIEW_COMMENT_NOT_RESOLVED: ${pr.url}`,
-          );
+          rejections.push({
+            type: 'ANY_REVIEW_COMMENT_NOT_RESOLVED',
+            detail: `ANY_REVIEW_COMMENT_NOT_RESOLVED: ${pr.url}`,
+          });
         }
       }
     }
 
-    if (rejectedReasons.length <= 0) {
+    if (rejections.length <= 0) {
       issue.status = params.awaitingQualityCheckStatus;
       await this.issueRepository.update(issue, project);
       return;
@@ -163,7 +168,7 @@ export class NotifyFinishedIssuePreparationUseCase {
 
     await this.issueCommentRepository.createComment(
       issue,
-      `Auto Status Check: REJECTED\n${rejectedReasonDetails.map((v) => `- ${v}`).join('\n')}`,
+      `Auto Status Check: REJECTED\n${rejections.map((r) => `- ${r.detail}`).join('\n')}`,
     );
   };
 }

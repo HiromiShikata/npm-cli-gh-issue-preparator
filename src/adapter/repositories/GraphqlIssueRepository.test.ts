@@ -1197,6 +1197,85 @@ describe('GraphqlIssueRepository', () => {
       );
     });
 
+    it('should not include failed required checks in missingRequiredCheckNames', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: {
+                            nodes: [
+                              {
+                                pattern: 'main',
+                                requiredStatusCheckContexts: [
+                                  'test',
+                                  'format',
+                                  'deploy-preview',
+                                ],
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'FAILURE',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'test',
+                                        conclusion: 'FAILURE',
+                                      },
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'format',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].missingRequiredCheckNames).toEqual(['deploy-preview']);
+    });
+
     it('should return isPassedAllCiJob as true when all required checks passed but blocked by required review', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
