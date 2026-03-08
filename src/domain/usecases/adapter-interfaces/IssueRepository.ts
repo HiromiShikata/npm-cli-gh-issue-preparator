@@ -8,6 +8,7 @@ export type RelatedPullRequest = {
   isPassedAllCiJob: boolean;
   isResolvedAllReviewComments: boolean;
   isBranchOutOfDate: boolean;
+  missingRequiredCheckNames: string[];
 };
 
 export interface IssueRepository {

@@ -542,6 +542,7 @@ describe('GraphqlIssueRepository', () => {
       expect(result[0].isConflicted).toBe(false);
       expect(result[0].isResolvedAllReviewComments).toBe(true);
       expect(result[0].isBranchOutOfDate).toBe(false);
+      expect(result[0].missingRequiredCheckNames).toEqual([]);
     });
 
     it('should handle conflicted PRs', async () => {
@@ -1188,6 +1189,12 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].missingRequiredCheckNames).toEqual(
+        expect.arrayContaining([
+          'Check linked issues in pull requests',
+          'create_and_enable_automerge',
+        ]),
+      );
     });
 
     it('should return isPassedAllCiJob as true when all required checks passed but blocked by required review', async () => {
@@ -1262,6 +1269,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(true);
+      expect(result[0].missingRequiredCheckNames).toEqual([]);
     });
 
     it('should return isPassedAllCiJob as true when ciState is SUCCESS and no branch protection rules exist', async () => {

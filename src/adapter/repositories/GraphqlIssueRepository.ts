@@ -848,9 +848,11 @@ export class GraphqlIssueRepository implements Pick<
           }
         }
 
-        const allRequiredChecksPassed =
-          requiredCheckNames.length === 0 ||
-          requiredCheckNames.every((name) => passedContextNames.has(name));
+        const missingRequiredCheckNames = requiredCheckNames.filter(
+          (name) => !passedContextNames.has(name),
+        );
+
+        const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
 
         const isPassedAllCiJob =
           ciState === 'SUCCESS' && allRequiredChecksPassed;
@@ -871,6 +873,7 @@ export class GraphqlIssueRepository implements Pick<
           isPassedAllCiJob,
           isResolvedAllReviewComments,
           isBranchOutOfDate,
+          missingRequiredCheckNames,
         });
       }
 

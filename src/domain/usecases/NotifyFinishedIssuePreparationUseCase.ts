@@ -26,6 +26,7 @@ type RejectedReasonType =
   | 'MULTIPLE_PULL_REQUESTS_FOUND'
   | 'PULL_REQUEST_CONFLICTED'
   | 'ANY_CI_JOB_FAILED_OR_IN_PROGRESS'
+  | 'REQUIRED_CI_JOB_NEVER_STARTED'
   | 'ANY_REVIEW_COMMENT_NOT_RESOLVED';
 
 export class NotifyFinishedIssuePreparationUseCase {
@@ -101,9 +102,11 @@ export class NotifyFinishedIssuePreparationUseCase {
     }
 
     const rejectedReasons: RejectedReasonType[] = [];
+    const rejectedReasonDetails: string[] = [];
     const lastComment = comments[comments.length - 1];
     if (!lastComment || !lastComment.content.startsWith('From:')) {
       rejectedReasons.push('NO_REPORT_FROM_AGENT_BOT');
+      rejectedReasonDetails.push('NO_REPORT_FROM_AGENT_BOT');
     }
 
     const categoryLabels = issue.labels.filter((label) =>
@@ -115,18 +118,36 @@ export class NotifyFinishedIssuePreparationUseCase {
       );
       if (relatedOpenPrs.length <= 0) {
         rejectedReasons.push('PULL_REQUEST_NOT_FOUND');
+        rejectedReasonDetails.push('PULL_REQUEST_NOT_FOUND');
       } else if (relatedOpenPrs.length > 1) {
         rejectedReasons.push('MULTIPLE_PULL_REQUESTS_FOUND');
+        rejectedReasonDetails.push(
+          `MULTIPLE_PULL_REQUESTS_FOUND: ${relatedOpenPrs.map((pr) => pr.url).join(', ')}`,
+        );
       } else {
         const pr = relatedOpenPrs[0];
         if (pr.isConflicted) {
           rejectedReasons.push('PULL_REQUEST_CONFLICTED');
+          rejectedReasonDetails.push(`PULL_REQUEST_CONFLICTED: ${pr.url}`);
         }
         if (!pr.isPassedAllCiJob) {
-          rejectedReasons.push('ANY_CI_JOB_FAILED_OR_IN_PROGRESS');
+          if (pr.missingRequiredCheckNames.length > 0) {
+            rejectedReasons.push('REQUIRED_CI_JOB_NEVER_STARTED');
+            rejectedReasonDetails.push(
+              `REQUIRED_CI_JOB_NEVER_STARTED: ${pr.url} (missing: ${pr.missingRequiredCheckNames.join(', ')})`,
+            );
+          } else {
+            rejectedReasons.push('ANY_CI_JOB_FAILED_OR_IN_PROGRESS');
+            rejectedReasonDetails.push(
+              `ANY_CI_JOB_FAILED_OR_IN_PROGRESS: ${pr.url}`,
+            );
+          }
         }
         if (!pr.isResolvedAllReviewComments) {
           rejectedReasons.push('ANY_REVIEW_COMMENT_NOT_RESOLVED');
+          rejectedReasonDetails.push(
+            `ANY_REVIEW_COMMENT_NOT_RESOLVED: ${pr.url}`,
+          );
         }
       }
     }
@@ -142,7 +163,7 @@ export class NotifyFinishedIssuePreparationUseCase {
 
     await this.issueCommentRepository.createComment(
       issue,
-      `Auto Status Check: REJECTED\n${rejectedReasons.map((v) => `- ${v}`).join('\n')}`,
+      `Auto Status Check: REJECTED\n${rejectedReasonDetails.map((v) => `- ${v}`).join('\n')}`,
     );
   };
 }
