@@ -539,9 +539,11 @@ describe('GraphqlIssueRepository', () => {
       expect(result).toHaveLength(1);
       expect(result[0].url).toBe('https://github.com/user/repo/pull/1');
       expect(result[0].isPassedAllCiJob).toBe(true);
+      expect(result[0].isCiStateSuccess).toBe(true);
       expect(result[0].isConflicted).toBe(false);
       expect(result[0].isResolvedAllReviewComments).toBe(true);
       expect(result[0].isBranchOutOfDate).toBe(false);
+      expect(result[0].missingRequiredCheckNames).toEqual([]);
     });
 
     it('should handle conflicted PRs', async () => {
@@ -1116,6 +1118,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(false);
     });
 
     it('should return isPassedAllCiJob as false when ciState is SUCCESS but required checks have not run', async () => {
@@ -1188,6 +1191,93 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(true);
+      expect(result[0].missingRequiredCheckNames).toEqual(
+        expect.arrayContaining([
+          'Check linked issues in pull requests',
+          'create_and_enable_automerge',
+        ]),
+      );
+    });
+
+    it('should not include failed required checks in missingRequiredCheckNames', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: {
+                            nodes: [
+                              {
+                                pattern: 'main',
+                                requiredStatusCheckContexts: [
+                                  'test',
+                                  'format',
+                                  'deploy-preview',
+                                ],
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'FAILURE',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'test',
+                                        conclusion: 'FAILURE',
+                                      },
+                                      {
+                                        __typename: 'CheckRun',
+                                        name: 'format',
+                                        conclusion: 'SUCCESS',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(false);
+      expect(result[0].missingRequiredCheckNames).toEqual(['deploy-preview']);
     });
 
     it('should return isPassedAllCiJob as true when all required checks passed but blocked by required review', async () => {
@@ -1262,6 +1352,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(true);
+      expect(result[0].missingRequiredCheckNames).toEqual([]);
     });
 
     it('should return isPassedAllCiJob as true when ciState is SUCCESS and no branch protection rules exist', async () => {
@@ -1467,6 +1558,80 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(true);
+    });
+
+    it('should not include failed StatusContext checks in missingRequiredCheckNames', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        number: 1,
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        baseRefName: 'main',
+                        baseRepository: {
+                          branchProtectionRules: {
+                            nodes: [
+                              {
+                                pattern: 'main',
+                                requiredStatusCheckContexts: [
+                                  'ci/build',
+                                  'ci/deploy',
+                                ],
+                              },
+                            ],
+                          },
+                        },
+                        commits: {
+                          nodes: [
+                            {
+                              commit: {
+                                statusCheckRollup: {
+                                  state: 'FAILURE',
+                                  contexts: {
+                                    nodes: [
+                                      {
+                                        __typename: 'StatusContext',
+                                        context: 'ci/build',
+                                        state: 'FAILURE',
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(false);
+      expect(result[0].missingRequiredCheckNames).toEqual(['ci/deploy']);
     });
 
     it('should match branch protection rule with glob pattern', async () => {

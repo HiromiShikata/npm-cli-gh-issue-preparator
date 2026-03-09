@@ -126,8 +126,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -174,8 +176,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -257,8 +261,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -301,8 +307,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -343,8 +351,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -422,8 +432,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -463,8 +475,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -504,8 +518,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -578,15 +594,19 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
       {
         url: 'https://github.com/user/repo/pull/2',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -629,8 +649,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: true,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -673,8 +695,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: false,
+        isCiStateSuccess: false,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -701,6 +725,150 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should reject with REQUIRED_CI_JOB_NEVER_STARTED when required checks are missing', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: false,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: ['E2E Tests', 'deploy-preview'],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Workspace',
+      }),
+      mockProject,
+    );
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('REQUIRED_CI_JOB_NEVER_STARTED'),
+    );
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('E2E Tests'),
+    );
+  });
+
+  it('should reject with ANY_CI_JOB_FAILED_OR_IN_PROGRESS when CI has failures and required checks are also missing', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: false,
+        isCiStateSuccess: false,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: ['deploy-preview'],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Workspace',
+      }),
+      mockProject,
+    );
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('ANY_CI_JOB_FAILED_OR_IN_PROGRESS'),
+    );
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('deploy-preview'),
+    );
+  });
+
+  it('should include PR URL in rejection comment details', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: false,
+        isCiStateSuccess: false,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      expect.stringContaining('https://github.com/user/repo/pull/1'),
+    );
+  });
+
   it('should reject when review comments are not resolved', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
@@ -717,8 +885,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: false,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 
@@ -793,8 +963,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/pull/1',
         isConflicted: false,
         isPassedAllCiJob: true,
+        isCiStateSuccess: true,
         isResolvedAllReviewComments: true,
         isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
       },
     ]);
 

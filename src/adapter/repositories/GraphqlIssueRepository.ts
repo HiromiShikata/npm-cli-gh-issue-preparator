@@ -832,28 +832,24 @@ export class GraphqlIssueRepository implements Pick<
 
         const requiredCheckNames = Array.from(requiredCheckNamesSet);
 
-        const passingConclusions = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
-
-        const passedContextNames = new Set<string>();
+        const seenContextNames = new Set<string>();
         for (const ctx of contexts) {
-          if (
-            'name' in ctx &&
-            ctx.conclusion &&
-            passingConclusions.has(ctx.conclusion)
-          ) {
-            passedContextNames.add(ctx.name);
+          if ('name' in ctx) {
+            seenContextNames.add(ctx.name);
           }
-          if ('context' in ctx && ctx.state === 'SUCCESS') {
-            passedContextNames.add(ctx.context);
+          if ('context' in ctx) {
+            seenContextNames.add(ctx.context);
           }
         }
 
-        const allRequiredChecksPassed =
-          requiredCheckNames.length === 0 ||
-          requiredCheckNames.every((name) => passedContextNames.has(name));
+        const missingRequiredCheckNames = requiredCheckNames.filter(
+          (name) => !seenContextNames.has(name),
+        );
 
-        const isPassedAllCiJob =
-          ciState === 'SUCCESS' && allRequiredChecksPassed;
+        const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
+
+        const isCiStateSuccess = ciState === 'SUCCESS';
+        const isPassedAllCiJob = isCiStateSuccess && allRequiredChecksPassed;
 
         const reviewThreads = pr.reviewThreads?.nodes || [];
         const isResolvedAllReviewComments =
@@ -869,8 +865,10 @@ export class GraphqlIssueRepository implements Pick<
           url: prUrl,
           isConflicted,
           isPassedAllCiJob,
+          isCiStateSuccess,
           isResolvedAllReviewComments,
           isBranchOutOfDate,
+          missingRequiredCheckNames,
         });
       }
 
