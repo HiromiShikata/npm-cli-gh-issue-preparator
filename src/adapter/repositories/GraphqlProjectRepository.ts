@@ -4,19 +4,30 @@ type ProjectV2ReadmeResponse = {
       projectV2?: {
         readme: string | null;
       };
-    };
+    } | null;
     user?: {
       projectV2?: {
         readme: string | null;
       };
-    };
+    } | null;
   };
+  errors?: Array<{ message: string }>;
 };
 
 const isProjectV2ReadmeResponse = (
   value: unknown,
-): value is ProjectV2ReadmeResponse =>
-  typeof value === 'object' && value !== null;
+): value is ProjectV2ReadmeResponse => {
+  if (typeof value !== 'object' || value === null) return false;
+  if (Array.isArray(value)) return false;
+  if (
+    'data' in value &&
+    value.data !== undefined &&
+    value.data !== null &&
+    typeof value.data !== 'object'
+  )
+    return false;
+  return true;
+};
 
 export class GraphqlProjectRepository {
   constructor(private readonly token: string) {}
@@ -61,6 +72,13 @@ export class GraphqlProjectRepository {
 
     const responseData: unknown = await response.json();
     if (!isProjectV2ReadmeResponse(responseData)) {
+      return null;
+    }
+
+    if (responseData.errors) {
+      console.warn(
+        `GraphQL errors in project README response: ${JSON.stringify(responseData.errors)}`,
+      );
       return null;
     }
 

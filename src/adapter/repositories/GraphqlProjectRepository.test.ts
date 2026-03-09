@@ -156,6 +156,78 @@ describe('GraphqlProjectRepository', () => {
       expect(result).toBeNull();
     });
 
+    it('should return null when response data is an array', async () => {
+      mockFetchResponse({
+        ok: true,
+        json: () => Promise.resolve([1, 2, 3]),
+      });
+
+      const result = await repository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when data field is not an object', async () => {
+      mockFetchResponse({
+        ok: true,
+        json: () => Promise.resolve({ data: 'invalid' }),
+      });
+
+      const result = await repository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null and warn when GraphQL errors are present', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockFetchResponse({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            errors: [{ message: 'Field "readme" not found' }],
+          }),
+      });
+
+      const result = await repository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('GraphQL errors in project README response'),
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should return null and warn when GraphQL errors with partial data', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockFetchResponse({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              organization: null,
+              user: null,
+            },
+            errors: [{ message: 'Insufficient permissions' }],
+          }),
+      });
+
+      const result = await repository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBeNull();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Insufficient permissions'),
+      );
+      consoleWarnSpy.mockRestore();
+    });
+
     it('should return null when no project data exists', async () => {
       mockFetchResponse({
         ok: true,
