@@ -1,0 +1,1 @@
+{"version":3,"file":"WebhookRepository.d.ts","sourceRoot":"","sources":["../../../../src/domain/usecases/adapter-interfaces/WebhookRepository.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,iBAAiB;IAChC,cAAc,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC,CAAC;CAC5C"}

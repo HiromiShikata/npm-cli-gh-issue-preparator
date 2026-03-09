@@ -16,10 +16,11 @@ class IllegalIssueStatusError extends Error {
 }
 exports.IllegalIssueStatusError = IllegalIssueStatusError;
 class NotifyFinishedIssuePreparationUseCase {
-    constructor(projectRepository, issueRepository, issueCommentRepository) {
+    constructor(projectRepository, issueRepository, issueCommentRepository, webhookRepository) {
         this.projectRepository = projectRepository;
         this.issueRepository = issueRepository;
         this.issueCommentRepository = issueCommentRepository;
+        this.webhookRepository = webhookRepository;
         this.run = async (params) => {
             let project = await this.projectRepository.getByUrl(params.projectUrl);
             project = await this.projectRepository.prepareStatus(params.preparationStatus, project);
@@ -39,6 +40,7 @@ class NotifyFinishedIssuePreparationUseCase {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
                 await this.issueCommentRepository.createComment(issue, `Failed to pass the check autimatically for ${params.thresholdForAutoReject} times`);
+                await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
                 return;
             }
             const rejections = [];
@@ -101,11 +103,33 @@ class NotifyFinishedIssuePreparationUseCase {
             if (rejections.length <= 0) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
+                await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
                 return;
             }
             issue.status = params.awaitingWorkspaceStatus;
             await this.issueRepository.update(issue, project);
             await this.issueCommentRepository.createComment(issue, `Auto Status Check: REJECTED\n${rejections.map((r) => `- ${r.detail}`).join('\n')}`);
+        };
+        this.sendWorkflowBlockerNotification = async (issueUrl, webhookUrlTemplate, project) => {
+            if (webhookUrlTemplate === null) {
+                return;
+            }
+            try {
+                const storyObjectMap = await this.issueRepository.getStoryObjectMap(project);
+                const isWorkflowBlocker = Array.from(storyObjectMap.entries()).some(([storyName, storyObject]) => storyName.toLowerCase().includes('workflow blocker') &&
+                    storyObject.issues.some((issue) => issue.url === issueUrl));
+                if (!isWorkflowBlocker) {
+                    return;
+                }
+                const message = `Workflow blocker resolved: ${issueUrl}`;
+                const webhookUrl = webhookUrlTemplate
+                    .replace('{URL}', encodeURIComponent(issueUrl))
+                    .replace('{MESSAGE}', encodeURIComponent(message));
+                await this.webhookRepository.sendGetRequest(webhookUrl);
+            }
+            catch (error) {
+                console.warn('Failed to send workflow blocker notification:', error);
+            }
         };
     }
 }

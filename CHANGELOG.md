@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.21.0...v1.22.0) (2026-03-09)
+
+
+### Features
+
+* **core:** send webhook notification when workflow blocker issue status changes to awaiting quality check ([1269936](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/1269936add37747b524cc151524c81aadd6c17e8))
+
 # [1.21.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.20.0...v1.21.0) (2026-03-09)
 
 
