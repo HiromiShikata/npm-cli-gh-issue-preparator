@@ -561,21 +561,19 @@ class GraphqlIssueRepository {
                     }
                 }
                 const requiredCheckNames = Array.from(requiredCheckNamesSet);
-                const passingConclusions = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
-                const passedContextNames = new Set();
+                const seenContextNames = new Set();
                 for (const ctx of contexts) {
-                    if ('name' in ctx &&
-                        ctx.conclusion &&
-                        passingConclusions.has(ctx.conclusion)) {
-                        passedContextNames.add(ctx.name);
+                    if ('name' in ctx) {
+                        seenContextNames.add(ctx.name);
                     }
-                    if ('context' in ctx && ctx.state === 'SUCCESS') {
-                        passedContextNames.add(ctx.context);
+                    if ('context' in ctx) {
+                        seenContextNames.add(ctx.context);
                     }
                 }
-                const allRequiredChecksPassed = requiredCheckNames.length === 0 ||
-                    requiredCheckNames.every((name) => passedContextNames.has(name));
-                const isPassedAllCiJob = ciState === 'SUCCESS' && allRequiredChecksPassed;
+                const missingRequiredCheckNames = requiredCheckNames.filter((name) => !seenContextNames.has(name));
+                const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
+                const isCiStateSuccess = ciState === 'SUCCESS';
+                const isPassedAllCiJob = isCiStateSuccess && allRequiredChecksPassed;
                 const reviewThreads = pr.reviewThreads?.nodes || [];
                 const isResolvedAllReviewComments = reviewThreads.length === 0 ||
                     reviewThreads.every((thread) => thread.isResolved);
@@ -587,8 +585,10 @@ class GraphqlIssueRepository {
                     url: prUrl,
                     isConflicted,
                     isPassedAllCiJob,
+                    isCiStateSuccess,
                     isResolvedAllReviewComments,
                     isBranchOutOfDate,
+                    missingRequiredCheckNames,
                 });
             }
             hasNextPage = issueData.timelineItems.pageInfo.hasNextPage;

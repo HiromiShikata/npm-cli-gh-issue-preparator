@@ -1,3 +1,16 @@
+# [1.21.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.20.0...v1.21.0) (2026-03-09)
+
+
+### Bug Fixes
+
+* **core:** track seen vs passed context names and use structured rejections ([1c3c3e9](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/1c3c3e95e7c6c0adf69cd53fa36d0c93c487e03b))
+* **core:** use CI rollup state to discriminate rejection reason for missing checks ([eaf3842](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/eaf38424eae592756f9433699511715e057f8bf6))
+
+
+### Features
+
+* **core:** detect required CI job never started and include PR URLs in rejection details ([0da757a](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/0da757a90b0af9638089779a5d49e9b8735479cf))
+
 # [1.20.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.19.3...v1.20.0) (2026-03-04)
 
 
