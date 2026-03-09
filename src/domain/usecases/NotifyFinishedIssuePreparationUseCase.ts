@@ -136,15 +136,20 @@ export class NotifyFinishedIssuePreparationUseCase {
           });
         }
         if (!pr.isPassedAllCiJob) {
-          if (pr.missingRequiredCheckNames.length > 0) {
+          const missingChecks = pr.missingRequiredCheckNames;
+          const missingSuffix =
+            missingChecks.length > 0
+              ? ` (missing: ${missingChecks.join(', ')})`
+              : '';
+          if (pr.isCiStateSuccess && missingChecks.length > 0) {
             rejections.push({
               type: 'REQUIRED_CI_JOB_NEVER_STARTED',
-              detail: `REQUIRED_CI_JOB_NEVER_STARTED: ${pr.url} (missing: ${pr.missingRequiredCheckNames.join(', ')})`,
+              detail: `REQUIRED_CI_JOB_NEVER_STARTED: ${pr.url}${missingSuffix}`,
             });
           } else {
             rejections.push({
               type: 'ANY_CI_JOB_FAILED_OR_IN_PROGRESS',
-              detail: `ANY_CI_JOB_FAILED_OR_IN_PROGRESS: ${pr.url}`,
+              detail: `ANY_CI_JOB_FAILED_OR_IN_PROGRESS: ${pr.url}${missingSuffix}`,
             });
           }
         }

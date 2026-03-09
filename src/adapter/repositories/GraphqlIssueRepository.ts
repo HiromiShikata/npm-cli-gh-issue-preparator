@@ -848,8 +848,8 @@ export class GraphqlIssueRepository implements Pick<
 
         const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
 
-        const isPassedAllCiJob =
-          ciState === 'SUCCESS' && allRequiredChecksPassed;
+        const isCiStateSuccess = ciState === 'SUCCESS';
+        const isPassedAllCiJob = isCiStateSuccess && allRequiredChecksPassed;
 
         const reviewThreads = pr.reviewThreads?.nodes || [];
         const isResolvedAllReviewComments =
@@ -865,6 +865,7 @@ export class GraphqlIssueRepository implements Pick<
           url: prUrl,
           isConflicted,
           isPassedAllCiJob,
+          isCiStateSuccess,
           isResolvedAllReviewComments,
           isBranchOutOfDate,
           missingRequiredCheckNames,

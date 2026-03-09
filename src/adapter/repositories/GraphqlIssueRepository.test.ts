@@ -539,6 +539,7 @@ describe('GraphqlIssueRepository', () => {
       expect(result).toHaveLength(1);
       expect(result[0].url).toBe('https://github.com/user/repo/pull/1');
       expect(result[0].isPassedAllCiJob).toBe(true);
+      expect(result[0].isCiStateSuccess).toBe(true);
       expect(result[0].isConflicted).toBe(false);
       expect(result[0].isResolvedAllReviewComments).toBe(true);
       expect(result[0].isBranchOutOfDate).toBe(false);
@@ -1117,6 +1118,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(false);
     });
 
     it('should return isPassedAllCiJob as false when ciState is SUCCESS but required checks have not run', async () => {
@@ -1189,6 +1191,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(true);
       expect(result[0].missingRequiredCheckNames).toEqual(
         expect.arrayContaining([
           'Check linked issues in pull requests',
@@ -1273,6 +1276,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(false);
       expect(result[0].missingRequiredCheckNames).toEqual(['deploy-preview']);
     });
 
@@ -1626,6 +1630,7 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(false);
+      expect(result[0].isCiStateSuccess).toBe(false);
       expect(result[0].missingRequiredCheckNames).toEqual(['ci/deploy']);
     });
 

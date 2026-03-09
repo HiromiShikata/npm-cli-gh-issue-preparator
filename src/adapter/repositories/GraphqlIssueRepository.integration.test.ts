@@ -130,8 +130,10 @@ describe('GraphqlIssueRepository Integration Tests', () => {
       expect(result[0]).toHaveProperty('url');
       expect(result[0]).toHaveProperty('isConflicted');
       expect(result[0]).toHaveProperty('isPassedAllCiJob');
+      expect(result[0]).toHaveProperty('isCiStateSuccess');
       expect(result[0]).toHaveProperty('isResolvedAllReviewComments');
       expect(result[0]).toHaveProperty('isBranchOutOfDate');
+      expect(result[0]).toHaveProperty('missingRequiredCheckNames');
     });
 
     it('should return empty array for issue with no PR', async () => {

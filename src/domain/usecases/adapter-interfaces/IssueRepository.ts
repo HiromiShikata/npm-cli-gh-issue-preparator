@@ -6,6 +6,7 @@ export type RelatedPullRequest = {
   url: string;
   isConflicted: boolean;
   isPassedAllCiJob: boolean;
+  isCiStateSuccess: boolean;
   isResolvedAllReviewComments: boolean;
   isBranchOutOfDate: boolean;
   missingRequiredCheckNames: string[];
