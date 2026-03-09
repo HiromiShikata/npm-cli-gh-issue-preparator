@@ -340,12 +340,25 @@ program
       options.configFilePath,
       token,
     );
+    const towerDefenceIssueRepository = new TowerDefenceIssueRepository(
+      options.configFilePath,
+      token,
+    );
     const graphqlIssueRepository = new GraphqlIssueRepository(token);
     const issueCommentRepository = new GitHubIssueCommentRepository(token);
 
     const useCase = new NotifyFinishedIssuePreparationUseCase(
       projectRepository,
-      graphqlIssueRepository,
+      {
+        get: graphqlIssueRepository.get.bind(graphqlIssueRepository),
+        update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(
+          graphqlIssueRepository,
+        ),
+        getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(
+          towerDefenceIssueRepository,
+        ),
+      },
       issueCommentRepository,
     );
 

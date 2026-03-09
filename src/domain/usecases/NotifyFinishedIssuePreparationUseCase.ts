@@ -1,6 +1,7 @@
 import { IssueRepository } from './adapter-interfaces/IssueRepository';
 import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { IssueCommentRepository } from './adapter-interfaces/IssueCommentRepository';
+import { StoryObjectMap } from '../entities/StoryObjectMap';
 
 export class IssueNotFoundError extends Error {
   constructor(issueUrl: string) {
@@ -37,7 +38,7 @@ export class NotifyFinishedIssuePreparationUseCase {
     >,
     private readonly issueRepository: Pick<
       IssueRepository,
-      'get' | 'update' | 'findRelatedOpenPRs'
+      'get' | 'update' | 'findRelatedOpenPRs' | 'getStoryObjectMap'
     >,
     private readonly issueCommentRepository: Pick<
       IssueCommentRepository,
@@ -175,5 +176,41 @@ export class NotifyFinishedIssuePreparationUseCase {
       issue,
       `Auto Status Check: REJECTED\n${rejections.map((r) => `- ${r.detail}`).join('\n')}`,
     );
+
+    const storyObjectMap =
+      await this.issueRepository.getStoryObjectMap(project);
+    const workflowBlockerRepos =
+      this.extractWorkflowBlockerRepos(storyObjectMap);
+    const issueOrgRepo = `${issue.org}/${issue.repo}`;
+    if (workflowBlockerRepos.some((repo) => repo === issueOrgRepo)) {
+      await this.issueCommentRepository.createComment(
+        issue,
+        'retry after resolved workflow blocker issue',
+      );
+    }
+  };
+
+  private extractWorkflowBlockerRepos = (
+    storyObjectMap: StoryObjectMap,
+  ): string[] => {
+    const workflowBlockerStoryNames = Array.from(storyObjectMap.keys()).filter(
+      (storyName) => storyName.toLowerCase().includes('workflow blocker'),
+    );
+    if (workflowBlockerStoryNames.length === 0) {
+      return [];
+    }
+
+    const orgRepos = new Set<string>();
+    workflowBlockerStoryNames.forEach((storyName) => {
+      const issues =
+        storyObjectMap
+          .get(storyName)
+          ?.issues.filter((issue) => issue.state === 'OPEN') || [];
+      issues.forEach((issue) => {
+        const orgRepo = issue.url.split('/issues')[0].split('github.com/')[1];
+        orgRepos.add(orgRepo);
+      });
+    });
+    return Array.from(orgRepos);
   };
 }

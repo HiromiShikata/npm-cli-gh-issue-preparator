@@ -5,6 +5,7 @@ import { IssueCommentRepository } from './adapter-interfaces/IssueCommentReposit
 import { Issue } from '../entities/Issue';
 import { Project } from '../entities/Project';
 import { Comment } from '../entities/Comment';
+import { StoryObjectMap } from '../entities/StoryObjectMap';
 
 type Mocked<T> = jest.Mocked<T> & jest.MockedObject<T>;
 
@@ -85,7 +86,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
 
     mockIssueRepository = {
       getAllOpened: jest.fn(),
-      getStoryObjectMap: jest.fn(),
+      getStoryObjectMap: jest.fn().mockResolvedValue(new Map()),
       get: jest.fn(),
       update: jest.fn(),
       findRelatedOpenPRs: jest.fn(),
@@ -1024,6 +1025,409 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         url: 'https://github.com/user/repo/issues/1',
       }),
       expect.stringContaining('NO_REPORT_FROM_AGENT_BOT'),
+    );
+  });
+
+  it('should add retry comment when rejected and issue repo has workflow blocker', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    const blockerStoryObjectMap: StoryObjectMap = new Map();
+    blockerStoryObjectMap.set('Workflow blocker', {
+      story: {
+        id: 'story-blocker',
+        name: 'Workflow blocker',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [
+        createMockIssue({
+          url: 'https://github.com/user/repo/issues/100',
+          state: 'OPEN',
+        }),
+      ],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      blockerStoryObjectMap,
+    );
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should not add retry comment when rejected but issue repo has no workflow blocker', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(new Map());
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should not add retry comment when issue passes all checks even if repo has workflow blocker', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    const blockerStoryObjectMap: StoryObjectMap = new Map();
+    blockerStoryObjectMap.set('Workflow blocker', {
+      story: {
+        id: 'story-blocker',
+        name: 'Workflow blocker',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [
+        createMockIssue({
+          url: 'https://github.com/user/repo/issues/100',
+          state: 'OPEN',
+        }),
+      ],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      blockerStoryObjectMap,
+    );
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should not add retry comment when blocker repo differs from issue repo', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    const blockerStoryObjectMap: StoryObjectMap = new Map();
+    blockerStoryObjectMap.set('Workflow blocker', {
+      story: {
+        id: 'story-blocker',
+        name: 'Workflow blocker',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [
+        createMockIssue({
+          url: 'https://github.com/other-org/other-repo/issues/100',
+          state: 'OPEN',
+        }),
+      ],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      blockerStoryObjectMap,
+    );
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should only add retry comment for open workflow blocker issues', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    const blockerStoryObjectMap: StoryObjectMap = new Map();
+    blockerStoryObjectMap.set('Workflow blocker', {
+      story: {
+        id: 'story-blocker',
+        name: 'Workflow blocker',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [
+        createMockIssue({
+          url: 'https://github.com/user/repo/issues/100',
+          state: 'CLOSED',
+        }),
+      ],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      blockerStoryObjectMap,
+    );
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should handle workflow blocker story with undefined storyObject fallback', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+    });
+
+    const customMap: StoryObjectMap = new Map();
+    customMap.set('Workflow blocker', {
+      story: {
+        id: 'story-blocker',
+        name: 'Workflow blocker',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [],
+    });
+    const originalGet = customMap.get.bind(customMap);
+    customMap.get = (key: string) => {
+      if (key === 'Workflow blocker') {
+        return undefined;
+      }
+      return originalGet(key);
+    };
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(customMap);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: true,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'retry after resolved workflow blocker issue',
+    );
+  });
+
+  it('should add retry comment with category:backend label when repo has workflow blocker', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+      org: 'user',
+      repo: 'repo',
+      labels: ['category:backend'],
+    });
+
+    const blockerStoryObjectMap: StoryObjectMap = new Map();
+    blockerStoryObjectMap.set('Workflow blocker', {
+      story: {
+        id: 'story-blocker',
+        name: 'Workflow blocker',
+        color: 'RED',
+        description: '',
+      },
+      storyIssue: null,
+      issues: [
+        createMockIssue({
+          url: 'https://github.com/user/repo/issues/100',
+          state: 'OPEN',
+        }),
+      ],
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      blockerStoryObjectMap,
+    );
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({
+        content: 'Auto Status Check: REJECTED\n["NO_REPORT"]',
+      }),
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+    });
+
+    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+      }),
+      'retry after resolved workflow blocker issue',
     );
   });
 });
