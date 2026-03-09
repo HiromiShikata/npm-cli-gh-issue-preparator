@@ -29,6 +29,11 @@ jest.mock('../../repositories/OauthAPIClaudeRepository', () => ({
     isClaudeAvailable: jest.fn(),
   })),
 }));
+jest.mock('../../repositories/FetchWebhookRepository', () => ({
+  FetchWebhookRepository: jest.fn().mockImplementation(() => ({
+    sendGetRequest: jest.fn(),
+  })),
+}));
 
 describe('CLI', () => {
   const originalEnv = process.env;
@@ -90,6 +95,7 @@ describe('CLI', () => {
         awaitingQualityCheckStatus: 'Awaiting QC',
         thresholdForAutoReject: 5,
         allowedIssueAuthors: 'user1,user2',
+        workflowBlockerResolvedWebhookUrl: 'https://example.com/webhook',
       };
       writeConfig(config);
 
@@ -1073,6 +1079,7 @@ describe('CLI', () => {
         awaitingWorkspaceStatus: 'Awaiting',
         awaitingQualityCheckStatus: 'Awaiting QC',
         thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
       });
     });
 
@@ -1111,6 +1118,7 @@ describe('CLI', () => {
         awaitingWorkspaceStatus: 'Awaiting',
         awaitingQualityCheckStatus: 'Override QC',
         thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
       });
     });
 
@@ -1151,6 +1159,7 @@ describe('CLI', () => {
         awaitingWorkspaceStatus: 'Awaiting',
         awaitingQualityCheckStatus: 'Awaiting QC',
         thresholdForAutoReject: 5,
+        workflowBlockerResolvedWebhookUrl: null,
       });
     });
 
@@ -1193,6 +1202,7 @@ describe('CLI', () => {
         awaitingWorkspaceStatus: 'Awaiting',
         awaitingQualityCheckStatus: 'Awaiting QC',
         thresholdForAutoReject: 7,
+        workflowBlockerResolvedWebhookUrl: null,
       });
     });
 
@@ -1399,6 +1409,92 @@ describe('CLI', () => {
 
       consoleErrorSpy.mockRestore();
       processExitSpy.mockRestore();
+    });
+
+    it('should pass workflowBlockerResolvedWebhookUrl from config file', async () => {
+      const configWithWebhook = {
+        ...defaultConfig,
+        workflowBlockerResolvedWebhookUrl:
+          'https://example.com/webhook?url={URL}',
+      };
+      writeConfig(configWithWebhook);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        issueUrl: 'https://github.com/test/issue/1',
+        preparationStatus: 'Preparing',
+        awaitingWorkspaceStatus: 'Awaiting',
+        awaitingQualityCheckStatus: 'Awaiting QC',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl:
+          'https://example.com/webhook?url={URL}',
+      });
+    });
+
+    it('should pass workflowBlockerResolvedWebhookUrl from CLI overriding config', async () => {
+      const configWithWebhook = {
+        ...defaultConfig,
+        workflowBlockerResolvedWebhookUrl: 'https://example.com/config-webhook',
+      };
+      writeConfig(configWithWebhook);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+        '--workflowBlockerResolvedWebhookUrl',
+        'https://example.com/cli-webhook',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        issueUrl: 'https://github.com/test/issue/1',
+        preparationStatus: 'Preparing',
+        awaitingWorkspaceStatus: 'Awaiting',
+        awaitingQualityCheckStatus: 'Awaiting QC',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: 'https://example.com/cli-webhook',
+      });
     });
   });
 });

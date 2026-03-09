@@ -50,6 +50,14 @@ npx npm-cli-gh-issue-preparator startDaemon --configFilePath ./config.yml --proj
 npx npm-cli-gh-issue-preparator notifyFinishedIssuePreparation --configFilePath ./config.yml --issueUrl <issueUrl>
 ```
 
+### Notify finished issue preparation with webhook notification
+
+```
+npx npm-cli-gh-issue-preparator notifyFinishedIssuePreparation --configFilePath ./config.yml --issueUrl <issueUrl> --workflowBlockerResolvedWebhookUrl 'https://example.com/webhook?url={URL}&message={MESSAGE}'
+```
+
+When a workflow blocker issue's status changes to awaiting quality check, a GET request is sent to the specified webhook URL. The `{URL}` and `{MESSAGE}` placeholders are replaced with URL-encoded values.
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md)
