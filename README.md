@@ -38,16 +38,17 @@ All parameters can be specified in a YAML config file. See [config.example.yml](
 
 The GitHub Project README can contain a collapsible `<details>` section with YAML configuration that overrides both CLI arguments and config file values:
 
-```html
+```
 <details>
-  <summary>config</summary>
+<summary>config</summary>
 
-  maximumPreparingIssuesCount: 2 utilizationPercentageThreshold: 99
-  defaultAgentName: 'custom-agent'
+maximumPreparingIssuesCount: 2
+utilizationPercentageThreshold: 99
+defaultAgentName: 'custom-agent'
 </details>
 ```
 
-Only the content inside the `<details><summary>config</summary>` section is parsed as YAML. Other content in the README is ignored.
+Only the content inside the `<details><summary>config</summary>` section is parsed as YAML. Other content in the README is ignored. `projectUrl` and `configFilePath` cannot be set via Project README since the README is fetched using these values.
 
 ## Example 📖
 

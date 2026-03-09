@@ -133,7 +133,6 @@ const parseProjectReadmeConfig = (readme: string): ConfigFile => {
       return {};
     }
     return {
-      projectUrl: getStringValue(parsed, 'projectUrl'),
       awaitingWorkspaceStatus: getStringValue(
         parsed,
         'awaitingWorkspaceStatus',
@@ -171,10 +170,7 @@ const mergeConfigs = (
   cliOverrides: ConfigFile,
   readmeOverrides: ConfigFile,
 ): ConfigFile => ({
-  projectUrl:
-    readmeOverrides.projectUrl ??
-    cliOverrides.projectUrl ??
-    configFile.projectUrl,
+  projectUrl: cliOverrides.projectUrl ?? configFile.projectUrl,
   awaitingWorkspaceStatus:
     readmeOverrides.awaitingWorkspaceStatus ??
     cliOverrides.awaitingWorkspaceStatus ??

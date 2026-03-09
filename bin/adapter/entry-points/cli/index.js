@@ -106,7 +106,6 @@ const parseProjectReadmeConfig = (readme) => {
             return {};
         }
         return {
-            projectUrl: getStringValue(parsed, 'projectUrl'),
             awaitingWorkspaceStatus: getStringValue(parsed, 'awaitingWorkspaceStatus'),
             preparationStatus: getStringValue(parsed, 'preparationStatus'),
             defaultAgentName: getStringValue(parsed, 'defaultAgentName'),
@@ -126,9 +125,7 @@ const parseProjectReadmeConfig = (readme) => {
 };
 exports.parseProjectReadmeConfig = parseProjectReadmeConfig;
 const mergeConfigs = (configFile, cliOverrides, readmeOverrides) => ({
-    projectUrl: readmeOverrides.projectUrl ??
-        cliOverrides.projectUrl ??
-        configFile.projectUrl,
+    projectUrl: cliOverrides.projectUrl ?? configFile.projectUrl,
     awaitingWorkspaceStatus: readmeOverrides.awaitingWorkspaceStatus ??
         cliOverrides.awaitingWorkspaceStatus ??
         configFile.awaitingWorkspaceStatus,
