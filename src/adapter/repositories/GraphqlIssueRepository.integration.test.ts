@@ -10,6 +10,7 @@ const createMockProject = (): Project => ({
   url: 'https://github.com/users/HiromiShikata/projects/49',
   databaseId: 49,
   name: 'test-project',
+  readme: null,
   status: {
     name: 'Status',
     fieldId: 'field-1',

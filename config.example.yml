@@ -18,6 +18,10 @@ workingReport:
 awaitingWorkspaceStatus: 'Awaiting workspace'
 preparationStatus: 'Preparation'
 defaultAgentName: 'impl'
+logFilePath: '/path/to/log.txt'
+maximumPreparingIssuesCount: 6
+utilizationPercentageThreshold: 90
 allowedIssueAuthors: 'HiromiShikata,other-author'
 awaitingQualityCheckStatus: 'Awaiting quality check'
+thresholdForAutoReject: 3
 workflowBlockerResolvedWebhookUrl: 'https://example.com/webhook?url={URL}&message={MESSAGE}'

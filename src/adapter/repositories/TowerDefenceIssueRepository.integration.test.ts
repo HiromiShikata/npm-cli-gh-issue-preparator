@@ -58,6 +58,7 @@ workingReport:
     url: projectUrl,
     databaseId: 49,
     name: 'test-project',
+    readme: null,
     status: {
       name: 'Status',
       fieldId: 'field-1',

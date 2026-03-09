@@ -9,6 +9,7 @@ const createMockTowerDefenceProject = () => ({
   url: 'https://github.com/users/user/projects/1',
   databaseId: 123,
   name: 'Test Project',
+  readme: null,
   status: {
     name: 'Status',
     fieldId: 'status-field-id',
@@ -194,6 +195,7 @@ describe('TowerDefenceProjectRepository', () => {
         url: 'https://github.com/users/user/projects/1',
         databaseId: 123,
         name: 'Test Project',
+        readme: null,
         status: {
           name: 'Status',
           fieldId: 'status-field-id',
@@ -220,6 +222,7 @@ describe('TowerDefenceProjectRepository', () => {
         url: 'https://github.com/users/user/projects/1',
         databaseId: 123,
         name: 'Test Project',
+        readme: null,
         status: {
           name: 'Status',
           fieldId: 'status-field-id',
