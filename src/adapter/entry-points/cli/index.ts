@@ -13,6 +13,7 @@ import { TowerDefenceProjectRepository } from '../../repositories/TowerDefencePr
 import { GitHubIssueCommentRepository } from '../../repositories/GitHubIssueCommentRepository';
 import { NodeLocalCommandRunner } from '../../repositories/NodeLocalCommandRunner';
 import { OauthAPIClaudeRepository } from '../../repositories/OauthAPIClaudeRepository';
+import { FetchWebhookRepository } from '../../repositories/FetchWebhookRepository';
 
 type ConfigFile = {
   projectUrl?: string;
@@ -25,6 +26,7 @@ type ConfigFile = {
   allowedIssueAuthors?: string;
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: number;
+  workflowBlockerResolvedWebhookUrl?: string;
 };
 
 type StartDaemonOptions = {
@@ -46,6 +48,7 @@ type NotifyFinishedOptions = {
   awaitingWorkspaceStatus?: string;
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: string;
+  workflowBlockerResolvedWebhookUrl?: string;
   configFilePath: string;
 };
 
@@ -98,6 +101,10 @@ const loadConfigFile = (configFilePath: string): ConfigFile => {
         'awaitingQualityCheckStatus',
       ),
       thresholdForAutoReject: getNumberValue(parsed, 'thresholdForAutoReject'),
+      workflowBlockerResolvedWebhookUrl: getStringValue(
+        parsed,
+        'workflowBlockerResolvedWebhookUrl',
+      ),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -294,6 +301,10 @@ program
     '--thresholdForAutoReject <count>',
     'Threshold for auto-escalation after consecutive rejections (default: 3)',
   )
+  .option(
+    '--workflowBlockerResolvedWebhookUrl <url>',
+    'Webhook URL to notify when a workflow blocker issue status changes to awaiting quality check. Supports {URL} and {MESSAGE} placeholders.',
+  )
   .action(async (options: NotifyFinishedOptions) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -336,17 +347,37 @@ program
       process.exit(1);
     }
 
+    const workflowBlockerResolvedWebhookUrl: string | null =
+      options.workflowBlockerResolvedWebhookUrl ??
+      config.workflowBlockerResolvedWebhookUrl ??
+      null;
+
     const projectRepository = new TowerDefenceProjectRepository(
+      options.configFilePath,
+      token,
+    );
+    const towerDefenceIssueRepository = new TowerDefenceIssueRepository(
       options.configFilePath,
       token,
     );
     const graphqlIssueRepository = new GraphqlIssueRepository(token);
     const issueCommentRepository = new GitHubIssueCommentRepository(token);
+    const webhookRepository = new FetchWebhookRepository();
 
     const useCase = new NotifyFinishedIssuePreparationUseCase(
       projectRepository,
-      graphqlIssueRepository,
+      {
+        get: graphqlIssueRepository.get.bind(graphqlIssueRepository),
+        update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(
+          graphqlIssueRepository,
+        ),
+        getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(
+          towerDefenceIssueRepository,
+        ),
+      },
       issueCommentRepository,
+      webhookRepository,
     );
 
     let thresholdForAutoReject = 3;
@@ -374,6 +405,7 @@ program
       awaitingWorkspaceStatus,
       awaitingQualityCheckStatus,
       thresholdForAutoReject,
+      workflowBlockerResolvedWebhookUrl,
     });
   });
 
