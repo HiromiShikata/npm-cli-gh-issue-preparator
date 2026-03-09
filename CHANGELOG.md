@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.22.0...v1.22.1) (2026-03-09)
+
+
+### Bug Fixes
+
+* **core:** remove workflow blocker issue skipping from StartPreparationUseCase ([a6f4b2d](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/a6f4b2db9406f35628d954f1e1958a4513295b73))
+
 # [1.22.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.21.0...v1.22.0) (2026-03-09)
 
 
