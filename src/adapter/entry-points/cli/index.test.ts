@@ -1,7 +1,12 @@
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
-import { program, loadConfigFile } from './index';
+import {
+  program,
+  loadConfigFile,
+  parseProjectReadmeConfig,
+  mergeConfigs,
+} from './index';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
 
@@ -21,6 +26,12 @@ jest.mock('../../repositories/GraphqlIssueRepository', () => ({
   })),
 }));
 jest.mock('../../repositories/TowerDefenceProjectRepository');
+const mockFetchReadme = jest.fn().mockResolvedValue(null);
+jest.mock('../../repositories/GraphqlProjectRepository', () => ({
+  GraphqlProjectRepository: jest.fn().mockImplementation(() => ({
+    fetchReadme: mockFetchReadme,
+  })),
+}));
 jest.mock('../../repositories/GitHubIssueCommentRepository');
 jest.mock('../../repositories/NodeLocalCommandRunner');
 jest.mock('../../repositories/OauthAPIClaudeRepository', () => ({
@@ -70,6 +81,7 @@ describe('CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchReadme.mockResolvedValue(null);
     process.env = { ...originalEnv, GH_TOKEN: 'test-token' };
     writeConfig(defaultConfig);
   });
@@ -235,6 +247,165 @@ describe('CLI', () => {
 
       consoleErrorSpy.mockRestore();
       processExitSpy.mockRestore();
+    });
+  });
+
+  describe('parseProjectReadmeConfig', () => {
+    it('should parse YAML from details/summary config section', () => {
+      const readme = `# Project
+Some description
+<details>
+<summary>config</summary>
+awaitingWorkspaceStatus: 'Custom Awaiting'
+preparationStatus: 'Custom Preparing'
+defaultAgentName: 'readme-agent'
+</details>`;
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result.awaitingWorkspaceStatus).toBe('Custom Awaiting');
+      expect(result.preparationStatus).toBe('Custom Preparing');
+      expect(result.defaultAgentName).toBe('readme-agent');
+    });
+
+    it('should return empty config when no details/summary section exists', () => {
+      const readme = '# Project\nSome description without config section';
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result).toEqual({});
+    });
+
+    it('should return empty config when details section has empty content', () => {
+      const readme = '<details>\n<summary>config</summary>\n</details>';
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result).toEqual({});
+    });
+
+    it('should return empty config when YAML content is not a record', () => {
+      const readme =
+        '<details>\n<summary>config</summary>\n- item1\n- item2\n</details>';
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result).toEqual({});
+    });
+
+    it('should handle invalid YAML gracefully', () => {
+      const readme =
+        '<details>\n<summary>config</summary>\ninvalid: [unclosed\n</details>';
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result).toEqual({});
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to parse YAML from project README config section',
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should parse number fields from README config', () => {
+      const readme = `<details>
+<summary>config</summary>
+maximumPreparingIssuesCount: 15
+utilizationPercentageThreshold: 80
+thresholdForAutoReject: 5
+</details>`;
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result.maximumPreparingIssuesCount).toBe(15);
+      expect(result.utilizationPercentageThreshold).toBe(80);
+      expect(result.thresholdForAutoReject).toBe(5);
+    });
+
+    it('should be case-insensitive for the summary tag', () => {
+      const readme = `<details>
+<SUMMARY>config</SUMMARY>
+defaultAgentName: 'case-test-agent'
+</details>`;
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result.defaultAgentName).toBe('case-test-agent');
+    });
+  });
+
+  describe('mergeConfigs', () => {
+    it('should use configFile values when no overrides', () => {
+      const configFile = {
+        projectUrl: 'https://github.com/config/project',
+        defaultAgentName: 'config-agent',
+      };
+
+      const result = mergeConfigs(configFile, {}, {});
+
+      expect(result.projectUrl).toBe('https://github.com/config/project');
+      expect(result.defaultAgentName).toBe('config-agent');
+    });
+
+    it('should use CLI overrides over configFile', () => {
+      const configFile = {
+        projectUrl: 'https://github.com/config/project',
+        defaultAgentName: 'config-agent',
+      };
+      const cliOverrides = {
+        defaultAgentName: 'cli-agent',
+      };
+
+      const result = mergeConfigs(configFile, cliOverrides, {});
+
+      expect(result.projectUrl).toBe('https://github.com/config/project');
+      expect(result.defaultAgentName).toBe('cli-agent');
+    });
+
+    it('should use README overrides over both CLI and configFile', () => {
+      const configFile = {
+        projectUrl: 'https://github.com/config/project',
+        defaultAgentName: 'config-agent',
+      };
+      const cliOverrides = {
+        defaultAgentName: 'cli-agent',
+      };
+      const readmeOverrides = {
+        defaultAgentName: 'readme-agent',
+      };
+
+      const result = mergeConfigs(configFile, cliOverrides, readmeOverrides);
+
+      expect(result.projectUrl).toBe('https://github.com/config/project');
+      expect(result.defaultAgentName).toBe('readme-agent');
+    });
+
+    it('should merge all config fields with correct priority', () => {
+      const configFile = {
+        projectUrl: 'https://github.com/config/project',
+        awaitingWorkspaceStatus: 'Config Awaiting',
+        preparationStatus: 'Config Preparing',
+        defaultAgentName: 'config-agent',
+        maximumPreparingIssuesCount: 5,
+      };
+      const cliOverrides = {
+        awaitingWorkspaceStatus: 'CLI Awaiting',
+        maximumPreparingIssuesCount: 10,
+      };
+      const readmeOverrides = {
+        maximumPreparingIssuesCount: 20,
+        allowedIssueAuthors: 'readme-user1,readme-user2',
+      };
+
+      const result = mergeConfigs(configFile, cliOverrides, readmeOverrides);
+
+      expect(result.projectUrl).toBe('https://github.com/config/project');
+      expect(result.awaitingWorkspaceStatus).toBe('CLI Awaiting');
+      expect(result.preparationStatus).toBe('Config Preparing');
+      expect(result.defaultAgentName).toBe('config-agent');
+      expect(result.maximumPreparingIssuesCount).toBe(20);
+      expect(result.allowedIssueAuthors).toBe('readme-user1,readme-user2');
     });
   });
 
@@ -814,7 +985,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'projectUrl is required. Provide via --projectUrl or config file.',
+        'projectUrl is required. Provide via --projectUrl, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -848,7 +1019,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus or config file.',
+        'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -882,7 +1053,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'preparationStatus is required. Provide via --preparationStatus or config file.',
+        'preparationStatus is required. Provide via --preparationStatus, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -916,7 +1087,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'defaultAgentName is required. Provide via --defaultAgentName or config file.',
+        'defaultAgentName is required. Provide via --defaultAgentName, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -1044,6 +1215,76 @@ describe('CLI', () => {
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user3', 'user4'],
       });
+    });
+
+    it('should continue when README fetch throws error', async () => {
+      mockFetchReadme.mockRejectedValueOnce(new Error('Network error'));
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to fetch project README',
+      );
+      expect(mockRun).toHaveBeenCalledTimes(1);
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should apply README config overrides', async () => {
+      const readmeContent = [
+        '# Project',
+        '<details>',
+        '<summary>config</summary>',
+        'defaultAgentName: readme-agent',
+        '</details>',
+      ].join('\n');
+      mockFetchReadme.mockResolvedValueOnce(readmeContent);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          defaultAgentName: 'readme-agent',
+        }),
+      );
     });
   });
 
@@ -1295,7 +1536,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'projectUrl is required. Provide via --projectUrl or config file.',
+        'projectUrl is required. Provide via --projectUrl, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -1331,7 +1572,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'preparationStatus is required. Provide via --preparationStatus or config file.',
+        'preparationStatus is required. Provide via --preparationStatus, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -1367,7 +1608,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus or config file.',
+        'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -1403,7 +1644,7 @@ describe('CLI', () => {
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'awaitingQualityCheckStatus is required. Provide via --awaitingQualityCheckStatus or config file.',
+        'awaitingQualityCheckStatus is required. Provide via --awaitingQualityCheckStatus, config file, or project README.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -1495,6 +1736,80 @@ describe('CLI', () => {
         thresholdForAutoReject: 3,
         workflowBlockerResolvedWebhookUrl: 'https://example.com/cli-webhook',
       });
+    });
+
+    it('should continue when README fetch throws error', async () => {
+      mockFetchReadme.mockRejectedValueOnce(new Error('Network error'));
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+      ]);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to fetch project README',
+      );
+      expect(mockRun).toHaveBeenCalledTimes(1);
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should apply README config overrides', async () => {
+      const readmeContent = [
+        '# Project',
+        '<details>',
+        '<summary>config</summary>',
+        "awaitingQualityCheckStatus: 'README QC'",
+        '</details>',
+      ].join('\n');
+      mockFetchReadme.mockResolvedValueOnce(readmeContent);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          awaitingQualityCheckStatus: 'README QC',
+        }),
+      );
     });
   });
 });

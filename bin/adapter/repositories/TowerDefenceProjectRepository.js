@@ -31,6 +31,7 @@ class TowerDefenceProjectRepository {
             url: url,
             databaseId: towerDefenceProject.databaseId,
             name: towerDefenceProject.name,
+            readme: null,
             status: towerDefenceProject.status,
             nextActionDate: towerDefenceProject.nextActionDate,
             nextActionHour: towerDefenceProject.nextActionHour,

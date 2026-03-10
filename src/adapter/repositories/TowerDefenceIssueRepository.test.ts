@@ -36,6 +36,7 @@ const createMockProject = (): Project => ({
   url: 'https://github.com/users/user/projects/1',
   databaseId: 1,
   name: 'Test Project',
+  readme: null,
   status: {
     name: 'Status',
     fieldId: 'field-1',

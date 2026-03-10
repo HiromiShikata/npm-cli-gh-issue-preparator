@@ -26,7 +26,29 @@ Commands:
 
 ## Configuration
 
-All parameters can be specified in a YAML config file. See [config.example.yml](./config.example.yml) for a complete example. CLI options override config file values.
+Parameters are resolved using a 3-tier priority system (highest to lowest):
+
+1. **GitHub Project README** (highest priority) -- YAML extracted from `<details><summary>config</summary>` section
+2. **CLI arguments** -- passed via command line options
+3. **Config YAML file** (lowest priority) -- base configuration loaded via `--configFilePath`
+
+All parameters can be specified in a YAML config file. See [config.example.yml](./config.example.yml) for a complete example.
+
+### GitHub Project README Config
+
+The GitHub Project README can contain a collapsible `<details>` section with YAML configuration that overrides both CLI arguments and config file values:
+
+```
+<details>
+<summary>config</summary>
+
+maximumPreparingIssuesCount: 2
+utilizationPercentageThreshold: 99
+defaultAgentName: 'custom-agent'
+</details>
+```
+
+Only the content inside the `<details><summary>config</summary>` section is parsed as YAML. Other content in the README is ignored. `projectUrl` and `configFilePath` cannot be set via Project README since the README is fetched using these values.
 
 ## Example 📖
 

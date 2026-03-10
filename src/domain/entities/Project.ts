@@ -18,7 +18,7 @@ export type Project = {
   url: string;
   databaseId: number;
   name: string;
-  // fields: ProjectField[];
+  readme: string | null;
   status: {
     name: string;
     fieldId: string;
