@@ -1,7 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphqlProjectRepository = void 0;
-const isProjectV2ReadmeResponse = (value) => typeof value === 'object' && value !== null;
+const isProjectV2ReadmeResponse = (value) => {
+    if (typeof value !== 'object' || value === null)
+        return false;
+    if (Array.isArray(value))
+        return false;
+    if ('data' in value &&
+        value.data !== undefined &&
+        value.data !== null &&
+        typeof value.data !== 'object')
+        return false;
+    return true;
+};
 class GraphqlProjectRepository {
     constructor(token) {
         this.token = token;
@@ -42,6 +53,10 @@ class GraphqlProjectRepository {
         }
         const responseData = await response.json();
         if (!isProjectV2ReadmeResponse(responseData)) {
+            return null;
+        }
+        if (responseData.errors) {
+            console.warn(`GraphQL errors in project README response: ${JSON.stringify(responseData.errors)}`);
             return null;
         }
         const projectData = responseData.data?.organization?.projectV2 ||

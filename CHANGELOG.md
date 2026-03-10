@@ -1,3 +1,16 @@
+# [1.24.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.23.0...v1.24.0) (2026-03-10)
+
+
+### Bug Fixes
+
+* **core:** exclude projectUrl from README config and fix README YAML formatting ([76fc1a6](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/76fc1a6456340fd41bfa6e6a1b2dcf193929435c))
+* **core:** improve type guard validation and handle GraphQL errors in ProjectRepository ([7c8b3fe](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/7c8b3fe142ba5199c7257f9325e8895b2ff26f51))
+
+
+### Features
+
+* **core:** support 3-tier parameter resolution with GitHub Project README config ([dbcc800](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/dbcc800663fe1bd4e7a56249acb88e4a2f2a8db8)), closes [#138](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/138)
+
 # [1.23.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.22.1...v1.23.0) (2026-03-10)
 
 
