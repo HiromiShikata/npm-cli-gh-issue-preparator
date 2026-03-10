@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.22.1...v1.23.0) (2026-03-10)
+
+
+### Features
+
+* **core:** upgrade tower-defence package from 1.21.2 to 1.30.0 ([0c3ec82](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/0c3ec82ae2360f49d6d0a736cc60198f8140dc18))
+
 ## [1.22.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.22.0...v1.22.1) (2026-03-09)
 
 
