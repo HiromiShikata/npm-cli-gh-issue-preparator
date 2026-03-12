@@ -256,6 +256,7 @@ describe('GraphqlProjectRepository', () => {
       );
 
       expect(result).toBe('# Org Project README');
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
       consoleWarnSpy.mockRestore();
     });
 
@@ -287,6 +288,7 @@ describe('GraphqlProjectRepository', () => {
       );
 
       expect(result).toBe('# User Project README');
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
       consoleWarnSpy.mockRestore();
     });
 
