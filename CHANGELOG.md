@@ -1,3 +1,11 @@
+## [1.24.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.24.0...v1.24.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* **core:** add console.warn assertions to partial error tests ([c9a287b](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c9a287b4becfc0729046d712bd185ea30f0b2517))
+* **core:** handle partial GraphQL errors when fetching project README ([bf0bf5d](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/bf0bf5d0ede30135a9ced2ba81b06b54a0a71a1e))
+
 # [1.24.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.23.0...v1.24.0) (2026-03-10)
 
 
