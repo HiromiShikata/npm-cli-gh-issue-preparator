@@ -403,6 +403,10 @@ program
         ? parsedAllowedIssueAuthors
         : null;
 
+    console.log(
+      `maximumPreparingIssuesCount: ${maximumPreparingIssuesCount ?? 'null (default: 6)'}, utilizationPercentageThreshold: ${utilizationPercentageThreshold}`,
+    );
+
     await useCase.run({
       projectUrl,
       awaitingWorkspaceStatus,

@@ -1217,6 +1217,73 @@ defaultAgentName: 'case-test-agent'
       });
     });
 
+    it('should log maximumPreparingIssuesCount and utilizationPercentageThreshold before calling useCase.run', async () => {
+      const configWithValues = {
+        ...defaultConfig,
+        maximumPreparingIssuesCount: 10,
+        utilizationPercentageThreshold: 75,
+      };
+      writeConfig(configWithValues);
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'maximumPreparingIssuesCount: 10, utilizationPercentageThreshold: 75',
+      );
+      expect(mockRun).toHaveBeenCalledTimes(1);
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should log default hint for maximumPreparingIssuesCount when not set', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'maximumPreparingIssuesCount: null (default: 6), utilizationPercentageThreshold: 90',
+      );
+      expect(mockRun).toHaveBeenCalledTimes(1);
+
+      consoleLogSpy.mockRestore();
+    });
+
     it('should continue when README fetch throws error', async () => {
       mockFetchReadme.mockRejectedValueOnce(new Error('Network error'));
 
