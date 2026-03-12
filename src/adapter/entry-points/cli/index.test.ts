@@ -1225,8 +1225,16 @@ defaultAgentName: 'case-test-agent'
       };
       writeConfig(configWithValues);
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const callOrder: string[] = [];
+      const consoleLogSpy = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => {
+          callOrder.push('console.log');
+        });
+      const mockRun = jest.fn().mockImplementation(() => {
+        callOrder.push('useCase.run');
+        return Promise.resolve(undefined);
+      });
       const MockedStartPreparationUseCase = jest.mocked(
         StartPreparationUseCase,
       );
@@ -1250,6 +1258,9 @@ defaultAgentName: 'case-test-agent'
         'maximumPreparingIssuesCount: 10, utilizationPercentageThreshold: 75',
       );
       expect(mockRun).toHaveBeenCalledTimes(1);
+      const logIndex = callOrder.indexOf('console.log');
+      const runIndex = callOrder.indexOf('useCase.run');
+      expect(logIndex).toBeLessThan(runIndex);
 
       consoleLogSpy.mockRestore();
     });
