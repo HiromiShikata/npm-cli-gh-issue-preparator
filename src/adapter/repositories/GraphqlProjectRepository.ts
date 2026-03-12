@@ -75,16 +75,16 @@ export class GraphqlProjectRepository {
       return null;
     }
 
-    if (responseData.errors) {
+    const projectData =
+      responseData.data?.organization?.projectV2 ||
+      responseData.data?.user?.projectV2;
+
+    if (responseData.errors && !projectData) {
       console.warn(
         `GraphQL errors in project README response: ${JSON.stringify(responseData.errors)}`,
       );
       return null;
     }
-
-    const projectData =
-      responseData.data?.organization?.projectV2 ||
-      responseData.data?.user?.projectV2;
 
     return projectData?.readme ?? null;
   }

@@ -228,6 +228,68 @@ describe('GraphqlProjectRepository', () => {
       consoleWarnSpy.mockRestore();
     });
 
+    it('should return readme when organization succeeds but user query returns NOT_FOUND error', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockFetchResponse({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              organization: {
+                projectV2: {
+                  readme: '# Org Project README',
+                },
+              },
+              user: null,
+            },
+            errors: [
+              {
+                message:
+                  "Could not resolve to a User with the login of 'my-org'.",
+              },
+            ],
+          }),
+      });
+
+      const result = await repository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBe('# Org Project README');
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should return readme when user succeeds but organization query returns NOT_FOUND error', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockFetchResponse({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              organization: null,
+              user: {
+                projectV2: {
+                  readme: '# User Project README',
+                },
+              },
+            },
+            errors: [
+              {
+                message:
+                  "Could not resolve to a Organization with the login of 'my-user'.",
+              },
+            ],
+          }),
+      });
+
+      const result = await repository.fetchReadme(
+        'https://github.com/users/my-user/projects/10',
+      );
+
+      expect(result).toBe('# User Project README');
+      consoleWarnSpy.mockRestore();
+    });
+
     it('should return null when no project data exists', async () => {
       mockFetchResponse({
         ok: true,
