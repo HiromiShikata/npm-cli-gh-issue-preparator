@@ -1,3 +1,15 @@
+# [1.25.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.24.1...v1.25.0) (2026-03-13)
+
+
+### Bug Fixes
+
+* **core:** verify call order in test and rebuild bin/types artifacts ([2769569](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/27695696981af7ec9f03ca3fa06927a62ad8b95b))
+
+
+### Features
+
+* **core:** output log about maximumPreparingIssuesCount and utilizationPercentageThreshold before calling start preparation usecase ([591a312](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/591a312762602a2d9051f1b1e3ff3d1f357eae7d))
+
 ## [1.24.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.24.0...v1.24.1) (2026-03-12)
 
 
