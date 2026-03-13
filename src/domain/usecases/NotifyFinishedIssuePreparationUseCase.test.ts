@@ -474,7 +474,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
-  it('should not auto-escalate when retry comment exists even if threshold met', async () => {
+  it('should not auto-escalate when failed-to-pass-check comment exists even if threshold met', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
@@ -486,7 +486,9 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
-      createMockComment({ content: 'retry' }),
+      createMockComment({
+        content: 'Failed to pass the check autimatically for 3 times',
+      }),
     ]);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
@@ -518,7 +520,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
-  it('should handle case-insensitive retry comment', async () => {
+  it('should handle case-insensitive failed-to-pass-check comment', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
@@ -530,7 +532,9 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
-      createMockComment({ content: 'Retry please' }),
+      createMockComment({
+        content: 'Failed to pass the check autimatically for 5 times',
+      }),
     ]);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {

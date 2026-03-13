@@ -95,7 +95,9 @@ export class NotifyFinishedIssuePreparationUseCase {
         comment.content.startsWith('Auto Status Check: REJECTED'),
       ).length >= params.thresholdForAutoReject &&
       !lastTargetComments.some((comment) =>
-        comment.content.toLowerCase().startsWith('retry'),
+        comment.content
+          .toLowerCase()
+          .startsWith('failed to pass the check autimatically'),
       )
     ) {
       issue.status = params.awaitingQualityCheckStatus;
