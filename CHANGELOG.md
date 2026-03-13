@@ -1,3 +1,10 @@
+## [1.25.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.25.0...v1.25.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* **core:** use failed-to-pass-check text instead of retry to reset failed count ([d2c80e9](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d2c80e989b885f9d861426c29321f2ce244cf1d5))
+
 # [1.25.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.24.1...v1.25.0) (2026-03-13)
 
 
