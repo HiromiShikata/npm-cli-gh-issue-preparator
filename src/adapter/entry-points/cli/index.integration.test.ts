@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import dotenv from 'dotenv';
 
@@ -56,12 +57,42 @@ awaitingQualityCheckStatus: "Awaiting quality check"
   });
 
   describe('startDaemon', () => {
-    it('executes without error', () => {
-      const result = execSync(
-        `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath}`,
-        { encoding: 'utf-8', timeout: 600000 },
-      );
-      expect(result).toBeDefined();
+    it('propagates Claude usage errors instead of swallowing them', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'test-home-'));
+      let threw = false;
+      let output = '';
+      try {
+        execSync(
+          `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath} 2>&1`,
+          {
+            encoding: 'utf-8',
+            timeout: 600000,
+            env: { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome },
+          },
+        );
+      } catch (err) {
+        threw = true;
+        if (
+          err &&
+          typeof err === 'object' &&
+          'stdout' in err &&
+          typeof err.stdout === 'string'
+        ) {
+          output = err.stdout;
+        }
+        if (
+          err &&
+          typeof err === 'object' &&
+          'stderr' in err &&
+          typeof err.stderr === 'string'
+        ) {
+          output += err.stderr;
+        }
+      } finally {
+        fs.rmSync(tmpHome, { recursive: true, force: true });
+      }
+      expect(threw).toBe(true);
+      expect(output).toContain('Claude credentials file not found');
     }, 600000);
   });
 

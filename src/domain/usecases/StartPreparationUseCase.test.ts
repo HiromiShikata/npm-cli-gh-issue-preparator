@@ -604,42 +604,25 @@ describe('StartPreparationUseCase', () => {
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
 
-  it('should proceed with preparation when Claude usage check fails', async () => {
+  it('should throw error when Claude usage check fails', async () => {
     mockClaudeRepository.getUsage.mockRejectedValue(
       new Error('Claude credentials file not found'),
     );
 
-    const awaitingIssues: Issue[] = [
-      createMockIssue({
-        url: 'url1',
-        title: 'Issue 1',
-        labels: ['category:impl'],
-        status: 'Awaiting Workspace',
+    await expect(
+      useCase.run({
+        projectUrl: 'https://github.com/user/repo',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        preparationStatus: 'Preparation',
+        defaultAgentName: 'agent1',
+        maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
       }),
-    ];
-    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
-    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
-      createMockStoryObjectMap(awaitingIssues),
-    );
-    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
-    mockLocalCommandRunner.runCommand.mockResolvedValue({
-      stdout: '',
-      stderr: '',
-      exitCode: 0,
-    });
+    ).rejects.toThrow('Claude credentials file not found');
 
-    await useCase.run({
-      projectUrl: 'https://github.com/user/repo',
-      awaitingWorkspaceStatus: 'Awaiting Workspace',
-      preparationStatus: 'Preparation',
-      defaultAgentName: 'agent1',
-      maximumPreparingIssuesCount: null,
-      utilizationPercentageThreshold: 90,
-      allowedIssueAuthors: null,
-    });
-
-    expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
 
   it('should skip preparation when Claude usage exceeds custom threshold', async () => {
