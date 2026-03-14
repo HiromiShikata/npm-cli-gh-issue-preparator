@@ -580,6 +580,53 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should not auto-escalate when new-format escalation comment with Auto Status Check prefix exists', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
+      createMockComment({
+        content:
+          'Auto Status Check: REJECTED\n- NO_REPORT_FROM_AGENT_BOT\n\nFailed to pass the check autimatically for 3 times',
+      }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+
+    expect(mockIssueRepository.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
   it('should reject when PR is not found', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',

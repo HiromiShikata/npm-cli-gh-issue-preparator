@@ -104,7 +104,7 @@ export class NotifyFinishedIssuePreparationUseCase {
       !lastTargetComments.some((comment) =>
         comment.content
           .toLowerCase()
-          .startsWith('failed to pass the check autimatically'),
+          .includes('failed to pass the check autimatically'),
       )
     ) {
       issue.status = params.awaitingQualityCheckStatus;
