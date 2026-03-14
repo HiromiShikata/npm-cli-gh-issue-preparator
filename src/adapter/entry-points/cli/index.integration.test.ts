@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import dotenv from 'dotenv';
 
@@ -57,12 +58,17 @@ awaitingQualityCheckStatus: "Awaiting quality check"
 
   describe('startDaemon', () => {
     it('propagates Claude usage errors instead of swallowing them', () => {
-      let stdout = '';
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'test-home-'));
       let threw = false;
+      let output = '';
       try {
-        stdout = execSync(
+        execSync(
           `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath} 2>&1`,
-          { encoding: 'utf-8', timeout: 600000 },
+          {
+            encoding: 'utf-8',
+            timeout: 600000,
+            env: { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome },
+          },
         );
       } catch (err) {
         threw = true;
@@ -72,10 +78,21 @@ awaitingQualityCheckStatus: "Awaiting quality check"
           'stdout' in err &&
           typeof err.stdout === 'string'
         ) {
-          stdout = err.stdout;
+          output = err.stdout;
         }
+        if (
+          err &&
+          typeof err === 'object' &&
+          'stderr' in err &&
+          typeof err.stderr === 'string'
+        ) {
+          output += err.stderr;
+        }
+      } finally {
+        fs.rmSync(tmpHome, { recursive: true, force: true });
       }
-      expect(threw || stdout.length > 0).toBe(true);
+      expect(threw).toBe(true);
+      expect(output).toContain('Claude credentials file not found');
     }, 600000);
   });
 
