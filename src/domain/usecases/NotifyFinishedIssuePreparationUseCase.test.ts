@@ -405,6 +405,17 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
     ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
 
     await useCase.run({
       projectUrl: 'https://github.com/users/user/projects/1',
@@ -422,13 +433,16 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       mockProject,
     );
-    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+    const createCommentCall =
+      mockIssueCommentRepository.createComment.mock.calls[0];
+    expect(createCommentCall[0]).toEqual(
       expect.objectContaining({
         url: 'https://github.com/user/repo/issues/1',
       }),
-      expect.stringContaining(
-        'Failed to pass the check autimatically for 3 times',
-      ),
+    );
+    expect(createCommentCall[1]).toContain('Auto Status Check:');
+    expect(createCommentCall[1]).toContain(
+      'Failed to pass the check autimatically for 3 times',
     );
   });
 
@@ -1161,6 +1175,17 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         createMockComment({
           content: 'Auto Status Check: REJECTED - third',
         }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
       ]);
       mockIssueRepository.getStoryObjectMap.mockResolvedValue(
         createWorkflowBlockerStoryObjectMap(
