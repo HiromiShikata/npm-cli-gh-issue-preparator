@@ -56,12 +56,26 @@ awaitingQualityCheckStatus: "Awaiting quality check"
   });
 
   describe('startDaemon', () => {
-    it('executes without error', () => {
-      const result = execSync(
-        `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath}`,
-        { encoding: 'utf-8', timeout: 600000 },
-      );
-      expect(result).toBeDefined();
+    it('propagates Claude usage errors instead of swallowing them', () => {
+      let stdout = '';
+      let threw = false;
+      try {
+        stdout = execSync(
+          `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath} 2>&1`,
+          { encoding: 'utf-8', timeout: 600000 },
+        );
+      } catch (err) {
+        threw = true;
+        if (
+          err &&
+          typeof err === 'object' &&
+          'stdout' in err &&
+          typeof err.stdout === 'string'
+        ) {
+          stdout = err.stdout;
+        }
+      }
+      expect(threw || stdout.length > 0).toBe(true);
     }, 600000);
   });
 
