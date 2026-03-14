@@ -405,6 +405,17 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
     ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
 
     await useCase.run({
       projectUrl: 'https://github.com/users/user/projects/1',
@@ -422,13 +433,16 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       }),
       mockProject,
     );
-    expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+    const createCommentCall =
+      mockIssueCommentRepository.createComment.mock.calls[0];
+    expect(createCommentCall[0]).toEqual(
       expect.objectContaining({
         url: 'https://github.com/user/repo/issues/1',
       }),
-      expect.stringContaining(
-        'Failed to pass the check autimatically for 3 times',
-      ),
+    );
+    expect(createCommentCall[1]).toContain('Auto Status Check:');
+    expect(createCommentCall[1]).toContain(
+      'Failed to pass the check autimatically for 3 times',
     );
   });
 
@@ -534,6 +548,53 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
       createMockComment({
         content: 'Failed to pass the check autimatically for 5 times',
+      }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+
+    expect(mockIssueRepository.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
+  it('should not auto-escalate when new-format escalation comment with Auto Status Check prefix exists', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
+      createMockComment({
+        content:
+          'Auto Status Check: REJECTED\n- NO_REPORT_FROM_AGENT_BOT\n\nFailed to pass the check autimatically for 3 times',
       }),
     ]);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
@@ -1161,6 +1222,17 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         createMockComment({
           content: 'Auto Status Check: REJECTED - third',
         }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
       ]);
       mockIssueRepository.getStoryObjectMap.mockResolvedValue(
         createWorkflowBlockerStoryObjectMap(
