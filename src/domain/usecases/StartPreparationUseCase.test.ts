@@ -583,11 +583,134 @@ describe('StartPreparationUseCase', () => {
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
   });
 
-  it('should skip preparation when any Claude usage window exceeds 90%', async () => {
+  it('should reduce maximumPreparingIssuesCount gradually when weekly usage window exceeds threshold', async () => {
     mockClaudeRepository.getUsage.mockResolvedValue([
       { hour: 5, utilizationPercentage: 50, resetsAt: new Date() },
       { hour: 168, utilizationPercentage: 91, resetsAt: new Date() },
     ]);
+
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) =>
+      createMockIssue({
+        url: `url${i + 1}`,
+        title: `Issue ${i + 1}`,
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    );
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+
+    expect(mockProjectRepository.getByUrl).toHaveBeenCalled();
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(4);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(4);
+  });
+
+  it('should skip all preparation when weekly window usage reduces maximumPreparingIssuesCount to 0', async () => {
+    mockClaudeRepository.getUsage.mockResolvedValue([
+      { hour: 168, utilizationPercentage: 100, resetsAt: new Date() },
+    ]);
+
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+  });
+
+  it('should not apply weekly reduction when threshold is 100', async () => {
+    mockClaudeRepository.getUsage.mockResolvedValue([
+      { hour: 168, utilizationPercentage: 99, resetsAt: new Date() },
+    ]);
+
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) =>
+      createMockIssue({
+        url: `url${i + 1}`,
+        title: `Issue ${i + 1}`,
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    );
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 100,
+      allowedIssueAuthors: null,
+    });
+
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(6);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(6);
+  });
+
+  it('should still skip immediately when non-weekly window exceeds threshold', async () => {
+    mockClaudeRepository.getUsage.mockResolvedValue([
+      { hour: 5, utilizationPercentage: 95, resetsAt: new Date() },
+      { hour: 168, utilizationPercentage: 50, resetsAt: new Date() },
+    ]);
+
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
 
     await useCase.run({
       projectUrl: 'https://github.com/user/repo',
@@ -602,6 +725,51 @@ describe('StartPreparationUseCase', () => {
     expect(mockProjectRepository.getByUrl).not.toHaveBeenCalled();
     expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+  });
+
+  it('should use maximum utilization across multiple weekly window entries for reduction', async () => {
+    mockClaudeRepository.getUsage.mockResolvedValue([
+      { hour: 168, utilizationPercentage: 91, resetsAt: new Date() },
+      { hour: 168, utilizationPercentage: 95, resetsAt: new Date() },
+    ]);
+
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) =>
+      createMockIssue({
+        url: `url${i + 1}`,
+        title: `Issue ${i + 1}`,
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    );
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+
+    const normalizedUtilizationBeyondThreshold = (95 - 90) / (100 - 90);
+    const expectedMax = Math.floor(
+      6 * Math.pow(1 - normalizedUtilizationBeyondThreshold, 2),
+    );
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(expectedMax);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(
+      expectedMax,
+    );
   });
 
   it('should throw error when Claude usage check fails', async () => {
