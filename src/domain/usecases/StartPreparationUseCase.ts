@@ -28,7 +28,10 @@ export class StartPreparationUseCase {
     allowedIssueAuthors: string[] | null;
   }): Promise<void> => {
     const claudeUsages = await this.claudeRepository.getUsage();
-    const nonWeeklyUsages = claudeUsages.filter((usage) => usage.hour !== 168);
+    const weeklyWindowHours = 168;
+    const nonWeeklyUsages = claudeUsages.filter(
+      (usage) => usage.hour !== weeklyWindowHours,
+    );
     if (
       nonWeeklyUsages.some(
         (usage) =>
@@ -43,7 +46,9 @@ export class StartPreparationUseCase {
 
     let maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
 
-    const weeklyUsages = claudeUsages.filter((usage) => usage.hour === 168);
+    const weeklyUsages = claudeUsages.filter(
+      (usage) => usage.hour === weeklyWindowHours,
+    );
     if (
       weeklyUsages.length > 0 &&
       params.utilizationPercentageThreshold < 100
@@ -60,8 +65,14 @@ export class StartPreparationUseCase {
             Math.pow(1 - normalizedUtilizationBeyondThreshold, 2),
         );
         if (maximumPreparingIssuesCount <= 0) {
+          console.warn(
+            `Weekly Claude usage (${maxWeeklyUtilization}%) exceeds threshold (${params.utilizationPercentageThreshold}%). Skipping starting preparation.`,
+          );
           return;
         }
+        console.warn(
+          `Weekly Claude usage (${maxWeeklyUtilization}%) exceeds threshold (${params.utilizationPercentageThreshold}%). Reducing maximumPreparingIssuesCount to ${maximumPreparingIssuesCount}.`,
+        );
       }
     }
     let project = await this.projectRepository.getByUrl(params.projectUrl);

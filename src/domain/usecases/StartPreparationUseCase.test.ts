@@ -618,9 +618,19 @@ describe('StartPreparationUseCase', () => {
       allowedIssueAuthors: null,
     });
 
+    const weeklyUtilization = 91;
+    const threshold = 90;
+    const defaultMax = 6;
+    const normalizedUtilizationBeyondThreshold =
+      (weeklyUtilization - threshold) / (100 - threshold);
+    const expectedMax = Math.floor(
+      defaultMax * Math.pow(1 - normalizedUtilizationBeyondThreshold, 2),
+    );
     expect(mockProjectRepository.getByUrl).toHaveBeenCalled();
-    expect(mockIssueRepository.update.mock.calls).toHaveLength(4);
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(4);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(expectedMax);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(
+      expectedMax,
+    );
   });
 
   it('should skip all preparation when weekly window usage reduces maximumPreparingIssuesCount to 0', async () => {
