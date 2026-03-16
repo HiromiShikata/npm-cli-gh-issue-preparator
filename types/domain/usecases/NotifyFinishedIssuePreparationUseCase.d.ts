@@ -38,6 +38,7 @@ export declare class NotifyFinishedIssuePreparationUseCase {
     thresholdForAutoReject: number;
     workflowBlockerResolvedWebhookUrl: string | null;
   }) => Promise<void>;
+  private collectRejections;
   private sendWorkflowBlockerNotification;
 }
 //# sourceMappingURL=NotifyFinishedIssuePreparationUseCase.d.ts.map

@@ -9,11 +9,29 @@ class StartPreparationUseCase {
         this.localCommandRunner = localCommandRunner;
         this.run = async (params) => {
             const claudeUsages = await this.claudeRepository.getUsage();
-            if (claudeUsages.some((usage) => usage.utilizationPercentage > params.utilizationPercentageThreshold)) {
+            const weeklyWindowHours = 168;
+            const nonWeeklyUsages = claudeUsages.filter((usage) => usage.hour !== weeklyWindowHours);
+            if (nonWeeklyUsages.some((usage) => usage.utilizationPercentage > params.utilizationPercentageThreshold)) {
                 console.warn('Claude usage limit exceeded. Skipping starting preparation.');
                 return;
             }
-            const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
+            let maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
+            const weeklyUsages = claudeUsages.filter((usage) => usage.hour === weeklyWindowHours);
+            if (weeklyUsages.length > 0 &&
+                params.utilizationPercentageThreshold < 100) {
+                const maxWeeklyUtilization = Math.max(...weeklyUsages.map((usage) => usage.utilizationPercentage));
+                if (maxWeeklyUtilization > params.utilizationPercentageThreshold) {
+                    const normalizedUtilizationBeyondThreshold = (maxWeeklyUtilization - params.utilizationPercentageThreshold) /
+                        (100 - params.utilizationPercentageThreshold);
+                    maximumPreparingIssuesCount = Math.floor(maximumPreparingIssuesCount *
+                        Math.pow(1 - normalizedUtilizationBeyondThreshold, 2));
+                    if (maximumPreparingIssuesCount <= 0) {
+                        console.warn(`Weekly Claude usage (${maxWeeklyUtilization}%) exceeds threshold (${params.utilizationPercentageThreshold}%). Skipping starting preparation.`);
+                        return;
+                    }
+                    console.warn(`Weekly Claude usage (${maxWeeklyUtilization}%) exceeds threshold (${params.utilizationPercentageThreshold}%). Reducing maximumPreparingIssuesCount to ${maximumPreparingIssuesCount}.`);
+                }
+            }
             let project = await this.projectRepository.getByUrl(params.projectUrl);
             project = await this.projectRepository.prepareStatus(params.awaitingWorkspaceStatus, project);
             project = await this.projectRepository.prepareStatus(params.preparationStatus, project);

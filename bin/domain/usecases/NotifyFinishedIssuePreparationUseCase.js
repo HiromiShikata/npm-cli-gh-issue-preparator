@@ -34,17 +34,32 @@ class NotifyFinishedIssuePreparationUseCase {
                 throw new IllegalIssueStatusError(params.issueUrl, issue.status, params.preparationStatus);
             }
             const comments = await this.issueCommentRepository.getCommentsFromIssue(issue);
+            const rejections = await this.collectRejections(issue, comments);
+            const rejectionStatusMessage = rejections.length > 0
+                ? `Auto Status Check: REJECTED\n${rejections.map((r) => `- ${r.detail}`).join('\n')}`
+                : 'Auto Status Check: APPROVED';
             const lastTargetComments = comments.slice(-params.thresholdForAutoReject * 2);
             if (lastTargetComments.filter((comment) => comment.content.startsWith('Auto Status Check: REJECTED')).length >= params.thresholdForAutoReject &&
                 !lastTargetComments.some((comment) => comment.content
                     .toLowerCase()
-                    .startsWith('failed to pass the check autimatically'))) {
+                    .includes('failed to pass the check autimatically'))) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
-                await this.issueCommentRepository.createComment(issue, `Failed to pass the check autimatically for ${params.thresholdForAutoReject} times`);
+                await this.issueCommentRepository.createComment(issue, `${rejectionStatusMessage}\n\nFailed to pass the check autimatically for ${params.thresholdForAutoReject} times`);
                 await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
                 return;
             }
+            if (rejections.length <= 0) {
+                issue.status = params.awaitingQualityCheckStatus;
+                await this.issueRepository.update(issue, project);
+                await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
+                return;
+            }
+            issue.status = params.awaitingWorkspaceStatus;
+            await this.issueRepository.update(issue, project);
+            await this.issueCommentRepository.createComment(issue, rejectionStatusMessage);
+        };
+        this.collectRejections = async (issue, comments) => {
             const rejections = [];
             const lastComment = comments[comments.length - 1];
             if (!lastComment || !lastComment.content.startsWith('From:')) {
@@ -102,15 +117,7 @@ class NotifyFinishedIssuePreparationUseCase {
                     }
                 }
             }
-            if (rejections.length <= 0) {
-                issue.status = params.awaitingQualityCheckStatus;
-                await this.issueRepository.update(issue, project);
-                await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
-                return;
-            }
-            issue.status = params.awaitingWorkspaceStatus;
-            await this.issueRepository.update(issue, project);
-            await this.issueCommentRepository.createComment(issue, `Auto Status Check: REJECTED\n${rejections.map((r) => `- ${r.detail}`).join('\n')}`);
+            return rejections;
         };
         this.sendWorkflowBlockerNotification = async (issueUrl, webhookUrlTemplate, project) => {
             if (webhookUrlTemplate === null) {
