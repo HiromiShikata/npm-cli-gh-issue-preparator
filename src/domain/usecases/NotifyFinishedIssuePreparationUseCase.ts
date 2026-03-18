@@ -28,7 +28,8 @@ type RejectedReasonType =
   | 'PULL_REQUEST_CONFLICTED'
   | 'ANY_CI_JOB_FAILED_OR_IN_PROGRESS'
   | 'REQUIRED_CI_JOB_NEVER_STARTED'
-  | 'ANY_REVIEW_COMMENT_NOT_RESOLVED';
+  | 'ANY_REVIEW_COMMENT_NOT_RESOLVED'
+  | 'DEPENDENT_ISSUE_URLS';
 
 export class NotifyFinishedIssuePreparationUseCase {
   constructor(
@@ -142,10 +143,18 @@ export class NotifyFinishedIssuePreparationUseCase {
   };
 
   private collectRejections = async (
-    issue: { url: string; labels: string[] },
+    issue: { url: string; labels: string[]; dependedIssueUrls: string[] },
     comments: { content: string }[],
   ): Promise<{ type: RejectedReasonType; detail: string }[]> => {
     const rejections: { type: RejectedReasonType; detail: string }[] = [];
+
+    if (issue.dependedIssueUrls.length > 0) {
+      rejections.push({
+        type: 'DEPENDENT_ISSUE_URLS',
+        detail: `DEPENDENT_ISSUE_URLS: ${issue.dependedIssueUrls.join(', ')}`,
+      });
+    }
+
     const lastComment = comments[comments.length - 1];
     if (!lastComment || !lastComment.content.startsWith('From:')) {
       rejections.push({
