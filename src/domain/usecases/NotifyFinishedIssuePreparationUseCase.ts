@@ -86,9 +86,8 @@ export class NotifyFinishedIssuePreparationUseCase {
       );
     }
 
-    const storyObjectMap = await this.issueRepository.getStoryObjectMap(
-      project,
-    );
+    const storyObjectMap =
+      await this.issueRepository.getStoryObjectMap(project);
     for (const storyObject of storyObjectMap.values()) {
       const towerDefenceIssue = storyObject.issues.find(
         (i) => i.url === issue.url,
