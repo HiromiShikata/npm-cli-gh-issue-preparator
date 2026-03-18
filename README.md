@@ -50,6 +50,27 @@ defaultAgentName: 'custom-agent'
 
 Only the content inside the `<details><summary>config</summary>` section is parsed as YAML. Other content in the README is ignored. `projectUrl` and `configFilePath` cannot be set via Project README since the README is fetched using these values.
 
+### Issue Labels
+
+You can use GitHub issue labels to customize the agent and model selection for individual issues:
+
+- `llm-agent:{agent-name}` - Overrides the default LLM agent for this issue
+- `llm-model:{model-name}` - Overrides the default LLM model for this issue
+
+Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet`
+
+For backward compatibility, the `category:{value}` label is still supported for agent selection.
+
+**Label priority for agent selection:**
+1. `llm-agent:` label (highest priority)
+2. `category:` label (for backward compatibility)
+3. `defaultLlmAgentName` parameter
+4. `defaultAgentName` parameter (lowest priority)
+
+**Model selection:**
+1. `llm-model:` label (highest priority)
+2. `defaultLlmModelName` parameter (lowest priority)
+
 ## Example 📖
 
 Here's a quick example to illustrate its usage:
@@ -63,7 +84,7 @@ npx npm-cli-gh-issue-preparator startDaemon --configFilePath ./config.yml
 ### Start preparation (with CLI overrides)
 
 ```
-npx npm-cli-gh-issue-preparator startDaemon --configFilePath ./config.yml --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"
+npx npm-cli-gh-issue-preparator startDaemon --configFilePath ./config.yml --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl" --defaultLlmModelName "claude-opus" --defaultLlmAgentName "impl"
 ```
 
 ### Notify finished issue preparation

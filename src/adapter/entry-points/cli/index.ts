@@ -21,6 +21,8 @@ type ConfigFile = {
   awaitingWorkspaceStatus?: string;
   preparationStatus?: string;
   defaultAgentName?: string;
+  defaultLlmModelName?: string;
+  defaultLlmAgentName?: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: number;
   utilizationPercentageThreshold?: number;
@@ -35,6 +37,8 @@ type StartDaemonOptions = {
   awaitingWorkspaceStatus?: string;
   preparationStatus?: string;
   defaultAgentName?: string;
+  defaultLlmModelName?: string;
+  defaultLlmAgentName?: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
   utilizationPercentageThreshold?: string;
@@ -87,6 +91,8 @@ const loadConfigFile = (configFilePath: string): ConfigFile => {
       ),
       preparationStatus: getStringValue(parsed, 'preparationStatus'),
       defaultAgentName: getStringValue(parsed, 'defaultAgentName'),
+      defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
+      defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
       logFilePath: getStringValue(parsed, 'logFilePath'),
       maximumPreparingIssuesCount: getNumberValue(
         parsed,
@@ -139,6 +145,8 @@ const parseProjectReadmeConfig = (readme: string): ConfigFile => {
       ),
       preparationStatus: getStringValue(parsed, 'preparationStatus'),
       defaultAgentName: getStringValue(parsed, 'defaultAgentName'),
+      defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
+      defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
       logFilePath: getStringValue(parsed, 'logFilePath'),
       maximumPreparingIssuesCount: getNumberValue(
         parsed,
@@ -183,6 +191,14 @@ const mergeConfigs = (
     readmeOverrides.defaultAgentName ??
     cliOverrides.defaultAgentName ??
     configFile.defaultAgentName,
+  defaultLlmModelName:
+    readmeOverrides.defaultLlmModelName ??
+    cliOverrides.defaultLlmModelName ??
+    configFile.defaultLlmModelName,
+  defaultLlmAgentName:
+    readmeOverrides.defaultLlmAgentName ??
+    cliOverrides.defaultLlmAgentName ??
+    configFile.defaultLlmAgentName,
   logFilePath:
     readmeOverrides.logFilePath ??
     cliOverrides.logFilePath ??
@@ -245,6 +261,8 @@ program
   )
   .option('--preparationStatus <status>', 'Status for issues in preparation')
   .option('--defaultAgentName <name>', 'Default agent name')
+  .option('--defaultLlmModelName <name>', 'Default LLM model name')
+  .option('--defaultLlmAgentName <name>', 'Default LLM agent name')
   .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
@@ -272,6 +290,8 @@ program
       awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
       preparationStatus: options.preparationStatus,
       defaultAgentName: options.defaultAgentName,
+      defaultLlmModelName: options.defaultLlmModelName,
+      defaultLlmAgentName: options.defaultLlmAgentName,
       logFilePath: options.logFilePath,
       maximumPreparingIssuesCount: options.maximumPreparingIssuesCount
         ? Number(options.maximumPreparingIssuesCount)
@@ -303,6 +323,8 @@ program
     const awaitingWorkspaceStatus = config.awaitingWorkspaceStatus;
     const preparationStatus = config.preparationStatus;
     const defaultAgentName = config.defaultAgentName;
+    const defaultLlmModelName = config.defaultLlmModelName;
+    const defaultLlmAgentName = config.defaultLlmAgentName;
     const logFilePath = config.logFilePath;
 
     if (!projectUrl) {
@@ -412,6 +434,8 @@ program
       awaitingWorkspaceStatus,
       preparationStatus,
       defaultAgentName,
+      defaultLlmModelName,
+      defaultLlmAgentName,
       logFilePath,
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,

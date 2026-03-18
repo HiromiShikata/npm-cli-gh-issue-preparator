@@ -22,6 +22,8 @@ export class StartPreparationUseCase {
     awaitingWorkspaceStatus: string;
     preparationStatus: string;
     defaultAgentName: string;
+    defaultLlmModelName?: string;
+    defaultLlmAgentName?: string;
     logFilePath?: string;
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
@@ -145,9 +147,20 @@ export class StartPreparationUseCase {
       }
       const agent =
         issue.labels
-          .find((label) => label.startsWith('category:'))
+          .find((label: string) => label.startsWith('llm-agent:'))
+          ?.replace('llm-agent:', '')
+          .trim() ||
+        issue.labels
+          .find((label: string) => label.startsWith('category:'))
           ?.replace('category:', '')
-          .trim() || params.defaultAgentName;
+          .trim() ||
+        params.defaultLlmAgentName ||
+        params.defaultAgentName;
+      const model =
+        issue.labels
+          .find((label: string) => label.startsWith('llm-model:'))
+          ?.replace('llm-model:', '')
+          .trim() || params.defaultLlmModelName;
       issue.status = params.preparationStatus;
       await this.issueRepository.update(issue, project);
 
@@ -155,7 +168,7 @@ export class StartPreparationUseCase {
         ? `--logFilePath ${params.logFilePath}`
         : '';
       await this.localCommandRunner.runCommand(
-        `aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
+        `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
       );
       updatedCurrentPreparationIssueCount++;
     }

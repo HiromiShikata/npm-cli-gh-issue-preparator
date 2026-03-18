@@ -74,6 +74,8 @@ const loadConfigFile = (configFilePath) => {
             awaitingWorkspaceStatus: getStringValue(parsed, 'awaitingWorkspaceStatus'),
             preparationStatus: getStringValue(parsed, 'preparationStatus'),
             defaultAgentName: getStringValue(parsed, 'defaultAgentName'),
+            defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
+            defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
             logFilePath: getStringValue(parsed, 'logFilePath'),
             maximumPreparingIssuesCount: getNumberValue(parsed, 'maximumPreparingIssuesCount'),
             utilizationPercentageThreshold: getNumberValue(parsed, 'utilizationPercentageThreshold'),
@@ -109,6 +111,8 @@ const parseProjectReadmeConfig = (readme) => {
             awaitingWorkspaceStatus: getStringValue(parsed, 'awaitingWorkspaceStatus'),
             preparationStatus: getStringValue(parsed, 'preparationStatus'),
             defaultAgentName: getStringValue(parsed, 'defaultAgentName'),
+            defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
+            defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
             logFilePath: getStringValue(parsed, 'logFilePath'),
             maximumPreparingIssuesCount: getNumberValue(parsed, 'maximumPreparingIssuesCount'),
             utilizationPercentageThreshold: getNumberValue(parsed, 'utilizationPercentageThreshold'),
@@ -135,6 +139,12 @@ const mergeConfigs = (configFile, cliOverrides, readmeOverrides) => ({
     defaultAgentName: readmeOverrides.defaultAgentName ??
         cliOverrides.defaultAgentName ??
         configFile.defaultAgentName,
+    defaultLlmModelName: readmeOverrides.defaultLlmModelName ??
+        cliOverrides.defaultLlmModelName ??
+        configFile.defaultLlmModelName,
+    defaultLlmAgentName: readmeOverrides.defaultLlmAgentName ??
+        cliOverrides.defaultLlmAgentName ??
+        configFile.defaultLlmAgentName,
     logFilePath: readmeOverrides.logFilePath ??
         cliOverrides.logFilePath ??
         configFile.logFilePath,
@@ -181,6 +191,8 @@ program
     .option('--awaitingWorkspaceStatus <status>', 'Status for issues awaiting workspace')
     .option('--preparationStatus <status>', 'Status for issues in preparation')
     .option('--defaultAgentName <name>', 'Default agent name')
+    .option('--defaultLlmModelName <name>', 'Default LLM model name')
+    .option('--defaultLlmAgentName <name>', 'Default LLM agent name')
     .option('--logFilePath <path>', 'Path to log file')
     .option('--maximumPreparingIssuesCount <count>', 'Maximum number of issues in preparation status (default: 6)')
     .option('--utilizationPercentageThreshold <percentage>', 'Claude usage percentage threshold for skipping preparation (default: 90)')
@@ -197,6 +209,8 @@ program
         awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
         preparationStatus: options.preparationStatus,
         defaultAgentName: options.defaultAgentName,
+        defaultLlmModelName: options.defaultLlmModelName,
+        defaultLlmAgentName: options.defaultLlmAgentName,
         logFilePath: options.logFilePath,
         maximumPreparingIssuesCount: options.maximumPreparingIssuesCount
             ? Number(options.maximumPreparingIssuesCount)
@@ -219,6 +233,8 @@ program
     const awaitingWorkspaceStatus = config.awaitingWorkspaceStatus;
     const preparationStatus = config.preparationStatus;
     const defaultAgentName = config.defaultAgentName;
+    const defaultLlmModelName = config.defaultLlmModelName;
+    const defaultLlmAgentName = config.defaultLlmAgentName;
     const logFilePath = config.logFilePath;
     if (!projectUrl) {
         console.error('projectUrl is required. Provide via --projectUrl, config file, or project README.');
@@ -286,6 +302,8 @@ program
         awaitingWorkspaceStatus,
         preparationStatus,
         defaultAgentName,
+        defaultLlmModelName,
+        defaultLlmAgentName,
         logFilePath,
         maximumPreparingIssuesCount,
         utilizationPercentageThreshold,

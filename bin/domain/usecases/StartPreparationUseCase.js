@@ -72,15 +72,25 @@ class StartPreparationUseCase {
                     continue;
                 }
                 const agent = issue.labels
-                    .find((label) => label.startsWith('category:'))
-                    ?.replace('category:', '')
-                    .trim() || params.defaultAgentName;
+                    .find((label) => label.startsWith('llm-agent:'))
+                    ?.replace('llm-agent:', '')
+                    .trim() ||
+                    issue.labels
+                        .find((label) => label.startsWith('category:'))
+                        ?.replace('category:', '')
+                        .trim() ||
+                    params.defaultLlmAgentName ||
+                    params.defaultAgentName;
+                const model = issue.labels
+                    .find((label) => label.startsWith('llm-model:'))
+                    ?.replace('llm-model:', '')
+                    .trim() || params.defaultLlmModelName;
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
                 const logFilePathArg = params.logFilePath
                     ? `--logFilePath ${params.logFilePath}`
                     : '';
-                await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`);
+                await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`);
                 updatedCurrentPreparationIssueCount++;
             }
         };
