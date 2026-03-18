@@ -1257,5 +1257,126 @@ describe('GitHubIssueRepository', () => {
         dependencyIssueUrls: [],
       });
     });
+
+    it('should extract dependency issue urls from issue body', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-with-deps',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/1',
+                        title: 'Issue With Dependencies',
+                        number: 1,
+                        labels: {
+                          nodes: [],
+                        },
+                        body: 'This issue depends on https://github.com/owner/repo/issues/2\nAlso blocked by https://github.com/owner/repo/issues/3\nUnrelated line with no dependencies',
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Todo',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/1',
+        mockProject,
+      );
+
+      expect(result).toEqual({
+        id: 'issue-with-deps',
+        url: 'https://github.com/owner/repo/issues/1',
+        title: 'Issue With Dependencies',
+        labels: [],
+        status: 'Todo',
+        dependencyIssueUrls: [
+          'https://github.com/owner/repo/issues/2',
+          'https://github.com/owner/repo/issues/3',
+        ],
+      });
+    });
+
+    it('should handle dependency keywords without valid URLs', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            organization: {
+              projectV2: {
+                items: {
+                  totalCount: 1,
+                  pageInfo: {
+                    endCursor: null,
+                    hasNextPage: false,
+                  },
+                  nodes: [
+                    {
+                      id: 'issue-invalid-deps',
+                      content: {
+                        url: 'https://github.com/owner/repo/issues/1',
+                        title: 'Issue With Invalid Dependencies',
+                        number: 1,
+                        labels: {
+                          nodes: [],
+                        },
+                        body: 'This issue depends on something\nBlocked by: not a real URL\nRelated to another task',
+                      },
+                      fieldValues: {
+                        nodes: [
+                          {
+                            name: 'Todo',
+                            field: {
+                              name: 'Status',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.get(
+        'https://github.com/owner/repo/issues/1',
+        mockProject,
+      );
+
+      expect(result).toEqual({
+        id: 'issue-invalid-deps',
+        url: 'https://github.com/owner/repo/issues/1',
+        title: 'Issue With Invalid Dependencies',
+        labels: [],
+        status: 'Todo',
+        dependencyIssueUrls: [],
+      });
+    });
   });
 });
