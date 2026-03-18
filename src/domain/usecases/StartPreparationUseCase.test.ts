@@ -60,6 +60,8 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -70,7 +72,7 @@ describe('StartPreparationUseCase', () => {
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      'aw url1 impl https://github.com/user/repo',
+      'aw url1 impl claude-opus https://github.com/user/repo',
     );
   });
   it('should assign workspace to awaiting issues', async () => {
@@ -102,6 +104,8 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -139,6 +143,8 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: null,
     });
     const issue7UpdateCalls = mockIssueRepository.update.mock.calls.filter(
@@ -169,12 +175,14 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       logFilePath: '/path/to/log.txt',
       maximumPreparingIssuesCount: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      'aw url1 impl https://github.com/user/repo --logFilePath /path/to/log.txt',
+      'aw url1 impl claude-opus https://github.com/user/repo --logFilePath /path/to/log.txt',
     );
   });
   it('should not append logFilePath to aw command when not provided', async () => {
@@ -199,11 +207,13 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      'aw url1 impl https://github.com/user/repo',
+      'aw url1 impl claude-opus https://github.com/user/repo',
     );
   });
   it('should handle defensive break when pop returns undefined', async () => {
@@ -243,6 +253,8 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(1);
@@ -268,6 +280,8 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: 3,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(3);
@@ -293,9 +307,161 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
       maximumPreparingIssuesCount: null,
     });
     expect(mockIssueRepository.update.mock.calls).toHaveLength(6);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(6);
+  });
+  it('should extract llm-agent label when present', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['llm-agent:gpt4'],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 gpt4 claude-opus https://github.com/user/repo',
+    );
+  });
+  it('should extract llm-model label when present', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['llm-model:gpt-4-turbo'],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 impl gpt-4-turbo https://github.com/user/repo',
+    );
+  });
+  it('should prioritize llm-agent label over category label', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['llm-agent:gpt4', 'category:feature'],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'impl',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 gpt4 claude-opus https://github.com/user/repo',
+    );
+  });
+  it('should use defaultLlmAgentName when no llm-agent or category labels exist', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: 'custom-impl',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 custom-impl claude-opus https://github.com/user/repo',
+    );
+  });
+  it('should fall back to defaultAgentName when defaultLlmAgentName is not provided', async () => {
+    const awaitingIssues: Issue[] = [
+      {
+        id: '1',
+        url: 'url1',
+        title: 'Issue 1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      },
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'fallback-agent',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: '',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      'aw url1 fallback-agent claude-opus https://github.com/user/repo',
+    );
   });
 });

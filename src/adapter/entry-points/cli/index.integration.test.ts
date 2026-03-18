@@ -64,7 +64,7 @@ describe('index', () => {
       expect(beforeIssue?.status).toBe('Awaiting workspace');
 
       const result = execSync(
-        'npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --projectUrl https://github.com/users/HiromiShikata/projects/49 --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"',
+        'npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --projectUrl https://github.com/users/HiromiShikata/projects/49 --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl" --defaultLlmModelName "claude-opus" --defaultLlmAgentName "impl"',
         { encoding: 'utf-8', timeout: 600000 },
       );
       expect(result).toBeDefined();

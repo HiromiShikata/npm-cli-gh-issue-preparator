@@ -31,7 +31,7 @@ Here's a quick example to illustrate its usage:
 ### Start daemon
 
 ```
-npx npm-cli-gh-issue-preparator startDaemon --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl"
+npx npm-cli-gh-issue-preparator startDaemon --projectUrl <projectUrl> --awaitingWorkspaceStatus "Awaiting workspace" --preparationStatus "Preparation" --defaultAgentName "impl" --defaultLlmModelName "claude-opus" --defaultLlmAgentName "impl"
 ```
 
 ### Notify finished issue preparation

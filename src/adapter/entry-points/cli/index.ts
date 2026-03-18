@@ -14,6 +14,8 @@ type StartDaemonOptions = {
   awaitingWorkspaceStatus: string;
   preparationStatus: string;
   defaultAgentName: string;
+  defaultLlmModelName: string;
+  defaultLlmAgentName: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: string;
 };
@@ -43,6 +45,8 @@ program
     'Status for issues in preparation',
   )
   .requiredOption('--defaultAgentName <name>', 'Default agent name')
+  .requiredOption('--defaultLlmModelName <name>', 'Default LLM model name')
+  .requiredOption('--defaultLlmAgentName <name>', 'Default LLM agent name')
   .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
@@ -86,6 +90,8 @@ program
       awaitingWorkspaceStatus: options.awaitingWorkspaceStatus,
       preparationStatus: options.preparationStatus,
       defaultAgentName: options.defaultAgentName,
+      defaultLlmModelName: options.defaultLlmModelName,
+      defaultLlmAgentName: options.defaultLlmAgentName,
       logFilePath: options.logFilePath,
       maximumPreparingIssuesCount,
     });
