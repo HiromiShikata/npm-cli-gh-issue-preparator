@@ -4,5 +4,6 @@ export type Issue = {
   title: string;
   labels: string[];
   status: string;
+  dependencyIssueUrls: string[];
 };
 //# sourceMappingURL=Issue.d.ts.map

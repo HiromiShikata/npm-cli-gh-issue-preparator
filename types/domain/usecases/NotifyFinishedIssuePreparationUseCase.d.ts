@@ -18,6 +18,7 @@ export declare class NotifyFinishedIssuePreparationUseCase {
     issueUrl: string;
     preparationStatus: string;
     awaitingQualityCheckStatus: string;
+    awaitingWorkspaceStatus?: string;
   }) => Promise<void>;
 }
 //# sourceMappingURL=NotifyFinishedIssuePreparationUseCase.d.ts.map
