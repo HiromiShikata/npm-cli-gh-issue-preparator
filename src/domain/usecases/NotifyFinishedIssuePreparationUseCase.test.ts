@@ -1525,5 +1525,76 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         mockProject,
       );
     });
+
+    it('should reject when issue is enriched with dependedIssueUrls from getStoryObjectMap', async () => {
+      const issueFetchedFromRepo = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: [],
+      });
+
+      const enrichedIssue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: ['https://github.com/user/repo/issues/2'],
+      });
+
+      const storyObjectMap: StoryObjectMap = new Map([
+        [
+          'Story 1',
+          {
+            story: {
+              id: 'story-1',
+              name: 'Story 1',
+              color: 'GRAY' as const,
+              description: '',
+            },
+            storyIssue: null,
+            issues: [enrichedIssue],
+          },
+        ],
+      ]);
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issueFetchedFromRepo);
+      mockIssueRepository.getStoryObjectMap.mockResolvedValue(storyObjectMap);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({ content: 'From: Test report' }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Workspace',
+          dependedIssueUrls: ['https://github.com/user/repo/issues/2'],
+        }),
+        mockProject,
+      );
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://github.com/user/repo/issues/1',
+          dependedIssueUrls: ['https://github.com/user/repo/issues/2'],
+        }),
+        expect.stringContaining('DEPENDENT_ISSUE_URLS'),
+      );
+    });
   });
 });
