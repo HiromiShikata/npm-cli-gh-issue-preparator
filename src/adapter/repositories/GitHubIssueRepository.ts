@@ -8,6 +8,7 @@ type ProjectItem = {
     url: string;
     title: string;
     number: number;
+    body?: string;
     labels: {
       nodes: Array<{ name: string }>;
     };
@@ -114,6 +115,32 @@ function isStatusFieldsResponse(value: unknown): value is StatusFieldsResponse {
   return true;
 }
 
+function extractDependencyIssueUrls(body?: string): string[] {
+  if (!body) return [];
+
+  const dependencyKeywords = [
+    'depends on',
+    'blocked by',
+    'related to',
+    'requires',
+  ];
+  const lines = body.split('\n');
+  const dependencyUrls: string[] = [];
+  const urlRegex = /https:\/\/github\.com\/[\w-]+\/[\w-]+\/issues\/\d+/g;
+
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    if (dependencyKeywords.some((keyword) => lowerLine.includes(keyword))) {
+      const matches = line.match(urlRegex);
+      if (matches) {
+        dependencyUrls.push(...matches);
+      }
+    }
+  }
+
+  return [...new Set(dependencyUrls)];
+}
+
 export class GitHubIssueRepository implements IssueRepository {
   constructor(private readonly token: string) {}
 
@@ -151,6 +178,7 @@ export class GitHubIssueRepository implements IssueRepository {
                     url
                     title
                     number
+                    body
                     labels(first: 10) {
                       nodes {
                         name
@@ -161,6 +189,7 @@ export class GitHubIssueRepository implements IssueRepository {
                     url
                     title
                     number
+                    body
                     labels(first: 10) {
                       nodes {
                         name
@@ -208,6 +237,7 @@ export class GitHubIssueRepository implements IssueRepository {
                     url
                     title
                     number
+                    body
                     labels(first: 10) {
                       nodes {
                         name
@@ -218,6 +248,7 @@ export class GitHubIssueRepository implements IssueRepository {
                     url
                     title
                     number
+                    body
                     labels(first: 10) {
                       nodes {
                         name
@@ -425,6 +456,7 @@ export class GitHubIssueRepository implements IssueRepository {
           title: item.content.title,
           labels: item.content.labels?.nodes?.map((l) => l.name) || [],
           status,
+          dependencyIssueUrls: extractDependencyIssueUrls(item.content.body),
         });
       }
 
@@ -553,6 +585,7 @@ export class GitHubIssueRepository implements IssueRepository {
             title: item.content.title,
             labels: item.content.labels?.nodes?.map((l) => l.name) || [],
             status,
+            dependencyIssueUrls: extractDependencyIssueUrls(item.content.body),
           };
         }
       }

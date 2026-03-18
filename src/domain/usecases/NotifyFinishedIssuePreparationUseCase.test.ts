@@ -40,13 +40,14 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
-  it('should update issue status from Preparation to Awaiting Quality Check', async () => {
+  it('should update issue status from Preparation to Awaiting Quality Check when no dependencies', async () => {
     const issue: Issue = {
       id: '1',
       url: 'https://github.com/user/repo/issues/1',
       title: 'Test Issue',
       labels: [],
       status: 'Preparation',
+      dependencyIssueUrls: [],
     };
 
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
@@ -64,6 +65,37 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       expect.objectContaining({
         id: '1',
         status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+  });
+
+  it('should update issue status to Awaiting workspace when issue has dependencies', async () => {
+    const issue: Issue = {
+      id: '1',
+      url: 'https://github.com/user/repo/issues/1',
+      title: 'Test Issue',
+      labels: [],
+      status: 'Preparation',
+      dependencyIssueUrls: ['https://github.com/user/repo/issues/2'],
+    };
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      awaitingWorkspaceStatus: 'Awaiting workspace',
+    });
+
+    expect(mockIssueRepository.update).toHaveBeenCalledTimes(1);
+    expect(mockIssueRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '1',
+        status: 'Awaiting workspace',
       }),
       mockProject,
     );
@@ -92,6 +124,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       title: 'Test Issue',
       labels: [],
       status: 'Done',
+      dependencyIssueUrls: [],
     };
 
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);

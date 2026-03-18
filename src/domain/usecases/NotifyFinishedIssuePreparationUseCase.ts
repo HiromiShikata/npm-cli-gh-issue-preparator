@@ -27,6 +27,7 @@ export class NotifyFinishedIssuePreparationUseCase {
     issueUrl: string;
     preparationStatus: string;
     awaitingQualityCheckStatus: string;
+    awaitingWorkspaceStatus?: string;
   }): Promise<void> => {
     const project = await this.projectRepository.getByUrl(params.projectUrl);
 
@@ -42,7 +43,15 @@ export class NotifyFinishedIssuePreparationUseCase {
       );
     }
 
-    issue.status = params.awaitingQualityCheckStatus;
+    if (
+      issue.dependencyIssueUrls.length > 0 &&
+      params.awaitingWorkspaceStatus
+    ) {
+      issue.status = params.awaitingWorkspaceStatus;
+    } else {
+      issue.status = params.awaitingQualityCheckStatus;
+    }
+
     await this.issueRepository.update(issue, project);
   };
 }

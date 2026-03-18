@@ -105,6 +105,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue 1',
         labels: ['bug', 'category:impl'],
         status: 'Awaiting Workspace',
+        dependencyIssueUrls: [],
       });
       expect(issues[1]).toEqual({
         id: 'issue-2',
@@ -112,6 +113,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue 2',
         labels: ['enhancement'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       });
     });
 
@@ -200,6 +202,7 @@ describe('GitHubIssueRepository', () => {
         title: 'User Issue',
         labels: ['enhancement'],
         status: 'Todo',
+        dependencyIssueUrls: [],
       });
     });
 
@@ -441,6 +444,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Issue Without Status',
         labels: ['bug'],
         status: '',
+        dependencyIssueUrls: [],
       });
     });
   });
@@ -453,6 +457,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -514,6 +519,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Done',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -571,6 +577,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'NonExistentStatus',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -610,6 +617,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -628,6 +636,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -647,6 +656,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -686,6 +696,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -730,6 +741,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -776,6 +788,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -820,6 +833,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Todo',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -872,6 +886,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -945,6 +960,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Test Issue',
         labels: ['bug'],
         status: 'Preparation',
+        dependencyIssueUrls: [],
       });
     });
 
@@ -1055,6 +1071,7 @@ describe('GitHubIssueRepository', () => {
         title: 'User Issue',
         labels: ['feature'],
         status: 'Todo',
+        dependencyIssueUrls: [],
       });
     });
 
@@ -1112,6 +1129,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Issue Without Status',
         labels: [],
         status: '',
+        dependencyIssueUrls: [],
       });
     });
 
@@ -1236,6 +1254,7 @@ describe('GitHubIssueRepository', () => {
         title: 'Issue With Null Labels',
         labels: [],
         status: 'Done',
+        dependencyIssueUrls: [],
       });
     });
   });

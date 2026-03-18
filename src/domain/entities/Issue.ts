@@ -4,4 +4,5 @@ export type Issue = {
   title: string;
   labels: string[];
   status: string;
+  dependencyIssueUrls: string[];
 };
