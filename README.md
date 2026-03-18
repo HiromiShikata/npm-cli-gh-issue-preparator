@@ -62,12 +62,14 @@ Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet`
 For backward compatibility, the `category:{value}` label is still supported for agent selection.
 
 **Label priority for agent selection:**
+
 1. `llm-agent:` label (highest priority)
 2. `category:` label (for backward compatibility)
 3. `defaultLlmAgentName` parameter
 4. `defaultAgentName` parameter (lowest priority)
 
 **Model selection:**
+
 1. `llm-model:` label (highest priority)
 2. `defaultLlmModelName` parameter (lowest priority)
 
