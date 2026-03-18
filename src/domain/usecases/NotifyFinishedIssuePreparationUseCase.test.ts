@@ -104,6 +104,8 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       sendGetRequest: jest.fn(),
     };
 
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(new Map());
+
     useCase = new NotifyFinishedIssuePreparationUseCase(
       mockProjectRepository,
       mockIssueRepository,
@@ -1330,7 +1332,6 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         workflowBlockerResolvedWebhookUrl: null,
       });
 
-      expect(mockIssueRepository.getStoryObjectMap).not.toHaveBeenCalled();
       expect(mockWebhookRepository.sendGetRequest).not.toHaveBeenCalled();
     });
 

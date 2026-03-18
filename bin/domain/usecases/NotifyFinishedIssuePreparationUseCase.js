@@ -33,6 +33,14 @@ class NotifyFinishedIssuePreparationUseCase {
             else if (issue.status !== params.preparationStatus) {
                 throw new IllegalIssueStatusError(params.issueUrl, issue.status, params.preparationStatus);
             }
+            const storyObjectMap = await this.issueRepository.getStoryObjectMap(project);
+            for (const storyObject of storyObjectMap.values()) {
+                const towerDefenceIssue = storyObject.issues.find((i) => i.url === issue.url);
+                if (towerDefenceIssue) {
+                    issue.dependedIssueUrls = towerDefenceIssue.dependedIssueUrls;
+                    break;
+                }
+            }
             const comments = await this.issueCommentRepository.getCommentsFromIssue(issue);
             const rejections = await this.collectRejections(issue, comments);
             const rejectionStatusMessage = rejections.length > 0
@@ -61,6 +69,12 @@ class NotifyFinishedIssuePreparationUseCase {
         };
         this.collectRejections = async (issue, comments) => {
             const rejections = [];
+            if (issue.dependedIssueUrls.length > 0) {
+                rejections.push({
+                    type: 'DEPENDENT_ISSUE_URLS',
+                    detail: `DEPENDENT_ISSUE_URLS: ${issue.dependedIssueUrls.join(', ')}`,
+                });
+            }
             const lastComment = comments[comments.length - 1];
             if (!lastComment || !lastComment.content.startsWith('From:')) {
                 rejections.push({
