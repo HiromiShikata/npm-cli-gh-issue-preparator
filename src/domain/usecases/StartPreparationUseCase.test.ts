@@ -171,6 +171,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -183,7 +184,7 @@ describe('StartPreparationUseCase', () => {
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url}`,
+      `aw url1 impl claude-opus ${mockProject.url}`,
     );
   });
   it('should assign workspace to awaiting issues', async () => {
@@ -302,6 +303,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
       logFilePath: '/path/to/log.txt',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
@@ -309,7 +311,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url} --logFilePath /path/to/log.txt`,
+      `aw url1 impl claude-opus ${mockProject.url} --logFilePath /path/to/log.txt`,
     );
   });
   it('should not append logFilePath to aw command when not provided', async () => {
@@ -336,13 +338,14 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url}`,
+      `aw url1 impl claude-opus ${mockProject.url}`,
     );
   });
   it('should handle no awaiting workspace issues gracefully', async () => {
