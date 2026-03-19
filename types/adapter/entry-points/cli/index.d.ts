@@ -5,6 +5,8 @@ type ConfigFile = {
   awaitingWorkspaceStatus?: string;
   preparationStatus?: string;
   defaultAgentName?: string;
+  defaultLlmModelName?: string;
+  defaultLlmAgentName?: string;
   logFilePath?: string;
   maximumPreparingIssuesCount?: number;
   utilizationPercentageThreshold?: number;

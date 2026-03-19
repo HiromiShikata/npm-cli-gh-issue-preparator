@@ -130,6 +130,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -171,6 +174,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -183,7 +189,7 @@ describe('StartPreparationUseCase', () => {
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url}`,
+      `aw url1 impl claude-opus ${mockProject.url}`,
     );
   });
   it('should assign workspace to awaiting issues', async () => {
@@ -216,6 +222,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -270,6 +279,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -302,6 +314,8 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
       logFilePath: '/path/to/log.txt',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
@@ -309,7 +323,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url} --logFilePath /path/to/log.txt`,
+      `aw url1 impl claude-opus ${mockProject.url} --logFilePath /path/to/log.txt`,
     );
   });
   it('should not append logFilePath to aw command when not provided', async () => {
@@ -336,6 +350,189 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw url1 impl claude-opus ${mockProject.url}`,
+    );
+  });
+  it('should use llm-agent label over category label and defaultLlmAgentName', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['llm-agent:research', 'category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: 'default-llm-agent',
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw url1 research ${mockProject.url}`,
+    );
+  });
+  it('should use category label over defaultLlmAgentName when no llm-agent label', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: 'default-llm-agent',
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw url1 impl ${mockProject.url}`,
+    );
+  });
+  it('should use defaultLlmAgentName over defaultAgentName when no label', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: [],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: 'default-llm-agent',
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw url1 default-llm-agent ${mockProject.url}`,
+    );
+  });
+  it('should use llm-model label over defaultLlmModelName', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl', 'llm-model:claude-sonnet'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw url1 impl claude-sonnet ${mockProject.url}`,
+    );
+  });
+  it('should omit model argument when no llm-model label and no defaultLlmModelName', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -370,6 +567,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -402,6 +602,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: 3,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -433,6 +636,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -497,6 +703,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -534,6 +743,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -574,6 +786,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -613,6 +828,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -656,6 +874,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -694,6 +915,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 100,
       allowedIssueAuthors: null,
@@ -727,6 +951,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -767,6 +994,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -793,6 +1023,9 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        logFilePath: null,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -827,6 +1060,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 70,
       allowedIssueAuthors: null,
@@ -866,6 +1102,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 80,
       allowedIssueAuthors: null,
@@ -910,6 +1149,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -965,6 +1207,9 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        logFilePath: null,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1023,6 +1268,9 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        logFilePath: null,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1070,6 +1318,9 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        logFilePath: null,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1117,6 +1368,9 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        logFilePath: null,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1164,6 +1418,9 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        logFilePath: null,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1218,6 +1475,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: ['user1', 'user2'],
@@ -1263,6 +1523,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1307,6 +1570,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: ['user1', 'user2'],
@@ -1368,6 +1634,9 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: ['user1'],

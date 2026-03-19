@@ -21,7 +21,9 @@ export declare class StartPreparationUseCase {
     awaitingWorkspaceStatus: string;
     preparationStatus: string;
     defaultAgentName: string;
-    logFilePath?: string;
+    defaultLlmModelName: string | null;
+    defaultLlmAgentName: string | null;
+    logFilePath: string | null;
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
     allowedIssueAuthors: string[] | null;
