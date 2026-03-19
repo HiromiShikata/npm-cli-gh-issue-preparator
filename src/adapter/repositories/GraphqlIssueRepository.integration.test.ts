@@ -48,7 +48,6 @@ describe('GraphqlIssueRepository Integration Tests', () => {
       }
 
       const originalStatus = originalIssue.status;
-      // Use statuses that exist in the project (note: lowercase 'w' in 'workspace')
       const newStatus =
         originalStatus === 'Awaiting workspace'
           ? 'Preparation'
@@ -61,7 +60,16 @@ describe('GraphqlIssueRepository Integration Tests', () => {
 
       await repository.update(updatedIssue, project);
 
-      const verifyIssue = await repository.get(issueUrl, project);
+      const maxRetries = 5;
+      const retryDelayMs = 2000;
+      let verifyIssue = null;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        verifyIssue = await repository.get(issueUrl, project);
+        if (verifyIssue?.status === newStatus) {
+          break;
+        }
+      }
       expect(verifyIssue).not.toBeNull();
       expect(verifyIssue?.status).toBe(newStatus);
 
@@ -70,7 +78,7 @@ describe('GraphqlIssueRepository Integration Tests', () => {
         status: originalStatus,
       };
       await repository.update(revertedIssue, project);
-    });
+    }, 30000);
 
     it('should throw error when status option not found', async () => {
       const project = createMockProject();
