@@ -84,13 +84,17 @@ class StartPreparationUseCase {
                 const model = issue.labels
                     .find((label) => label.startsWith('llm-model:'))
                     ?.replace('llm-model:', '')
-                    .trim() || params.defaultLlmModelName;
+                    .trim() ||
+                    params.defaultLlmModelName ||
+                    null;
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
                 const logFilePathArg = params.logFilePath
                     ? `--logFilePath ${params.logFilePath}`
-                    : '';
-                await this.localCommandRunner.runCommand(`aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`);
+                    : null;
+                const modelArg = model !== null ? ` ${model}` : '';
+                const command = `aw ${issue.url} ${agent}${modelArg} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}`;
+                await this.localCommandRunner.runCommand(command);
                 updatedCurrentPreparationIssueCount++;
             }
         };

@@ -22,9 +22,9 @@ export class StartPreparationUseCase {
     awaitingWorkspaceStatus: string;
     preparationStatus: string;
     defaultAgentName: string;
-    defaultLlmModelName?: string;
-    defaultLlmAgentName?: string;
-    logFilePath?: string;
+    defaultLlmModelName: string | null;
+    defaultLlmAgentName: string | null;
+    logFilePath: string | null;
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
     allowedIssueAuthors: string[] | null;
@@ -160,16 +160,18 @@ export class StartPreparationUseCase {
         issue.labels
           .find((label: string) => label.startsWith('llm-model:'))
           ?.replace('llm-model:', '')
-          .trim() || params.defaultLlmModelName;
+          .trim() ||
+        params.defaultLlmModelName ||
+        null;
       issue.status = params.preparationStatus;
       await this.issueRepository.update(issue, project);
 
       const logFilePathArg = params.logFilePath
         ? `--logFilePath ${params.logFilePath}`
-        : '';
-      await this.localCommandRunner.runCommand(
-        `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg ? ` ${logFilePathArg}` : ''}`,
-      );
+        : null;
+      const modelArg = model !== null ? ` ${model}` : '';
+      const command = `aw ${issue.url} ${agent}${modelArg} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}`;
+      await this.localCommandRunner.runCommand(command);
       updatedCurrentPreparationIssueCount++;
     }
   };

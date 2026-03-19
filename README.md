@@ -59,8 +59,6 @@ You can use GitHub issue labels to customize the agent and model selection for i
 
 Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet`
 
-For backward compatibility, the `category:{value}` label is still supported for agent selection.
-
 **Label priority for agent selection:**
 
 1. `llm-agent:` label (highest priority)
@@ -72,6 +70,8 @@ For backward compatibility, the `category:{value}` label is still supported for 
 
 1. `llm-model:` label (highest priority)
 2. `defaultLlmModelName` parameter (lowest priority)
+
+**Note:** The `category:` label serves an additional role beyond agent selection: in `notifyFinishedIssuePreparation`, issues with a non-e2e `category:` label skip the PR check. Issues using only `llm-agent:` for agent selection still require a `category:` label (other than `category:e2e`) to skip the PR check during notification.
 
 ## Example 📖
 
