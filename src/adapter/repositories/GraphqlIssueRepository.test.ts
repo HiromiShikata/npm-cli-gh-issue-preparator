@@ -780,7 +780,7 @@ describe('GraphqlIssueRepository', () => {
                     nodes: [
                       {
                         __typename: 'CrossReferencedEvent',
-                      willCloseTarget: true,
+                        willCloseTarget: true,
                         source: {
                           __typename: 'PullRequest',
                           url: 'https://github.com/user/repo/pull/1',
@@ -809,7 +809,7 @@ describe('GraphqlIssueRepository', () => {
                     nodes: [
                       {
                         __typename: 'CrossReferencedEvent',
-                      willCloseTarget: true,
+                        willCloseTarget: true,
                         source: {
                           __typename: 'PullRequest',
                           url: 'https://github.com/user/repo/pull/2',
