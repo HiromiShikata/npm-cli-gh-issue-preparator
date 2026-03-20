@@ -558,6 +558,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -598,6 +599,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -636,6 +638,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -676,6 +679,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -684,6 +688,59 @@ describe('GraphqlIssueRepository', () => {
                     },
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/2',
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        commits: { nodes: [] },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].url).toBe('https://github.com/user/repo/pull/2');
+    });
+
+    it('should filter out PRs that do not close the issue (willCloseTarget: false)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      willCloseTarget: false,
+                      source: {
+                        __typename: 'PullRequest',
+                        url: 'https://github.com/user/repo/pull/1',
+                        state: 'OPEN',
+                        mergeable: 'MERGEABLE',
+                        commits: { nodes: [] },
+                        reviewThreads: { nodes: [] },
+                        baseRef: { name: 'main' },
+                      },
+                    },
+                    {
+                      __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/2',
@@ -723,6 +780,7 @@ describe('GraphqlIssueRepository', () => {
                     nodes: [
                       {
                         __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                         source: {
                           __typename: 'PullRequest',
                           url: 'https://github.com/user/repo/pull/1',
@@ -751,6 +809,7 @@ describe('GraphqlIssueRepository', () => {
                     nodes: [
                       {
                         __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                         source: {
                           __typename: 'PullRequest',
                           url: 'https://github.com/user/repo/pull/2',
@@ -837,6 +896,7 @@ describe('GraphqlIssueRepository', () => {
                     { __typename: 'IssueComment' },
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -874,10 +934,12 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: { __typename: 'Issue' },
                     },
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -915,6 +977,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: null,
                     },
                   ],
@@ -957,6 +1020,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: undefined,
@@ -999,6 +1063,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1038,6 +1103,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1085,6 +1151,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1133,6 +1200,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1212,6 +1280,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1292,6 +1361,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1367,6 +1437,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1429,6 +1500,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1503,6 +1575,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1572,6 +1645,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1646,6 +1720,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1715,6 +1790,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1784,6 +1860,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1853,6 +1930,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1922,6 +2000,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -1991,6 +2070,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2060,6 +2140,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2133,6 +2214,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2201,6 +2283,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2274,6 +2357,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2343,6 +2427,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2416,6 +2501,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2517,6 +2603,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2607,6 +2694,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2688,6 +2776,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2769,6 +2858,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2858,6 +2948,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -2939,6 +3030,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3035,6 +3127,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3124,6 +3217,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3205,6 +3299,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3286,6 +3381,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3375,6 +3471,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3456,6 +3553,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
@@ -3533,6 +3631,7 @@ describe('GraphqlIssueRepository', () => {
                   nodes: [
                     {
                       __typename: 'CrossReferencedEvent',
+                      willCloseTarget: true,
                       source: {
                         __typename: 'PullRequest',
                         url: 'https://github.com/user/repo/pull/1',
