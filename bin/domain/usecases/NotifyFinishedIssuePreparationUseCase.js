@@ -42,10 +42,10 @@ class NotifyFinishedIssuePreparationUseCase {
             if (lastTargetComments.filter((comment) => comment.content.startsWith('Auto Status Check: REJECTED')).length >= params.thresholdForAutoReject &&
                 !lastTargetComments.some((comment) => comment.content
                     .toLowerCase()
-                    .includes('failed to pass the check autimatically'))) {
+                    .includes('failed to pass the check automatically'))) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
-                await this.issueCommentRepository.createComment(issue, `${rejectionStatusMessage}\n\nFailed to pass the check autimatically for ${params.thresholdForAutoReject} times`);
+                await this.issueCommentRepository.createComment(issue, `${rejectionStatusMessage}\n\nFailed to pass the check automatically for ${params.thresholdForAutoReject} times`);
                 await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
                 return;
             }
