@@ -1439,4 +1439,273 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       );
     });
   });
+
+  describe('REPORT_HAS_NEXT_STEP rejection', () => {
+    it('should reject with REPORT_HAS_NEXT_STEP when last comment has JSON report with nextStep field', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content:
+            'From: :robot: Agent\nSome output\n```json\n{"nextStep": "Fix the remaining issue"}\n```',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Workspace',
+        }),
+        mockProject,
+      );
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://github.com/user/repo/issues/1',
+        }),
+        expect.stringContaining('REPORT_HAS_NEXT_STEP'),
+      );
+    });
+
+    it('should not reject when last comment has JSON report with nextStep as null', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content:
+            'From: :robot: Agent\nSome output\n```json\n{"nextStep": null}\n```',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should not reject when last comment has JSON report without nextStep field', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content:
+            'From: :robot: Agent\nSome output\n```json\n{"status": "done"}\n```',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should not reject when last comment has no JSON block', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content: 'From: :robot: Agent\nWork is done, no JSON block here.',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should not reject when last comment has JSON block with invalid JSON', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content: 'From: :robot: Agent\n```json\n{invalid json content}\n```',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should not reject when last comment has JSON block with non-object value', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content: 'From: :robot: Agent\n```json\n"just a string"\n```',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+  });
 });
