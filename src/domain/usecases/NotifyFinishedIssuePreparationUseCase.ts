@@ -223,7 +223,11 @@ export class NotifyFinishedIssuePreparationUseCase {
     let reportJson: unknown;
     try {
       reportJson = JSON.parse(reportMatch[1]);
-    } catch {
+    } catch (error) {
+      console.warn(
+        'Invalid JSON in report body while checking nextStep:',
+        error,
+      );
       return false;
     }
     if (typeof reportJson !== 'object' || reportJson === null) {

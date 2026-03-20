@@ -1623,6 +1623,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     });
 
     it('should not reject when last comment has JSON block with invalid JSON', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const issue = createMockIssue({
         url: 'https://github.com/user/repo/issues/1',
         status: 'Preparation',
@@ -1663,6 +1664,11 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         }),
         mockProject,
       );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Invalid JSON in report body while checking nextStep:',
+        expect.any(Error),
+      );
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not reject when last comment has JSON block with non-object value', async () => {
