@@ -104,6 +104,8 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       sendGetRequest: jest.fn(),
     };
 
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(new Map());
+
     useCase = new NotifyFinishedIssuePreparationUseCase(
       mockProjectRepository,
       mockIssueRepository,
@@ -1330,7 +1332,6 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         workflowBlockerResolvedWebhookUrl: null,
       });
 
-      expect(mockIssueRepository.getStoryObjectMap).not.toHaveBeenCalled();
       expect(mockWebhookRepository.sendGetRequest).not.toHaveBeenCalled();
     });
 
@@ -1712,6 +1713,196 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         }),
         mockProject,
       );
+    });
+  });
+
+  describe('dependent issues', () => {
+    it('should move to Awaiting Workspace with explanation comment when issue has dependedIssueUrls', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: ['https://github.com/user/repo/issues/2'],
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Workspace',
+        }),
+        mockProject,
+      );
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://github.com/user/repo/issues/1',
+        }),
+        expect.stringContaining('https://github.com/user/repo/issues/2'),
+      );
+      expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('Auto Status Check: REJECTED'),
+      );
+    });
+
+    it('should not move to Awaiting Workspace for empty dependedIssueUrls', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: [],
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({ content: 'From: Test report' }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should move to Awaiting Workspace when issue is enriched with dependedIssueUrls from getStoryObjectMap', async () => {
+      const issueFetchedFromRepo = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: [],
+      });
+
+      const enrichedIssue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: ['https://github.com/user/repo/issues/2'],
+      });
+
+      const storyObjectMap: StoryObjectMap = new Map([
+        [
+          'Story 1',
+          {
+            story: {
+              id: 'story-1',
+              name: 'Story 1',
+              color: 'GRAY' as const,
+              description: '',
+            },
+            storyIssue: null,
+            issues: [enrichedIssue],
+          },
+        ],
+      ]);
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issueFetchedFromRepo);
+      mockIssueRepository.getStoryObjectMap.mockResolvedValue(storyObjectMap);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Workspace',
+          dependedIssueUrls: ['https://github.com/user/repo/issues/2'],
+        }),
+        mockProject,
+      );
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://github.com/user/repo/issues/1',
+        }),
+        expect.stringContaining('https://github.com/user/repo/issues/2'),
+      );
+      expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('Auto Status Check: REJECTED'),
+      );
+    });
+
+    it('should continue normally when getStoryObjectMap throws', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        dependedIssueUrls: [],
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueRepository.getStoryObjectMap.mockRejectedValue(
+        new Error('TowerDefence unavailable'),
+      );
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({ content: 'From: Test report' }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+        {
+          url: 'https://github.com/user/repo/pull/1',
+          isConflicted: false,
+          isPassedAllCiJob: true,
+          isCiStateSuccess: true,
+          isResolvedAllReviewComments: true,
+          isBranchOutOfDate: false,
+          missingRequiredCheckNames: [],
+        },
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to enrich dependedIssueUrls from story object map:',
+        expect.any(Error),
+      );
+      consoleWarnSpy.mockRestore();
     });
   });
 });

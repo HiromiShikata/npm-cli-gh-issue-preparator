@@ -85,6 +85,38 @@ export class NotifyFinishedIssuePreparationUseCase {
         params.preparationStatus,
       );
     }
+
+    if (issue.dependedIssueUrls.length === 0) {
+      try {
+        const storyObjectMap =
+          await this.issueRepository.getStoryObjectMap(project);
+        for (const storyObject of storyObjectMap.values()) {
+          const towerDefenceIssue = storyObject.issues.find(
+            (i) => i.url === issue.url,
+          );
+          if (towerDefenceIssue) {
+            issue.dependedIssueUrls = towerDefenceIssue.dependedIssueUrls;
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn(
+          'Failed to enrich dependedIssueUrls from story object map:',
+          error,
+        );
+      }
+    }
+
+    if (issue.dependedIssueUrls.length > 0) {
+      issue.status = params.awaitingWorkspaceStatus;
+      await this.issueRepository.update(issue, project);
+      await this.issueCommentRepository.createComment(
+        issue,
+        `Issue has dependent issue URLs: ${issue.dependedIssueUrls.join(', ')}`,
+      );
+      return;
+    }
+
     const comments =
       await this.issueCommentRepository.getCommentsFromIssue(issue);
 

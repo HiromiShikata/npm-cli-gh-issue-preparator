@@ -39,6 +39,7 @@ export declare class NotifyFinishedIssuePreparationUseCase {
     workflowBlockerResolvedWebhookUrl: string | null;
   }) => Promise<void>;
   private collectRejections;
+  private reportBodyHasNextStep;
   private sendWorkflowBlockerNotification;
 }
 //# sourceMappingURL=NotifyFinishedIssuePreparationUseCase.d.ts.map
