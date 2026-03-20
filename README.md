@@ -45,10 +45,15 @@ The GitHub Project README can contain a collapsible `<details>` section with YAM
 maximumPreparingIssuesCount: 2
 utilizationPercentageThreshold: 99
 defaultAgentName: 'custom-agent'
+thresholdForAutoReject: 3
 </details>
 ```
 
 Only the content inside the `<details><summary>config</summary>` section is parsed as YAML. Other content in the README is ignored. `projectUrl` and `configFilePath` cannot be set via Project README since the README is fetched using these values.
+
+### Parameters
+
+- `thresholdForAutoReject` (default: `3`) - Number of consecutive auto-rejection comments before automatically escalating the issue to the awaiting quality check status. Can be set via CLI argument `--thresholdForAutoReject`, config file, or GitHub Project README config.
 
 ### Issue Labels
 

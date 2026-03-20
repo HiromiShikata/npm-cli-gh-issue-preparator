@@ -442,7 +442,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
     expect(createCommentCall[1]).toContain('Auto Status Check:');
     expect(createCommentCall[1]).toContain(
-      'Failed to pass the check autimatically for 3 times',
+      'Failed to pass the check automatically for 3 times',
     );
   });
 
@@ -501,7 +501,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
       createMockComment({
-        content: 'Failed to pass the check autimatically for 3 times',
+        content: 'Failed to pass the check automatically for 3 times',
       }),
     ]);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
@@ -547,7 +547,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
       createMockComment({
-        content: 'Failed to pass the check autimatically for 5 times',
+        content: 'Failed to pass the check automatically for 5 times',
       }),
     ]);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
@@ -594,7 +594,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
       createMockComment({
         content:
-          'Auto Status Check: REJECTED\n- NO_REPORT_FROM_AGENT_BOT\n\nFailed to pass the check autimatically for 3 times',
+          'Auto Status Check: REJECTED\n- NO_REPORT_FROM_AGENT_BOT\n\nFailed to pass the check automatically for 3 times',
       }),
     ]);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
