@@ -33,6 +33,27 @@ class NotifyFinishedIssuePreparationUseCase {
             else if (issue.status !== params.preparationStatus) {
                 throw new IllegalIssueStatusError(params.issueUrl, issue.status, params.preparationStatus);
             }
+            if (issue.dependedIssueUrls.length === 0) {
+                try {
+                    const storyObjectMap = await this.issueRepository.getStoryObjectMap(project);
+                    for (const storyObject of storyObjectMap.values()) {
+                        const towerDefenceIssue = storyObject.issues.find((i) => i.url === issue.url);
+                        if (towerDefenceIssue) {
+                            issue.dependedIssueUrls = towerDefenceIssue.dependedIssueUrls;
+                            break;
+                        }
+                    }
+                }
+                catch (error) {
+                    console.warn('Failed to enrich dependedIssueUrls from story object map:', error);
+                }
+            }
+            if (issue.dependedIssueUrls.length > 0) {
+                issue.status = params.awaitingWorkspaceStatus;
+                await this.issueRepository.update(issue, project);
+                await this.issueCommentRepository.createComment(issue, `Issue has depended issue URLs: ${issue.dependedIssueUrls.join(', ')}`);
+                return;
+            }
             const comments = await this.issueCommentRepository.getCommentsFromIssue(issue);
             const rejections = await this.collectRejections(issue, comments);
             const rejectionStatusMessage = rejections.length > 0
@@ -66,6 +87,12 @@ class NotifyFinishedIssuePreparationUseCase {
                 rejections.push({
                     type: 'NO_REPORT_FROM_AGENT_BOT',
                     detail: 'NO_REPORT_FROM_AGENT_BOT',
+                });
+            }
+            else if (this.reportBodyHasNextStep(lastComment.content)) {
+                rejections.push({
+                    type: 'REPORT_HAS_NEXT_STEP',
+                    detail: 'REPORT_HAS_NEXT_STEP',
                 });
             }
             const categoryLabels = issue.labels.filter((label) => label.startsWith('category:'));
@@ -118,6 +145,28 @@ class NotifyFinishedIssuePreparationUseCase {
                 }
             }
             return rejections;
+        };
+        this.reportBodyHasNextStep = (body) => {
+            const reportMatch = body.match(/```json\n([\s\S]*?)\n```/);
+            if (!reportMatch || reportMatch.length < 2) {
+                return false;
+            }
+            let reportJson;
+            try {
+                reportJson = JSON.parse(reportMatch[1]);
+            }
+            catch (error) {
+                console.warn('Invalid JSON in report body while checking nextStep:', error);
+                return false;
+            }
+            if (typeof reportJson !== 'object' || reportJson === null) {
+                return false;
+            }
+            if (!('nextStep' in reportJson)) {
+                return false;
+            }
+            const nextStepValue = Reflect.get(reportJson, 'nextStep');
+            return nextStepValue !== null && nextStepValue !== undefined;
         };
         this.sendWorkflowBlockerNotification = async (issueUrl, webhookUrlTemplate, project) => {
             if (webhookUrlTemplate === null) {
