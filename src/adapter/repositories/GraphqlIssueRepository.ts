@@ -757,6 +757,7 @@ export class GraphqlIssueRepository implements Pick<
         if (item.__typename !== 'CrossReferencedEvent') continue;
         if (!item.source || item.source.__typename !== 'PullRequest') continue;
         if (item.source.state !== 'OPEN') continue;
+        if (!item.willCloseTarget) continue;
 
         const pr = item.source;
         const prUrl = pr.url || '';
