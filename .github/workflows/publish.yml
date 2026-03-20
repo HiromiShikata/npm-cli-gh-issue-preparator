@@ -13,6 +13,11 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     steps:
       - uses: actions/create-github-app-token@v3
         id: app-token
@@ -34,7 +39,7 @@ jobs:
 
       - run: npx semantic-release
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
       - run: |
           git status
           git add -A
