@@ -112,7 +112,7 @@ export class NotifyFinishedIssuePreparationUseCase {
       await this.issueRepository.update(issue, project);
       await this.issueCommentRepository.createComment(
         issue,
-        `Issue has depended issue URLs: ${issue.dependedIssueUrls.join(', ')}`,
+        `Issue has dependent issue URLs: ${issue.dependedIssueUrls.join(', ')}`,
       );
       return;
     }
