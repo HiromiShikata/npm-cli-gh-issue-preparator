@@ -43,6 +43,7 @@ class GitHubProjectRepository {
             id
             title
             url
+            readme
             fields(first: 100) {
               nodes {
                 ... on ProjectV2SingleSelectField {
@@ -65,6 +66,7 @@ class GitHubProjectRepository {
             id
             title
             url
+            readme
             fields(first: 100) {
               nodes {
                 ... on ProjectV2SingleSelectField {
@@ -121,6 +123,7 @@ class GitHubProjectRepository {
             statuses,
             customFieldNames: fields.map((f) => f.name),
             statusFieldId: statusField?.id ?? null,
+            readme: project.readme ?? null,
         };
     }
     async prepareStatus(name, project) {

@@ -6,9 +6,19 @@ class StartPreparationUseCase {
         this.projectRepository = projectRepository;
         this.issueRepository = issueRepository;
         this.localCommandRunner = localCommandRunner;
+        this.parseMaximumPreparingIssuesCountFromReadme = (readme) => {
+            if (!readme)
+                return null;
+            const match = readme.match(/maximumPreparingIssuesCount:\s*(\d+)/);
+            if (!match)
+                return null;
+            return parseInt(match[1], 10);
+        };
         this.run = async (params) => {
-            const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
             const project = await this.projectRepository.getByUrl(params.projectUrl);
+            const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ??
+                this.parseMaximumPreparingIssuesCountFromReadme(project.readme) ??
+                6;
             const allIssues = await this.issueRepository.getAllOpened(project);
             const awaitingWorkspaceIssues = allIssues.filter((issue) => issue.status === params.awaitingWorkspaceStatus);
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;

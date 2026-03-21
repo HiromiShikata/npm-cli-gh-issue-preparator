@@ -24,6 +24,7 @@ describe('GitHubProjectRepository', () => {
                 id: 'project-id',
                 title: 'Test Project',
                 url: projectUrl,
+                readme: null,
                 fields: {
                   nodes: [
                     {
@@ -53,6 +54,7 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Awaiting workspace', 'Preparation', 'Done'],
         customFieldNames: ['Status', 'workspace'],
         statusFieldId: 'status-field-id',
+        readme: null,
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -79,6 +81,8 @@ describe('GitHubProjectRepository', () => {
                 id: 'user-project-id',
                 title: 'User Project',
                 url: projectUrl,
+                readme:
+                  '<details>\n<summary>config</summary>\n\nmaximumPreparingIssuesCount: 6\n</details>',
                 fields: {
                   nodes: [
                     {
@@ -103,6 +107,8 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Todo', 'Done'],
         customFieldNames: ['Status'],
         statusFieldId: 'user-status-field-id',
+        readme:
+          '<details>\n<summary>config</summary>\n\nmaximumPreparingIssuesCount: 6\n</details>',
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -193,6 +199,7 @@ describe('GitHubProjectRepository', () => {
               id: 'repo-project-id',
               title: 'Repo Project',
               url: projectUrl,
+              readme: null,
               fields: {
                 nodes: [
                   {
@@ -217,6 +224,7 @@ describe('GitHubProjectRepository', () => {
       statuses: ['Open', 'Closed'],
       customFieldNames: ['Status'],
       statusFieldId: 'repo-status-field-id',
+      readme: null,
     });
   });
 
@@ -232,6 +240,7 @@ describe('GitHubProjectRepository', () => {
               id: 'project-without-status',
               title: 'Project Without Status',
               url: projectUrl,
+              readme: null,
               fields: {
                 nodes: [
                   {
@@ -255,6 +264,7 @@ describe('GitHubProjectRepository', () => {
       statuses: [],
       customFieldNames: ['Priority'],
       statusFieldId: null,
+      readme: null,
     });
   });
 
@@ -267,6 +277,7 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Todo', 'In Progress', 'Done'],
         customFieldNames: ['Status'],
         statusFieldId: 'status-field-id',
+        readme: null,
       };
 
       const result = await repository.prepareStatus('In Progress', project);
@@ -283,6 +294,7 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Todo', 'Done'],
         customFieldNames: ['Status'],
         statusFieldId: 'status-field-id',
+        readme: null,
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -331,6 +343,7 @@ describe('GitHubProjectRepository', () => {
         statuses: [],
         customFieldNames: ['Priority'],
         statusFieldId: null,
+        readme: null,
       };
 
       await expect(
@@ -346,6 +359,7 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Todo'],
         customFieldNames: ['Status'],
         statusFieldId: 'status-field-id',
+        readme: null,
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -366,6 +380,7 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Todo'],
         customFieldNames: ['Status'],
         statusFieldId: 'status-field-id',
+        readme: null,
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -386,6 +401,7 @@ describe('GitHubProjectRepository', () => {
         statuses: ['Todo'],
         customFieldNames: ['Status'],
         statusFieldId: 'status-field-id',
+        readme: null,
       };
 
       mockFetch.mockResolvedValueOnce({

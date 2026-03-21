@@ -18,6 +18,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     statuses: ['Preparation', 'Awaiting Quality Check', 'Done'],
     customFieldNames: ['workspace'],
     statusFieldId: 'status-field-id',
+    readme: null,
   };
 
   beforeEach(() => {

@@ -17,6 +17,7 @@ describe('StartPreparationUseCase', () => {
     statuses: ['Awaiting Workspace', 'Preparation', 'Done'],
     customFieldNames: ['workspace'],
     statusFieldId: 'status-field-id',
+    readme: null,
   };
   beforeEach(() => {
     jest.resetAllMocks();
@@ -282,6 +283,98 @@ describe('StartPreparationUseCase', () => {
       status: 'Awaiting Workspace',
     }));
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(6);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(6);
+  });
+  it('should use maximumPreparingIssuesCount from project readme when cli arg is null', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `${i + 1}`,
+      url: `url${i + 1}`,
+      title: `Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    const projectWithReadme: Project = {
+      ...mockProject,
+      readme:
+        '<details>\n<summary>config</summary>\n\nmaximumPreparingIssuesCount: 3\nutilizationPercentageThreshold: 98\n</details>',
+    };
+    mockProjectRepository.getByUrl.mockResolvedValue(projectWithReadme);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: null,
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(3);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(3);
+  });
+  it('should prefer cli maximumPreparingIssuesCount over project readme value', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `${i + 1}`,
+      url: `url${i + 1}`,
+      title: `Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    const projectWithReadme: Project = {
+      ...mockProject,
+      readme:
+        '<details>\n<summary>config</summary>\n\nmaximumPreparingIssuesCount: 3\n</details>',
+    };
+    mockProjectRepository.getByUrl.mockResolvedValue(projectWithReadme);
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      maximumPreparingIssuesCount: 5,
+    });
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(5);
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(5);
+  });
+  it('should use default maximumPreparingIssuesCount of 6 when readme has no matching config key', async () => {
+    const awaitingIssues: Issue[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `${i + 1}`,
+      url: `url${i + 1}`,
+      title: `Issue ${i + 1}`,
+      labels: [],
+      status: 'Awaiting Workspace',
+    }));
+    const projectWithReadmeWithoutConfig: Project = {
+      ...mockProject,
+      readme:
+        '<details>\n<summary>config</summary>\n\nutilizationPercentageThreshold: 98\n</details>',
+    };
+    mockProjectRepository.getByUrl.mockResolvedValue(
+      projectWithReadmeWithoutConfig,
+    );
     mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
     mockLocalCommandRunner.runCommand.mockResolvedValue({
       stdout: '',

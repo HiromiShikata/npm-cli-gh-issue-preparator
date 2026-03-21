@@ -9,6 +9,15 @@ export class StartPreparationUseCase {
     private readonly localCommandRunner: LocalCommandRunner,
   ) {}
 
+  private parseMaximumPreparingIssuesCountFromReadme = (
+    readme: string | null,
+  ): number | null => {
+    if (!readme) return null;
+    const match = readme.match(/maximumPreparingIssuesCount:\s*(\d+)/);
+    if (!match) return null;
+    return parseInt(match[1], 10);
+  };
+
   run = async (params: {
     projectUrl: string;
     awaitingWorkspaceStatus: string;
@@ -17,8 +26,11 @@ export class StartPreparationUseCase {
     logFilePath?: string;
     maximumPreparingIssuesCount: number | null;
   }): Promise<void> => {
-    const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
     const project = await this.projectRepository.getByUrl(params.projectUrl);
+    const maximumPreparingIssuesCount =
+      params.maximumPreparingIssuesCount ??
+      this.parseMaximumPreparingIssuesCountFromReadme(project.readme) ??
+      6;
 
     const allIssues = await this.issueRepository.getAllOpened(project);
 

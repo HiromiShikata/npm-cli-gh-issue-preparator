@@ -5,4 +5,5 @@ export type Project = {
   statuses: string[];
   customFieldNames: string[];
   statusFieldId: string | null;
+  readme: string | null;
 };

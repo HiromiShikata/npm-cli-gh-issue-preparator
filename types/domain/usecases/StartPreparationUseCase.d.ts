@@ -6,6 +6,7 @@ export declare class StartPreparationUseCase {
     private readonly issueRepository;
     private readonly localCommandRunner;
     constructor(projectRepository: ProjectRepository, issueRepository: IssueRepository, localCommandRunner: LocalCommandRunner);
+    private parseMaximumPreparingIssuesCountFromReadme;
     run: (params: {
         projectUrl: string;
         awaitingWorkspaceStatus: string;

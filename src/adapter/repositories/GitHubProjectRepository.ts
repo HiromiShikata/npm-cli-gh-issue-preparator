@@ -11,6 +11,7 @@ type GitHubProjectV2 = {
   id: string;
   title: string;
   url: string;
+  readme: string | null;
   fields: {
     nodes: GitHubProjectField[];
   };
@@ -78,6 +79,7 @@ export class GitHubProjectRepository implements ProjectRepository {
             id
             title
             url
+            readme
             fields(first: 100) {
               nodes {
                 ... on ProjectV2SingleSelectField {
@@ -100,6 +102,7 @@ export class GitHubProjectRepository implements ProjectRepository {
             id
             title
             url
+            readme
             fields(first: 100) {
               nodes {
                 ... on ProjectV2SingleSelectField {
@@ -163,6 +166,7 @@ export class GitHubProjectRepository implements ProjectRepository {
       statuses,
       customFieldNames: fields.map((f) => f.name),
       statusFieldId: statusField?.id ?? null,
+      readme: project.readme ?? null,
     };
   }
 
