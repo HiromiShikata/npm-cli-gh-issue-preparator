@@ -177,7 +177,9 @@ export class StartPreparationUseCase {
         : null;
       const modelArg = model !== null ? ` ${model}` : '';
       const branchArg =
-        existingPRBranchName !== null ? ` --branch ${existingPRBranchName}` : '';
+        existingPRBranchName !== null
+          ? ` --branch ${existingPRBranchName}`
+          : '';
       const command = `aw ${issue.url} ${agent}${modelArg} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}${branchArg}`;
       await this.localCommandRunner.runCommand(command);
       updatedCurrentPreparationIssueCount++;
