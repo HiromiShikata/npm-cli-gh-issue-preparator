@@ -4,6 +4,7 @@ import { StoryObjectMap } from '../../entities/StoryObjectMap';
 
 export type RelatedPullRequest = {
   url: string;
+  branchName: string;
   isConflicted: boolean;
   isPassedAllCiJob: boolean;
   isCiStateSuccess: boolean;

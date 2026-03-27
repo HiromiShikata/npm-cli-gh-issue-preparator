@@ -374,6 +374,8 @@ program
           towerDefenceIssueRepository,
         ),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        findRelatedOpenPRs:
+          graphqlIssueRepository.findRelatedOpenPRs.bind(graphqlIssueRepository),
       },
       claudeRepository,
       localCommandRunner,
