@@ -242,6 +242,63 @@ describe('StartPreparationUseCase', () => {
       `aw url1 impl claude-opus ${mockProject.url} --branch i1`,
     );
   });
+  it('should not pass --branch when issue has multiple linked PRs', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    const pr1: RelatedPullRequest = {
+      url: 'https://github.com/user/repo/pull/42',
+      branchName: 'i1',
+      isConflicted: false,
+      isPassedAllCiJob: false,
+      isCiStateSuccess: false,
+      isResolvedAllReviewComments: false,
+      isBranchOutOfDate: false,
+      missingRequiredCheckNames: [],
+    };
+    const pr2: RelatedPullRequest = {
+      url: 'https://github.com/user/repo/pull/43',
+      branchName: 'i1-fix',
+      isConflicted: false,
+      isPassedAllCiJob: false,
+      isCiStateSuccess: false,
+      isResolvedAllReviewComments: false,
+      isBranchOutOfDate: false,
+      missingRequiredCheckNames: [],
+    };
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([pr1, pr2]);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw url1 impl claude-opus ${mockProject.url}`,
+    );
+  });
   it('should assign workspace to awaiting issues', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({

@@ -167,7 +167,7 @@ export class StartPreparationUseCase {
         issue.url,
       );
       const existingPRBranchName =
-        relatedPRs.length > 0 ? relatedPRs[0].branchName : null;
+        relatedPRs.length === 1 ? relatedPRs[0].branchName : null;
 
       issue.status = params.preparationStatus;
       await this.issueRepository.update(issue, project);

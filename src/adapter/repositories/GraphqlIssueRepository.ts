@@ -866,7 +866,7 @@ export class GraphqlIssueRepository implements Pick<
 
         relatedPRsMap.set(prUrl, {
           url: prUrl,
-          branchName: pr.headRefName ?? '',
+          branchName: pr.headRefName ?? null,
           isConflicted,
           isPassedAllCiJob,
           isCiStateSuccess,

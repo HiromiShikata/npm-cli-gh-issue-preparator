@@ -135,7 +135,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -187,7 +187,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -276,7 +276,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -324,7 +324,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -370,7 +370,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -415,7 +415,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -469,7 +469,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -516,7 +516,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -563,7 +563,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -611,7 +611,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -690,7 +690,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -700,7 +700,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       },
       {
         url: 'https://github.com/user/repo/pull/2',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -748,7 +748,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: true,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -796,7 +796,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: false,
         isCiStateSuccess: false,
@@ -844,7 +844,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: false,
         isCiStateSuccess: true,
@@ -898,7 +898,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: false,
         isCiStateSuccess: false,
@@ -952,7 +952,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: false,
         isCiStateSuccess: false,
@@ -994,7 +994,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -1075,7 +1075,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
       {
         url: 'https://github.com/user/repo/pull/1',
-        branchName: '',
+        branchName: null,
         isConflicted: false,
         isPassedAllCiJob: true,
         isCiStateSuccess: true,
@@ -1195,7 +1195,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1248,7 +1248,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1294,7 +1294,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1335,7 +1335,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1372,7 +1372,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1431,7 +1431,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1484,7 +1484,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1535,7 +1535,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1580,7 +1580,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1624,7 +1624,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1669,7 +1669,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1718,7 +1718,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1799,7 +1799,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
@@ -1905,7 +1905,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
         {
           url: 'https://github.com/user/repo/pull/1',
-          branchName: '',
+          branchName: null,
           isConflicted: false,
           isPassedAllCiJob: true,
           isCiStateSuccess: true,
