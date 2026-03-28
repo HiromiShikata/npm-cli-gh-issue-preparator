@@ -117,6 +117,7 @@ type TimelineItem = {
     number?: number;
     state?: string;
     mergeable?: string;
+    headRefName?: string;
     baseRefName?: string;
     baseRepository?: {
       branchProtectionRules?: {
@@ -631,6 +632,7 @@ export class GraphqlIssueRepository implements Pick<
                       number
                       state
                       mergeable
+                      headRefName
                       baseRefName
                       baseRepository {
                         branchProtectionRules(first: 100) {
@@ -864,6 +866,7 @@ export class GraphqlIssueRepository implements Pick<
 
         relatedPRsMap.set(prUrl, {
           url: prUrl,
+          branchName: pr.headRefName ?? null,
           isConflicted,
           isPassedAllCiJob,
           isCiStateSuccess,
