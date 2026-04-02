@@ -2078,10 +2078,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     it('should move to Awaiting Workspace with explanation comment when issue has future nextActionDate set', async () => {
       jest.useFakeTimers();
       try {
-        jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+        jest.setSystemTime(new Date(2024, 0, 15, 10, 0, 0));
         const issue = createMockIssue({
           url: 'https://github.com/user/repo/issues/1',
-          nextActionDate: new Date('2024-01-16'),
+          nextActionDate: new Date(2024, 0, 16),
           nextActionHour: null,
         });
 
@@ -2124,10 +2124,10 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     it('should not move to Awaiting Workspace when nextActionDate is today or in the past', async () => {
       jest.useFakeTimers();
       try {
-        jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+        jest.setSystemTime(new Date(2024, 0, 15, 10, 0, 0));
         const issue = createMockIssue({
           url: 'https://github.com/user/repo/issues/1',
-          nextActionDate: new Date('2024-01-15'),
+          nextActionDate: new Date(2024, 0, 15),
           nextActionHour: null,
         });
 
@@ -2173,7 +2173,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     it('should move to Awaiting Workspace with explanation comment when issue has future nextActionHour set', async () => {
       jest.useFakeTimers();
       try {
-        jest.setSystemTime(new Date('2024-01-15T08:00:00'));
+        jest.setSystemTime(new Date(2024, 0, 15, 8, 0, 0));
         const issue = createMockIssue({
           url: 'https://github.com/user/repo/issues/1',
           nextActionDate: null,
@@ -2213,7 +2213,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     it('should not move to Awaiting Workspace when nextActionHour has already passed', async () => {
       jest.useFakeTimers();
       try {
-        jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+        jest.setSystemTime(new Date(2024, 0, 15, 10, 0, 0));
         const issue = createMockIssue({
           url: 'https://github.com/user/repo/issues/1',
           nextActionDate: null,
