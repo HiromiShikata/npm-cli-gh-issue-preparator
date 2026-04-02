@@ -588,7 +588,7 @@ describe('GraphqlIssueRepository', () => {
       expect(result[0].isBranchOutOfDate).toBe(false);
     });
 
-    it('should treat UNKNOWN mergeable state as conflicted', async () => {
+    it('should treat UNKNOWN mergeable state as not conflicted', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -624,7 +624,7 @@ describe('GraphqlIssueRepository', () => {
         'https://github.com/user/repo/issues/1',
       );
 
-      expect(result[0].isConflicted).toBe(true);
+      expect(result[0].isConflicted).toBe(false);
     });
 
     it('should handle unresolved review comments', async () => {
@@ -4403,6 +4403,52 @@ describe('GraphqlIssueRepository', () => {
       await expect(repository.getOpenPullRequest(prUrl)).rejects.toThrow(
         'Unexpected response shape when fetching pull request from GitHub GraphQL API',
       );
+    });
+
+    it('should return null when URL is an issue URL, not a PR URL', async () => {
+      const result = await repository.getOpenPullRequest(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw when GraphQL response contains errors', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          errors: [{ message: 'Could not resolve to a Repository' }],
+        }),
+      });
+
+      await expect(repository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'GraphQL errors:',
+      );
+    });
+
+    it('should return isConflicted false when mergeable is UNKNOWN', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'UNKNOWN',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: { nodes: [] },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.isConflicted).toBe(false);
     });
 
     it('should detect required checks from active rulesets with ~DEFAULT_BRANCH pattern', async () => {

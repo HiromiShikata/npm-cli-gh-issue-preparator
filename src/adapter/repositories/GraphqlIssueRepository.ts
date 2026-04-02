@@ -268,6 +268,73 @@ function isIssueResponse(value: unknown): value is IssueResponse {
   return true;
 }
 
+type PrStatusComputationData = {
+  mergeable?: string;
+  baseRepository?: {
+    branchProtectionRules?: {
+      nodes: Array<{
+        pattern: string;
+        requiredStatusCheckContexts: string[];
+      }>;
+    };
+    defaultBranchRef?: {
+      name: string;
+    } | null;
+    rulesets?: {
+      nodes: Array<{
+        name: string;
+        enforcement: string;
+        conditions: {
+          refName: {
+            include: string[];
+            exclude: string[];
+          };
+        };
+        rules: {
+          nodes: Array<{
+            type: string;
+            parameters:
+              | {
+                  requiredStatusChecks: Array<{
+                    context: string;
+                  }>;
+                }
+              | Record<string, never>;
+          }>;
+        };
+      }>;
+    };
+  };
+  commits?: {
+    nodes: Array<{
+      commit: {
+        statusCheckRollup?: {
+          state: string;
+          contexts?: {
+            nodes: Array<
+              | {
+                  __typename: 'CheckRun';
+                  name: string;
+                  conclusion: string | null;
+                }
+              | {
+                  __typename: 'StatusContext';
+                  context: string;
+                  state: string;
+                }
+            >;
+          };
+        } | null;
+      };
+    }>;
+  };
+  reviewThreads?: {
+    nodes: Array<{
+      isResolved: boolean;
+    }>;
+  };
+};
+
 type DirectPullRequestResponse = {
   data?: {
     repository?: {
@@ -276,76 +343,10 @@ type DirectPullRequestResponse = {
         state: string;
         headRefName?: string;
         baseRefName?: string;
-        mergeable?: string;
-        baseRepository?: {
-          branchProtectionRules?: {
-            nodes: Array<{
-              pattern: string;
-              requiredStatusCheckContexts: string[];
-            }>;
-          };
-          defaultBranchRef?: {
-            name: string;
-          } | null;
-          rulesets?: {
-            nodes: Array<{
-              name: string;
-              enforcement: string;
-              conditions: {
-                refName: {
-                  include: string[];
-                  exclude: string[];
-                };
-              };
-              rules: {
-                nodes: Array<{
-                  type: string;
-                  parameters:
-                    | {
-                        requiredStatusChecks: Array<{
-                          context: string;
-                        }>;
-                      }
-                    | Record<string, never>;
-                }>;
-              };
-            }>;
-          };
-        };
-        commits?: {
-          nodes: Array<{
-            commit: {
-              statusCheckRollup?: {
-                state: string;
-                contexts?: {
-                  nodes: Array<
-                    | {
-                        __typename: 'CheckRun';
-                        name: string;
-                        conclusion: string | null;
-                      }
-                    | {
-                        __typename: 'StatusContext';
-                        context: string;
-                        state: string;
-                      }
-                  >;
-                };
-              } | null;
-            };
-          }>;
-        };
-        reviewThreads?: {
-          nodes: Array<{
-            isResolved: boolean;
-          }>;
-        };
-        baseRef?: {
-          name: string;
-        } | null;
-      };
+      } & PrStatusComputationData;
     };
   };
+  errors?: Array<{ message: string }>;
 };
 
 function isDirectPullRequestResponse(
@@ -671,6 +672,113 @@ export class GraphqlIssueRepository implements Pick<
     }
   }
 
+  private computePrStatus(
+    prUrl: string,
+    headRefName: string | undefined,
+    baseRefName: string | undefined,
+    data: PrStatusComputationData,
+  ): RelatedPullRequest {
+    const isConflicted = data.mergeable === 'CONFLICTING';
+
+    const lastCommit = data.commits?.nodes[0]?.commit;
+    const ciState = lastCommit?.statusCheckRollup?.state;
+    const contexts = lastCommit?.statusCheckRollup?.contexts?.nodes || [];
+
+    const branchProtectionRules =
+      data.baseRepository?.branchProtectionRules?.nodes || [];
+    const matchingRules = baseRefName
+      ? branchProtectionRules.filter(
+          (rule) =>
+            rule.pattern === baseRefName || fnmatch(rule.pattern, baseRefName),
+        )
+      : [];
+    const requiredCheckNamesSet = new Set<string>();
+    for (const rule of matchingRules) {
+      for (const name of rule.requiredStatusCheckContexts) {
+        requiredCheckNamesSet.add(name);
+      }
+    }
+
+    const rulesets = data.baseRepository?.rulesets?.nodes || [];
+    const defaultBranchName =
+      data.baseRepository?.defaultBranchRef?.name || '';
+    for (const ruleset of rulesets) {
+      if (ruleset.enforcement !== 'ACTIVE') continue;
+      const refIncludes = ruleset.conditions.refName.include;
+      const refExcludes = ruleset.conditions.refName.exclude;
+      const matchesInclude =
+        baseRefName !== undefined &&
+        refIncludes.some((pattern) => {
+          if (pattern === '~DEFAULT_BRANCH') {
+            return baseRefName === defaultBranchName;
+          }
+          if (pattern === '~ALL') {
+            return true;
+          }
+          const branchPattern = pattern.replace(/^refs\/heads\//, '');
+          return (
+            branchPattern === baseRefName || fnmatch(branchPattern, baseRefName)
+          );
+        });
+      if (!matchesInclude) continue;
+      const matchesExclude =
+        baseRefName !== undefined &&
+        refExcludes.some((pattern) => {
+          if (pattern === '~DEFAULT_BRANCH') {
+            return baseRefName === defaultBranchName;
+          }
+          const branchPattern = pattern.replace(/^refs\/heads\//, '');
+          return (
+            branchPattern === baseRefName || fnmatch(branchPattern, baseRefName)
+          );
+        });
+      if (matchesExclude) continue;
+      for (const rule of ruleset.rules.nodes) {
+        if (rule.type !== 'REQUIRED_STATUS_CHECKS') continue;
+        if ('requiredStatusChecks' in rule.parameters) {
+          for (const check of rule.parameters.requiredStatusChecks) {
+            requiredCheckNamesSet.add(check.context);
+          }
+        }
+      }
+    }
+
+    const requiredCheckNames = Array.from(requiredCheckNamesSet);
+
+    const seenContextNames = new Set<string>();
+    for (const ctx of contexts) {
+      if ('name' in ctx) {
+        seenContextNames.add(ctx.name);
+      }
+      if ('context' in ctx) {
+        seenContextNames.add(ctx.context);
+      }
+    }
+
+    const missingRequiredCheckNames = requiredCheckNames.filter(
+      (name) => !seenContextNames.has(name),
+    );
+    const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
+    const isCiStateSuccess = ciState === 'SUCCESS';
+    const isPassedAllCiJob = isCiStateSuccess && allRequiredChecksPassed;
+
+    const reviewThreads = data.reviewThreads?.nodes || [];
+    const isResolvedAllReviewComments =
+      reviewThreads.length === 0 ||
+      reviewThreads.every((thread) => thread.isResolved);
+
+    return {
+      url: prUrl,
+      branchName: headRefName ?? null,
+      isConflicted,
+      isPassedAllCiJob,
+      isCiStateSuccess,
+      isResolvedAllReviewComments,
+      isBranchOutOfDate: false,
+      missingRequiredCheckNames,
+    };
+  }
+
   private parseIssueUrl(issueUrl: string): {
     owner: string;
     repo: string;
@@ -850,117 +958,12 @@ export class GraphqlIssueRepository implements Pick<
 
         const pr = item.source;
         const prUrl = pr.url || '';
-
-        const isConflicted = pr.mergeable !== 'MERGEABLE';
-
-        const lastCommit = pr.commits?.nodes[0]?.commit;
-        const ciState = lastCommit?.statusCheckRollup?.state;
-
-        const contexts = lastCommit?.statusCheckRollup?.contexts?.nodes || [];
         const baseRefName = pr.baseRefName ?? pr.baseRef?.name;
-        const branchProtectionRules =
-          pr.baseRepository?.branchProtectionRules?.nodes || [];
-        const matchingRules = baseRefName
-          ? branchProtectionRules.filter(
-              (rule) =>
-                rule.pattern === baseRefName ||
-                fnmatch(rule.pattern, baseRefName),
-            )
-          : [];
-        const requiredCheckNamesSet = new Set<string>();
-        for (const rule of matchingRules) {
-          for (const name of rule.requiredStatusCheckContexts) {
-            requiredCheckNamesSet.add(name);
-          }
-        }
 
-        const rulesets = pr.baseRepository?.rulesets?.nodes || [];
-        const defaultBranchName =
-          pr.baseRepository?.defaultBranchRef?.name || '';
-        for (const ruleset of rulesets) {
-          if (ruleset.enforcement !== 'ACTIVE') continue;
-          const refIncludes = ruleset.conditions.refName.include;
-          const refExcludes = ruleset.conditions.refName.exclude;
-          const matchesInclude =
-            baseRefName !== undefined &&
-            refIncludes.some((pattern) => {
-              if (pattern === '~DEFAULT_BRANCH') {
-                return baseRefName === defaultBranchName;
-              }
-              if (pattern === '~ALL') {
-                return true;
-              }
-              const branchPattern = pattern.replace(/^refs\/heads\//, '');
-              return (
-                branchPattern === baseRefName ||
-                fnmatch(branchPattern, baseRefName)
-              );
-            });
-          if (!matchesInclude) continue;
-          const matchesExclude =
-            baseRefName !== undefined &&
-            refExcludes.some((pattern) => {
-              if (pattern === '~DEFAULT_BRANCH') {
-                return baseRefName === defaultBranchName;
-              }
-              const branchPattern = pattern.replace(/^refs\/heads\//, '');
-              return (
-                branchPattern === baseRefName ||
-                fnmatch(branchPattern, baseRefName)
-              );
-            });
-          if (matchesExclude) continue;
-          for (const rule of ruleset.rules.nodes) {
-            if (rule.type !== 'REQUIRED_STATUS_CHECKS') continue;
-            if ('requiredStatusChecks' in rule.parameters) {
-              for (const check of rule.parameters.requiredStatusChecks) {
-                requiredCheckNamesSet.add(check.context);
-              }
-            }
-          }
-        }
-
-        const requiredCheckNames = Array.from(requiredCheckNamesSet);
-
-        const seenContextNames = new Set<string>();
-        for (const ctx of contexts) {
-          if ('name' in ctx) {
-            seenContextNames.add(ctx.name);
-          }
-          if ('context' in ctx) {
-            seenContextNames.add(ctx.context);
-          }
-        }
-
-        const missingRequiredCheckNames = requiredCheckNames.filter(
-          (name) => !seenContextNames.has(name),
+        relatedPRsMap.set(
+          prUrl,
+          this.computePrStatus(prUrl, pr.headRefName, baseRefName, pr),
         );
-
-        const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
-
-        const isCiStateSuccess = ciState === 'SUCCESS';
-        const isPassedAllCiJob = isCiStateSuccess && allRequiredChecksPassed;
-
-        const reviewThreads = pr.reviewThreads?.nodes || [];
-        const isResolvedAllReviewComments =
-          reviewThreads.length === 0 ||
-          reviewThreads.every((thread) => thread.isResolved);
-
-        // Note: compareWithBaseRef is not available in GraphQL timeline items.
-        // To get accurate behindBy, a separate API call per PR would be needed.
-        // For now, we set isBranchOutOfDate to false. Conflicts are still detected via mergeable.
-        const isBranchOutOfDate = false;
-
-        relatedPRsMap.set(prUrl, {
-          url: prUrl,
-          branchName: pr.headRefName ?? null,
-          isConflicted,
-          isPassedAllCiJob,
-          isCiStateSuccess,
-          isResolvedAllReviewComments,
-          isBranchOutOfDate,
-          missingRequiredCheckNames,
-        });
       }
 
       hasNextPage = issueData.timelineItems.pageInfo.hasNextPage;
@@ -971,7 +974,11 @@ export class GraphqlIssueRepository implements Pick<
   }
 
   async getOpenPullRequest(prUrl: string): Promise<RelatedPullRequest | null> {
-    const { owner, repo, issueNumber: prNumber } = this.parseIssueUrl(prUrl);
+    const parsedUrl = this.parseIssueUrl(prUrl);
+    if (!parsedUrl.isPr) {
+      return null;
+    }
+    const { owner, repo, issueNumber: prNumber } = parsedUrl;
 
     const query = `
       query($owner: String!, $repo: String!, $prNumber: Int!) {
@@ -1072,107 +1079,17 @@ export class GraphqlIssueRepository implements Pick<
       );
     }
 
+    if (responseData.errors) {
+      throw new Error(
+        `GraphQL errors: ${JSON.stringify(responseData.errors)}`,
+      );
+    }
+
     const pr = responseData.data?.repository?.pullRequest;
     if (!pr || pr.state !== 'OPEN') {
       return null;
     }
 
-    const isConflicted = pr.mergeable !== 'MERGEABLE';
-    const lastCommit = pr.commits?.nodes[0]?.commit;
-    const ciState = lastCommit?.statusCheckRollup?.state;
-    const contexts = lastCommit?.statusCheckRollup?.contexts?.nodes || [];
-    const baseRefName = pr.baseRefName ?? pr.baseRef?.name;
-    const branchProtectionRules =
-      pr.baseRepository?.branchProtectionRules?.nodes || [];
-    const matchingRules = baseRefName
-      ? branchProtectionRules.filter(
-          (rule) =>
-            rule.pattern === baseRefName || fnmatch(rule.pattern, baseRefName),
-        )
-      : [];
-    const requiredCheckNamesSet = new Set<string>();
-    for (const rule of matchingRules) {
-      for (const name of rule.requiredStatusCheckContexts) {
-        requiredCheckNamesSet.add(name);
-      }
-    }
-
-    const rulesets = pr.baseRepository?.rulesets?.nodes || [];
-    const defaultBranchName = pr.baseRepository?.defaultBranchRef?.name || '';
-    for (const ruleset of rulesets) {
-      if (ruleset.enforcement !== 'ACTIVE') continue;
-      const refIncludes = ruleset.conditions.refName.include;
-      const refExcludes = ruleset.conditions.refName.exclude;
-      const matchesInclude =
-        baseRefName !== undefined &&
-        refIncludes.some((pattern) => {
-          if (pattern === '~DEFAULT_BRANCH') {
-            return baseRefName === defaultBranchName;
-          }
-          if (pattern === '~ALL') {
-            return true;
-          }
-          const branchPattern = pattern.replace(/^refs\/heads\//, '');
-          return (
-            branchPattern === baseRefName || fnmatch(branchPattern, baseRefName)
-          );
-        });
-      if (!matchesInclude) continue;
-      const matchesExclude =
-        baseRefName !== undefined &&
-        refExcludes.some((pattern) => {
-          if (pattern === '~DEFAULT_BRANCH') {
-            return baseRefName === defaultBranchName;
-          }
-          const branchPattern = pattern.replace(/^refs\/heads\//, '');
-          return (
-            branchPattern === baseRefName || fnmatch(branchPattern, baseRefName)
-          );
-        });
-      if (matchesExclude) continue;
-      for (const rule of ruleset.rules.nodes) {
-        if (rule.type !== 'REQUIRED_STATUS_CHECKS') continue;
-        if ('requiredStatusChecks' in rule.parameters) {
-          for (const check of rule.parameters.requiredStatusChecks) {
-            requiredCheckNamesSet.add(check.context);
-          }
-        }
-      }
-    }
-
-    const requiredCheckNames = Array.from(requiredCheckNamesSet);
-
-    const seenContextNames = new Set<string>();
-    for (const ctx of contexts) {
-      if ('name' in ctx) {
-        seenContextNames.add(ctx.name);
-      }
-      if ('context' in ctx) {
-        seenContextNames.add(ctx.context);
-      }
-    }
-
-    const missingRequiredCheckNames = requiredCheckNames.filter(
-      (name) => !seenContextNames.has(name),
-    );
-    const allRequiredChecksPassed = missingRequiredCheckNames.length === 0;
-    const isCiStateSuccess = ciState === 'SUCCESS';
-    const isPassedAllCiJob = isCiStateSuccess && allRequiredChecksPassed;
-
-    const reviewThreads = pr.reviewThreads?.nodes || [];
-    const isResolvedAllReviewComments =
-      reviewThreads.length === 0 ||
-      reviewThreads.every((thread) => thread.isResolved);
-
-    return {
-      url: pr.url,
-      branchName: pr.headRefName ?? null,
-      isConflicted,
-      isPassedAllCiJob,
-      isCiStateSuccess,
-      isResolvedAllReviewComments,
-      isBranchOutOfDate: false,
-      missingRequiredCheckNames,
-    };
+    return this.computePrStatus(pr.url, pr.headRefName, pr.baseRefName, pr);
   }
 }

@@ -87,13 +87,18 @@ class StartPreparationUseCase {
                     .trim() ||
                     params.defaultLlmModelName ||
                     null;
+                const relatedPRs = await this.issueRepository.findRelatedOpenPRs(issue.url);
+                const existingPRBranchName = relatedPRs.length === 1 ? relatedPRs[0].branchName : null;
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
                 const logFilePathArg = params.logFilePath
                     ? `--logFilePath ${params.logFilePath}`
                     : null;
                 const modelArg = model !== null ? ` ${model}` : '';
-                const command = `aw ${issue.url} ${agent}${modelArg} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}`;
+                const branchArg = existingPRBranchName !== null
+                    ? ` --branch ${existingPRBranchName}`
+                    : '';
+                const command = `aw ${issue.url} ${agent}${modelArg} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}${branchArg}`;
                 await this.localCommandRunner.runCommand(command);
                 updatedCurrentPreparationIssueCount++;
             }
