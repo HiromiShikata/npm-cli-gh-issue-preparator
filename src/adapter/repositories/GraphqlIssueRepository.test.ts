@@ -4131,4 +4131,1110 @@ describe('GraphqlIssueRepository', () => {
       expect(result?.state).toBe('OPEN');
     });
   });
+
+  describe('getOpenPullRequest', () => {
+    const prUrl = 'https://github.com/user/repo/pull/158';
+
+    const buildPrResponse = (pr: object) => ({
+      data: {
+        repository: {
+          pullRequest: pr,
+        },
+      },
+    });
+
+    it('should return RelatedPullRequest for an open PR with passing CI', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(result?.url).toBe(prUrl);
+      expect(result?.branchName).toBe('feature-branch');
+      expect(result?.isConflicted).toBe(false);
+      expect(result?.isPassedAllCiJob).toBe(true);
+      expect(result?.isCiStateSuccess).toBe(true);
+      expect(result?.isResolvedAllReviewComments).toBe(true);
+      expect(result?.isBranchOutOfDate).toBe(false);
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+    });
+
+    it('should return null when PR is not open', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'MERGED',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: { nodes: [] },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when PR is not found', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { repository: { pullRequest: null } },
+        }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return isConflicted true when PR is not mergeable', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'CONFLICTING',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: { nodes: [] },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.isConflicted).toBe(true);
+    });
+
+    it('should return isPassedAllCiJob false when CI state is not SUCCESS', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'FAILURE',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.isPassedAllCiJob).toBe(false);
+      expect(result?.isCiStateSuccess).toBe(false);
+    });
+
+    it('should detect unresolved review comments', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: {
+              nodes: [{ isResolved: true }, { isResolved: false }],
+            },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.isResolvedAllReviewComments).toBe(false);
+    });
+
+    it('should detect missing required checks from branch protection rules', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: {
+                nodes: [
+                  {
+                    pattern: 'main',
+                    requiredStatusCheckContexts: ['ci/test', 'ci/lint'],
+                  },
+                ],
+              },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: {
+                        nodes: [
+                          {
+                            __typename: 'CheckRun',
+                            name: 'ci/test',
+                            conclusion: 'success',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual(['ci/lint']);
+      expect(result?.isPassedAllCiJob).toBe(false);
+    });
+
+    it('should throw when fetch response is not ok', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({}),
+      });
+
+      await expect(repository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'Failed to fetch pull request from GitHub GraphQL API',
+      );
+    });
+
+    it('should throw for invalid PR URL', async () => {
+      await expect(
+        repository.getOpenPullRequest('invalid-url'),
+      ).rejects.toThrow('Invalid GitHub issue URL: invalid-url');
+    });
+
+    it('should throw when response is not a valid object', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => null,
+      });
+
+      await expect(repository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'Unexpected response shape when fetching pull request from GitHub GraphQL API',
+      );
+    });
+
+    it('should detect required checks from active rulesets with ~DEFAULT_BRANCH pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'default-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: {
+                        include: ['~DEFAULT_BRANCH'],
+                        exclude: [],
+                      },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [
+                              { context: 'ci/ruleset-check' },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: {
+                        nodes: [
+                          {
+                            __typename: 'CheckRun',
+                            name: 'ci/ruleset-check',
+                            conclusion: 'success',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.isPassedAllCiJob).toBe(true);
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+    });
+
+    it('should detect required checks from rulesets with ~ALL pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'all-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: {
+                        include: ['~ALL'],
+                        exclude: [],
+                      },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [{ context: 'ci/required' }],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual(['ci/required']);
+      expect(result?.isPassedAllCiJob).toBe(false);
+    });
+
+    it('should skip non-ACTIVE rulesets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'disabled-ruleset',
+                    enforcement: 'DISABLED',
+                    conditions: {
+                      refName: { include: ['~ALL'], exclude: [] },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [{ context: 'ci/disabled' }],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should skip rulesets where branch matches exclude pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'excluded-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: {
+                        include: ['~DEFAULT_BRANCH'],
+                        exclude: ['~DEFAULT_BRANCH'],
+                      },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [{ context: 'ci/excluded' }],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should skip rulesets where branch matches explicit branch exclude pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'develop' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'excluded-by-name-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: {
+                        include: ['~ALL'],
+                        exclude: ['refs/heads/main'],
+                      },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [{ context: 'ci/skipped' }],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should detect required checks from rulesets with refs/heads/ prefixed pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'heads-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: {
+                        include: ['refs/heads/main'],
+                        exclude: [],
+                      },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [
+                              { context: 'ci/heads-check' },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual(['ci/heads-check']);
+    });
+
+    it('should handle absent baseRepository gracefully', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should match branch protection rule via fnmatch glob pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'release/v1.0',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: {
+                nodes: [
+                  {
+                    pattern: 'release/*',
+                    requiredStatusCheckContexts: ['ci/release'],
+                  },
+                ],
+              },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual(['ci/release']);
+    });
+
+    it('should use baseRef.name as fallback when baseRefName is absent', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+            baseRef: { name: 'main' },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(result?.branchName).toBeNull();
+    });
+
+    it('should handle PR with no baseRefName and no baseRef (undefined baseRefName)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: {
+                nodes: [
+                  {
+                    pattern: 'main',
+                    requiredStatusCheckContexts: ['ci/check'],
+                  },
+                ],
+              },
+              defaultBranchRef: null,
+              rulesets: { nodes: [] },
+            },
+            commits: { nodes: [] },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+    });
+
+    it('should handle null defaultBranchRef in rulesets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: null,
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: { include: ['~DEFAULT_BRANCH'], exclude: [] },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [{ context: 'ci/check' }],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should match rulesets using fnmatch glob pattern in include', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'release/v1.0',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'release-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: { include: ['release/*'], exclude: [] },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [
+                              { context: 'ci/release-check' },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual(['ci/release-check']);
+    });
+
+    it('should skip rules with non-REQUIRED_STATUS_CHECKS type and empty parameters', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'mixed-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: { include: ['~ALL'], exclude: [] },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'BRANCH_PROTECTION',
+                          parameters: {},
+                        },
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {},
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should handle missing reviewThreads in response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.isResolvedAllReviewComments).toBe(true);
+    });
+
+    it('should skip ruleset when fnmatch matches exclude pattern', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'release/v1.0',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: { nodes: [] },
+              defaultBranchRef: { name: 'main' },
+              rulesets: {
+                nodes: [
+                  {
+                    name: 'skip-release-ruleset',
+                    enforcement: 'ACTIVE',
+                    conditions: {
+                      refName: {
+                        include: ['~ALL'],
+                        exclude: ['release/*'],
+                      },
+                    },
+                    rules: {
+                      nodes: [
+                        {
+                          type: 'REQUIRED_STATUS_CHECKS',
+                          parameters: {
+                            requiredStatusChecks: [
+                              { context: 'ci/skipped-check' },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: { nodes: [] },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should count StatusContext checks as seen', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildPrResponse({
+            url: prUrl,
+            state: 'OPEN',
+            headRefName: 'feature-branch',
+            baseRefName: 'main',
+            mergeable: 'MERGEABLE',
+            baseRepository: {
+              branchProtectionRules: {
+                nodes: [
+                  {
+                    pattern: 'main',
+                    requiredStatusCheckContexts: ['ci/status-check'],
+                  },
+                ],
+              },
+              defaultBranchRef: { name: 'main' },
+              rulesets: { nodes: [] },
+            },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    statusCheckRollup: {
+                      state: 'SUCCESS',
+                      contexts: {
+                        nodes: [
+                          {
+                            __typename: 'StatusContext',
+                            context: 'ci/status-check',
+                            state: 'SUCCESS',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            reviewThreads: { nodes: [] },
+          }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result?.missingRequiredCheckNames).toEqual([]);
+      expect(result?.isPassedAllCiJob).toBe(true);
+    });
+  });
 });

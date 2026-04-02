@@ -93,6 +93,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       get: jest.fn(),
       update: jest.fn(),
       findRelatedOpenPRs: jest.fn(),
+      getOpenPullRequest: jest.fn(),
     };
 
     mockIssueCommentRepository = {
@@ -1938,4 +1939,139 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       consoleWarnSpy.mockRestore();
     });
   });
+
+  describe('when project item is a pull request (isPr: true)', () => {
+    const prItemUrl = 'https://github.com/user/repo/pull/158';
+
+    it('should move to Awaiting Quality Check when PR is open and all checks pass', async () => {
+      const issue = createMockIssue({
+        url: prItemUrl,
+        status: 'Preparation',
+        isPr: true,
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({ content: 'From: Test report' }),
+      ]);
+      mockIssueRepository.getOpenPullRequest.mockResolvedValue({
+        url: prItemUrl,
+        branchName: 'dependabot/npm_and_yarn/multi-cd28347e53',
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      });
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: prItemUrl,
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.getOpenPullRequest).toHaveBeenCalledWith(
+        prItemUrl,
+      );
+      expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should reject with PULL_REQUEST_NOT_FOUND when PR is not open', async () => {
+      const issue = createMockIssue({
+        url: prItemUrl,
+        status: 'Preparation',
+        isPr: true,
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({ content: 'From: Test report' }),
+      ]);
+      mockIssueRepository.getOpenPullRequest.mockResolvedValue(null);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: prItemUrl,
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.getOpenPullRequest).toHaveBeenCalledWith(
+        prItemUrl,
+      );
+      expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Workspace',
+        }),
+        mockProject,
+      );
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('PULL_REQUEST_NOT_FOUND'),
+      );
+    });
+
+    it('should reject with ANY_CI_JOB_FAILED_OR_IN_PROGRESS when PR CI fails', async () => {
+      const issue = createMockIssue({
+        url: prItemUrl,
+        status: 'Preparation',
+        isPr: true,
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({ content: 'From: Test report' }),
+      ]);
+      mockIssueRepository.getOpenPullRequest.mockResolvedValue({
+        url: prItemUrl,
+        branchName: 'dependabot/npm_and_yarn/multi-cd28347e53',
+        isConflicted: false,
+        isPassedAllCiJob: false,
+        isCiStateSuccess: false,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      });
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: prItemUrl,
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Workspace',
+        }),
+        mockProject,
+      );
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('ANY_CI_JOB_FAILED_OR_IN_PROGRESS'),
+      );
+    });
+  });
 });
+

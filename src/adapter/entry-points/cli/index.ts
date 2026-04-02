@@ -563,6 +563,9 @@ program
         findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(
           graphqlIssueRepository,
         ),
+        getOpenPullRequest: graphqlIssueRepository.getOpenPullRequest.bind(
+          graphqlIssueRepository,
+        ),
         getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(
           towerDefenceIssueRepository,
         ),

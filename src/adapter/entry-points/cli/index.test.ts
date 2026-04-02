@@ -23,6 +23,7 @@ jest.mock('../../repositories/GraphqlIssueRepository', () => ({
     get: jest.fn(),
     update: jest.fn(),
     findRelatedOpenPRs: jest.fn(),
+    getOpenPullRequest: jest.fn(),
   })),
 }));
 jest.mock('../../repositories/TowerDefenceProjectRepository');
