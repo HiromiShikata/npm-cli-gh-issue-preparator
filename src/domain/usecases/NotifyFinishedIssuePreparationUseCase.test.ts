@@ -2074,4 +2074,3 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     });
   });
 });
-
