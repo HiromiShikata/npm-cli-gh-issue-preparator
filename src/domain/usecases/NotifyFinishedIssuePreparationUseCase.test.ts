@@ -2075,76 +2075,188 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
   });
 
   describe('next action date/hour', () => {
-    it('should move to Awaiting Workspace with explanation comment when issue has nextActionDate set', async () => {
-      const issue = createMockIssue({
-        url: 'https://github.com/user/repo/issues/1',
-        nextActionDate: new Date('2026-05-01'),
-        nextActionHour: null,
-      });
-
-      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
-      mockIssueRepository.get.mockResolvedValue(issue);
-
-      await useCase.run({
-        projectUrl: 'https://github.com/users/user/projects/1',
-        issueUrl: 'https://github.com/user/repo/issues/1',
-        preparationStatus: 'Preparation',
-        awaitingWorkspaceStatus: 'Awaiting Workspace',
-        awaitingQualityCheckStatus: 'Awaiting Quality Check',
-        thresholdForAutoReject: 3,
-        workflowBlockerResolvedWebhookUrl: null,
-      });
-
-      expect(mockIssueRepository.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'Awaiting Workspace',
-        }),
-        mockProject,
-      );
-      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
-        expect.objectContaining({
+    it('should move to Awaiting Workspace with explanation comment when issue has future nextActionDate set', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+        const issue = createMockIssue({
           url: 'https://github.com/user/repo/issues/1',
-        }),
-        expect.stringContaining('next action date or hour'),
-      );
-      expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalledWith(
-        expect.anything(),
-        expect.stringContaining('Auto Status Check: REJECTED'),
-      );
+          nextActionDate: new Date('2024-01-16'),
+          nextActionHour: null,
+        });
+
+        mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+        mockIssueRepository.get.mockResolvedValue(issue);
+
+        await useCase.run({
+          projectUrl: 'https://github.com/users/user/projects/1',
+          issueUrl: 'https://github.com/user/repo/issues/1',
+          preparationStatus: 'Preparation',
+          awaitingWorkspaceStatus: 'Awaiting Workspace',
+          awaitingQualityCheckStatus: 'Awaiting Quality Check',
+          thresholdForAutoReject: 3,
+          workflowBlockerResolvedWebhookUrl: null,
+        });
+
+        expect(mockIssueRepository.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'Awaiting Workspace',
+          }),
+          mockProject,
+        );
+        expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: 'https://github.com/user/repo/issues/1',
+          }),
+          expect.stringContaining('next action date or hour'),
+        );
+        expect(
+          mockIssueCommentRepository.createComment,
+        ).not.toHaveBeenCalledWith(
+          expect.anything(),
+          expect.stringContaining('Auto Status Check: REJECTED'),
+        );
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
-    it('should move to Awaiting Workspace with explanation comment when issue has nextActionHour set', async () => {
-      const issue = createMockIssue({
-        url: 'https://github.com/user/repo/issues/1',
-        nextActionDate: null,
-        nextActionHour: 9,
-      });
-
-      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
-      mockIssueRepository.get.mockResolvedValue(issue);
-
-      await useCase.run({
-        projectUrl: 'https://github.com/users/user/projects/1',
-        issueUrl: 'https://github.com/user/repo/issues/1',
-        preparationStatus: 'Preparation',
-        awaitingWorkspaceStatus: 'Awaiting Workspace',
-        awaitingQualityCheckStatus: 'Awaiting Quality Check',
-        thresholdForAutoReject: 3,
-        workflowBlockerResolvedWebhookUrl: null,
-      });
-
-      expect(mockIssueRepository.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'Awaiting Workspace',
-        }),
-        mockProject,
-      );
-      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
-        expect.objectContaining({
+    it('should not move to Awaiting Workspace when nextActionDate is today or in the past', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+        const issue = createMockIssue({
           url: 'https://github.com/user/repo/issues/1',
-        }),
-        expect.stringContaining('next action date or hour'),
-      );
+          nextActionDate: new Date('2024-01-15'),
+          nextActionHour: null,
+        });
+
+        mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+        mockIssueRepository.get.mockResolvedValue(issue);
+        mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+          createMockComment({ content: 'From: Test report' }),
+        ]);
+        mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+          {
+            url: 'https://github.com/user/repo/pull/1',
+            branchName: null,
+            isConflicted: false,
+            isPassedAllCiJob: true,
+            isCiStateSuccess: true,
+            isResolvedAllReviewComments: true,
+            isBranchOutOfDate: false,
+            missingRequiredCheckNames: [],
+          },
+        ]);
+
+        await useCase.run({
+          projectUrl: 'https://github.com/users/user/projects/1',
+          issueUrl: 'https://github.com/user/repo/issues/1',
+          preparationStatus: 'Preparation',
+          awaitingWorkspaceStatus: 'Awaiting Workspace',
+          awaitingQualityCheckStatus: 'Awaiting Quality Check',
+          thresholdForAutoReject: 3,
+          workflowBlockerResolvedWebhookUrl: null,
+        });
+
+        expect(mockIssueRepository.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'Awaiting Quality Check',
+          }),
+          mockProject,
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('should move to Awaiting Workspace with explanation comment when issue has future nextActionHour set', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2024-01-15T08:00:00'));
+        const issue = createMockIssue({
+          url: 'https://github.com/user/repo/issues/1',
+          nextActionDate: null,
+          nextActionHour: 9,
+        });
+
+        mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+        mockIssueRepository.get.mockResolvedValue(issue);
+
+        await useCase.run({
+          projectUrl: 'https://github.com/users/user/projects/1',
+          issueUrl: 'https://github.com/user/repo/issues/1',
+          preparationStatus: 'Preparation',
+          awaitingWorkspaceStatus: 'Awaiting Workspace',
+          awaitingQualityCheckStatus: 'Awaiting Quality Check',
+          thresholdForAutoReject: 3,
+          workflowBlockerResolvedWebhookUrl: null,
+        });
+
+        expect(mockIssueRepository.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'Awaiting Workspace',
+          }),
+          mockProject,
+        );
+        expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: 'https://github.com/user/repo/issues/1',
+          }),
+          expect.stringContaining('next action date or hour'),
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('should not move to Awaiting Workspace when nextActionHour has already passed', async () => {
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(new Date('2024-01-15T10:00:00'));
+        const issue = createMockIssue({
+          url: 'https://github.com/user/repo/issues/1',
+          nextActionDate: null,
+          nextActionHour: 9,
+        });
+
+        mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+        mockIssueRepository.get.mockResolvedValue(issue);
+        mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+          createMockComment({ content: 'From: Test report' }),
+        ]);
+        mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+          {
+            url: 'https://github.com/user/repo/pull/1',
+            branchName: null,
+            isConflicted: false,
+            isPassedAllCiJob: true,
+            isCiStateSuccess: true,
+            isResolvedAllReviewComments: true,
+            isBranchOutOfDate: false,
+            missingRequiredCheckNames: [],
+          },
+        ]);
+
+        await useCase.run({
+          projectUrl: 'https://github.com/users/user/projects/1',
+          issueUrl: 'https://github.com/user/repo/issues/1',
+          preparationStatus: 'Preparation',
+          awaitingWorkspaceStatus: 'Awaiting Workspace',
+          awaitingQualityCheckStatus: 'Awaiting Quality Check',
+          thresholdForAutoReject: 3,
+          workflowBlockerResolvedWebhookUrl: null,
+        });
+
+        expect(mockIssueRepository.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'Awaiting Quality Check',
+          }),
+          mockProject,
+        );
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('should not move to Awaiting Workspace when nextActionDate and nextActionHour are both null', async () => {
