@@ -124,6 +124,16 @@ export class NotifyFinishedIssuePreparationUseCase {
       return;
     }
 
+    if (issue.nextActionDate !== null || issue.nextActionHour !== null) {
+      issue.status = params.awaitingWorkspaceStatus;
+      await this.issueRepository.update(issue, project);
+      await this.issueCommentRepository.createComment(
+        issue,
+        `Issue has next action date or hour set: nextActionDate=${issue.nextActionDate?.toISOString() ?? 'null'}, nextActionHour=${issue.nextActionHour ?? 'null'}`,
+      );
+      return;
+    }
+
     const comments =
       await this.issueCommentRepository.getCommentsFromIssue(issue);
 
