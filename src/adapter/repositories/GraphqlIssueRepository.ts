@@ -700,8 +700,7 @@ export class GraphqlIssueRepository implements Pick<
     }
 
     const rulesets = data.baseRepository?.rulesets?.nodes || [];
-    const defaultBranchName =
-      data.baseRepository?.defaultBranchRef?.name || '';
+    const defaultBranchName = data.baseRepository?.defaultBranchRef?.name || '';
     for (const ruleset of rulesets) {
       if (ruleset.enforcement !== 'ACTIVE') continue;
       const refIncludes = ruleset.conditions.refName.include;
@@ -1080,9 +1079,7 @@ export class GraphqlIssueRepository implements Pick<
     }
 
     if (responseData.errors) {
-      throw new Error(
-        `GraphQL errors: ${JSON.stringify(responseData.errors)}`,
-      );
+      throw new Error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
     }
 
     const pr = responseData.data?.repository?.pullRequest;
