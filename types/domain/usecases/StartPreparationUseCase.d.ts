@@ -11,7 +11,7 @@ export declare class StartPreparationUseCase {
     projectRepository: Pick<ProjectRepository, 'getByUrl' | 'prepareStatus'>,
     issueRepository: Pick<
       IssueRepository,
-      'getAllOpened' | 'getStoryObjectMap' | 'update'
+      'getAllOpened' | 'getStoryObjectMap' | 'update' | 'findRelatedOpenPRs'
     >,
     claudeRepository: Pick<ClaudeRepository, 'getUsage'>,
     localCommandRunner: LocalCommandRunner,

@@ -102,6 +102,7 @@ describe('StartPreparationUseCase', () => {
       get: jest.fn(),
       update: jest.fn(),
       findRelatedOpenPRs: jest.fn().mockResolvedValue([]),
+      getOpenPullRequest: jest.fn().mockResolvedValue(null),
     };
     mockClaudeRepository = {
       getUsage: jest.fn().mockResolvedValue([]),

@@ -261,6 +261,7 @@ program
         getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(towerDefenceIssueRepository),
         getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(towerDefenceIssueRepository),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(graphqlIssueRepository),
     }, claudeRepository, localCommandRunner);
     let maximumPreparingIssuesCount = null;
     const rawMaxCount = config.maximumPreparingIssuesCount;
@@ -377,6 +378,7 @@ program
         get: graphqlIssueRepository.get.bind(graphqlIssueRepository),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
         findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(graphqlIssueRepository),
+        getOpenPullRequest: graphqlIssueRepository.getOpenPullRequest.bind(graphqlIssueRepository),
         getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(towerDefenceIssueRepository),
     }, issueCommentRepository, webhookRepository);
     let thresholdForAutoReject = 3;

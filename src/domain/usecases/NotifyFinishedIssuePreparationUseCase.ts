@@ -1,4 +1,7 @@
-import { IssueRepository } from './adapter-interfaces/IssueRepository';
+import {
+  IssueRepository,
+  RelatedPullRequest,
+} from './adapter-interfaces/IssueRepository';
 import { ProjectRepository } from './adapter-interfaces/ProjectRepository';
 import { IssueCommentRepository } from './adapter-interfaces/IssueCommentRepository';
 import { WebhookRepository } from './adapter-interfaces/WebhookRepository';
@@ -39,7 +42,11 @@ export class NotifyFinishedIssuePreparationUseCase {
     >,
     private readonly issueRepository: Pick<
       IssueRepository,
-      'get' | 'update' | 'findRelatedOpenPRs' | 'getStoryObjectMap'
+      | 'get'
+      | 'update'
+      | 'findRelatedOpenPRs'
+      | 'getStoryObjectMap'
+      | 'getOpenPullRequest'
     >,
     private readonly issueCommentRepository: Pick<
       IssueCommentRepository,
@@ -175,7 +182,7 @@ export class NotifyFinishedIssuePreparationUseCase {
   };
 
   private collectRejections = async (
-    issue: { url: string; labels: string[] },
+    issue: { url: string; labels: string[]; isPr: boolean },
     comments: { content: string }[],
   ): Promise<{ type: RejectedReasonType; detail: string }[]> => {
     const rejections: { type: RejectedReasonType; detail: string }[] = [];
@@ -196,21 +203,22 @@ export class NotifyFinishedIssuePreparationUseCase {
       label.startsWith('category:'),
     );
     if (categoryLabels.length <= 0 || categoryLabels.includes('category:e2e')) {
-      const relatedOpenPrs = await this.issueRepository.findRelatedOpenPRs(
-        issue.url,
-      );
-      if (relatedOpenPrs.length <= 0) {
+      const prsToCheck = issue.isPr
+        ? await this.resolveOpenPrsForPrItem(issue.url)
+        : await this.issueRepository.findRelatedOpenPRs(issue.url);
+
+      if (prsToCheck.length <= 0) {
         rejections.push({
           type: 'PULL_REQUEST_NOT_FOUND',
           detail: 'PULL_REQUEST_NOT_FOUND',
         });
-      } else if (relatedOpenPrs.length > 1) {
+      } else if (prsToCheck.length > 1) {
         rejections.push({
           type: 'MULTIPLE_PULL_REQUESTS_FOUND',
-          detail: `MULTIPLE_PULL_REQUESTS_FOUND: ${relatedOpenPrs.map((pr) => pr.url).join(', ')}`,
+          detail: `MULTIPLE_PULL_REQUESTS_FOUND: ${prsToCheck.map((pr) => pr.url).join(', ')}`,
         });
       } else {
-        const pr = relatedOpenPrs[0];
+        const pr = prsToCheck[0];
         if (pr.isConflicted) {
           rejections.push({
             type: 'PULL_REQUEST_CONFLICTED',
@@ -245,6 +253,16 @@ export class NotifyFinishedIssuePreparationUseCase {
     }
 
     return rejections;
+  };
+
+  private resolveOpenPrsForPrItem = async (
+    prUrl: string,
+  ): Promise<RelatedPullRequest[]> => {
+    const pr = await this.issueRepository.getOpenPullRequest(prUrl);
+    if (pr === null) {
+      return [];
+    }
+    return [pr];
   };
 
   private reportBodyHasNextStep = (body: string): boolean => {

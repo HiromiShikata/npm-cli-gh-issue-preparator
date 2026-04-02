@@ -21,7 +21,11 @@ export declare class NotifyFinishedIssuePreparationUseCase {
     projectRepository: Pick<ProjectRepository, 'getByUrl' | 'prepareStatus'>,
     issueRepository: Pick<
       IssueRepository,
-      'get' | 'update' | 'findRelatedOpenPRs' | 'getStoryObjectMap'
+      | 'get'
+      | 'update'
+      | 'findRelatedOpenPRs'
+      | 'getStoryObjectMap'
+      | 'getOpenPullRequest'
     >,
     issueCommentRepository: Pick<
       IssueCommentRepository,
@@ -39,6 +43,7 @@ export declare class NotifyFinishedIssuePreparationUseCase {
     workflowBlockerResolvedWebhookUrl: string | null;
   }) => Promise<void>;
   private collectRejections;
+  private resolveOpenPrsForPrItem;
   private reportBodyHasNextStep;
   private sendWorkflowBlockerNotification;
 }

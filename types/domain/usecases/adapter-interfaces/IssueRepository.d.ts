@@ -3,6 +3,7 @@ import { Project } from '../../entities/Project';
 import { StoryObjectMap } from '../../entities/StoryObjectMap';
 export type RelatedPullRequest = {
   url: string;
+  branchName: string | null;
   isConflicted: boolean;
   isPassedAllCiJob: boolean;
   isCiStateSuccess: boolean;
@@ -16,5 +17,6 @@ export interface IssueRepository {
   get(issueUrl: string, project: Project): Promise<Issue | null>;
   update(issue: Issue, project: Project): Promise<void>;
   findRelatedOpenPRs(issueUrl: string): Promise<RelatedPullRequest[]>;
+  getOpenPullRequest(prUrl: string): Promise<RelatedPullRequest | null>;
 }
 //# sourceMappingURL=IssueRepository.d.ts.map
