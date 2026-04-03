@@ -124,23 +124,7 @@ export class NotifyFinishedIssuePreparationUseCase {
       return;
     }
 
-    const now = new Date();
-    const currentHour = now.getHours();
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
-    const tomorrowStart = new Date(
-      todayStart.getFullYear(),
-      todayStart.getMonth(),
-      todayStart.getDate() + 1,
-    );
-    const hasBlockingNextActionDate =
-      issue.nextActionDate !== null && issue.nextActionDate >= tomorrowStart;
-    const hasBlockingNextActionHour =
-      issue.nextActionHour !== null && currentHour < issue.nextActionHour;
-    if (hasBlockingNextActionDate || hasBlockingNextActionHour) {
+    if (issue.nextActionDate !== null || issue.nextActionHour !== null) {
       issue.status = params.awaitingWorkspaceStatus;
       await this.issueRepository.update(issue, project);
       await this.issueCommentRepository.createComment(
