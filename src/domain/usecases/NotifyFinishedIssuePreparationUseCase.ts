@@ -212,7 +212,9 @@ export class NotifyFinishedIssuePreparationUseCase {
     const categoryLabels = issue.labels.filter((label) =>
       label.startsWith('category:'),
     );
-    const hasLlmAgentLabel = issue.labels.includes('llm-agent');
+    const hasLlmAgentLabel = issue.labels.some(
+      (l) => l === 'llm-agent' || l.startsWith('llm-agent:'),
+    );
     if (
       !hasLlmAgentLabel &&
       (categoryLabels.length <= 0 || categoryLabels.includes('category:e2e'))
