@@ -212,7 +212,13 @@ export class NotifyFinishedIssuePreparationUseCase {
     const categoryLabels = issue.labels.filter((label) =>
       label.startsWith('category:'),
     );
-    if (categoryLabels.length <= 0 || categoryLabels.includes('category:e2e')) {
+    const hasLlmAgentLabel = issue.labels.some(
+      (l) => l === 'llm-agent' || l.startsWith('llm-agent:'),
+    );
+    if (
+      !hasLlmAgentLabel &&
+      (categoryLabels.length <= 0 || categoryLabels.includes('category:e2e'))
+    ) {
       const prsToCheck = issue.isPr
         ? await this.resolveOpenPrsForPrItem(issue.url)
         : await this.issueRepository.findRelatedOpenPRs(issue.url);
