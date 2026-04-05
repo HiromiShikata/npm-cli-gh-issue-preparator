@@ -293,6 +293,44 @@ describe('StartPreparationUseCase', () => {
       'https://github.com/user/repo/pull/354',
     );
   });
+  it('should not pass --branch when PR URL returns null from getOpenPullRequest', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'https://github.com/user/repo/pull/999',
+        title: 'PR 999',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockIssueRepository.getOpenPullRequest.mockResolvedValue(null);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
+      `aw https://github.com/user/repo/pull/999 impl claude-opus ${mockProject.url}`,
+    );
+    expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
+  });
   it('should not pass --branch when issue has multiple linked PRs', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
