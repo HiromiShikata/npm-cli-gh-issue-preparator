@@ -377,6 +377,9 @@ program
         findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(
           graphqlIssueRepository,
         ),
+        getOpenPullRequest: graphqlIssueRepository.getOpenPullRequest.bind(
+          graphqlIssueRepository,
+        ),
       },
       claudeRepository,
       localCommandRunner,
