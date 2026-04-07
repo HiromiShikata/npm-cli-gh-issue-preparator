@@ -3,8 +3,9 @@ module.exports = {
   testEnvironment: 'node',
   transform: {
     '^.+\\.ts?$': 'ts-jest',
+    '^.+\\.js$': ['ts-jest', { tsconfig: { allowJs: true } }],
   },
-  transformIgnorePatterns: ['<rootDir>/node_modules/'],
+  transformIgnorePatterns: ['<rootDir>/node_modules/(?!(ky)/)'],
   collectCoverage: true,
   collectCoverageFrom: [
     'src/**/*.ts',
