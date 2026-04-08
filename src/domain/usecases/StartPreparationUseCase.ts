@@ -166,7 +166,7 @@ export class StartPreparationUseCase {
           ?.replace('llm-model:', '')
           .trim() ||
         params.defaultLlmModelName ||
-        null;
+        'claude-sonnet-4.6';
       const isPrUrl = issue.url.includes('/pull/');
       let existingPRBranchName: string | null = null;
       if (isPrUrl) {

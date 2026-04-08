@@ -607,7 +607,7 @@ program
 
 /* istanbul ignore next */
 if (process.argv && require.main === module) {
-  program.parse(process.argv);
+  program.parseAsync(process.argv);
 }
 
 export { program, loadConfigFile, parseProjectReadmeConfig, mergeConfigs };
