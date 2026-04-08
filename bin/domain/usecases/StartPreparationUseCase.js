@@ -87,8 +87,17 @@ class StartPreparationUseCase {
                     .trim() ||
                     params.defaultLlmModelName ||
                     null;
-                const relatedPRs = await this.issueRepository.findRelatedOpenPRs(issue.url);
-                const existingPRBranchName = relatedPRs.length === 1 ? relatedPRs[0].branchName : null;
+                const isPrUrl = issue.url.includes('/pull/');
+                let existingPRBranchName = null;
+                if (isPrUrl) {
+                    const pr = await this.issueRepository.getOpenPullRequest(issue.url);
+                    existingPRBranchName = pr?.branchName ?? null;
+                }
+                else {
+                    const relatedPRs = await this.issueRepository.findRelatedOpenPRs(issue.url);
+                    existingPRBranchName =
+                        relatedPRs.length === 1 ? relatedPRs[0].branchName : null;
+                }
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
                 const logFilePathArg = params.logFilePath

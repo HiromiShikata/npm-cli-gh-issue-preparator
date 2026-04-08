@@ -1,3 +1,45 @@
+# [1.26.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.25.1...v1.26.0) (2026-04-08)
+
+
+### Bug Fixes
+
+* **ci:** enable OIDC trusted publishing for npm by adding id-token permission ([1469322](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/1469322ad97b3604a86e2fcaaf03a9b364e1d995))
+* **ci:** remove unnecessary permissions from publish workflow ([5c46b28](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/5c46b28483f804a94b2495236a55a39f947a153c))
+* **core:** add retry logic to integration test for GitHub API eventual consistency ([420c9c4](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/420c9c4327dd696a6749c91fc5d38289de021d41))
+* **core:** add ts-jest transform for ky ESM module to resolve test failures ([563cccb](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/563cccbcd0e7933cd522cae0c6fa592e9fb78e9f))
+* **core:** address review comments - add logging, extract constant, update build artifacts ([c740ad4](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c740ad44e90d9e2ee7d306ec89d62a33aa8ef9ca))
+* **core:** address review comments - add type annotation, immediate first retry, and try/finally for revert ([85d55d8](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/85d55d8a76acac753bdcd5c9cd10af5593b0760d))
+* **core:** address review comments on getOpenPullRequest ([d289310](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d289310a3c5f40174576129cef75824d089fa777))
+* **core:** correct typo 'autimatically' to 'automatically' and document thresholdForAutoReject ([6c1680c](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/6c1680c7c923b87f376a23b0f5f71470e2a661c9))
+* **core:** exclude cross-referenced PRs that do not close the issue from findRelatedOpenPRs ([eff58fc](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/eff58fcdc8db30f82039ae71faf8a7a1cbae58fb)), closes [#189](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/189)
+* **core:** fix grammar in dependent issue URLs comment ([f232b90](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/f232b90778df245d080a4ad2b1ffe2f5ff713d38))
+* **core:** fix undefined params, add label priority tests, update README ([5a9e929](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/5a9e9294da42e31ada86c7b64347748046885041))
+* **core:** handle llm-agent: prefixed labels in PR skip check ([041138d](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/041138d298ac97156eea28d6bdf2c4961df9822c))
+* **core:** handle PR URL in notifyFinishedIssuePreparation when project item is a PR ([0b89981](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/0b899815791ee033ff5e7eeecb626a962d3c42d8)), closes [#215](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/215)
+* **core:** log warning when JSON parsing fails in reportBodyHasNextStep ([df65df0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/df65df045344bd2293b25689e48b6944abc27092))
+* **core:** make branchName nullable and handle multiple linked PRs ([cbfab4d](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/cbfab4d478d13c5bea16c9b1b7feb35d710cea47))
+* **core:** make integration test deterministic for Claude usage error propagation ([d195206](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d195206fac52b46e0e4e072a11802a16d8cd9328))
+* **core:** only block on future nextActionDate/nextActionHour in NotifyFinishedIssuePreparation ([ad1ca31](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ad1ca316fa120c6cae5c3af197cc8f3310b5addc))
+* **core:** regenerate build artifacts ([071450f](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/071450f1b0a2e4437c09297a2e0d1ca540cf298b))
+* **core:** simplify nextActionDate/Hour check to null check in NotifyFinishedIssuePreparation ([841141a](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/841141af5fe167b88c22bb563cee2eb56f7fc0fc))
+* **core:** skip PR check when issue has llm-agent label ([fcbdc85](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/fcbdc8554c7ff9229b1f90b242e1cad259ae44e2)), closes [#218](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/218)
+* **core:** throw error when Claude usage check fails instead of swallowing it ([30edc52](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/30edc5202dc10ea7eb0e049c4247a57edfeee23e))
+* **core:** update integration test for Claude usage error propagation ([c987057](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c9870576e3a025c266e5dd510891eade7bb75ca6))
+* **core:** use includes instead of startsWith for escalation guard detection ([32ee57a](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/32ee57abc9451e9ed6dce0c3a5cd00c164f3abe6))
+* **core:** use numeric Date constructor in nextActionDate/Hour tests to avoid timezone sensitivity ([9fb0dac](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/9fb0dac9dc264ba1c8e8ae6b12803a89de5f6c79))
+* **StartPreparationUseCase:** pass PR branch name via --branch when issue URL is a PR URL ([61c7c01](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/61c7c01d48231f7844139901e67bf5f0cb8c5116))
+
+
+### Features
+
+* **core:** add auto review status before Failed to pass the check automatically message ([b806e01](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/b806e017e42f080ac10ceef3f884d6ac30f463d2))
+* **core:** add support for llm-agent and llm-model labels in issue preparation ([87caf87](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/87caf87a6274be9cfca52a8126d3c20ff3ca66bb))
+* **core:** back issue to awaiting workspace if has depended issue urls on NotifyFinish ([ae1f5e2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ae1f5e2a77823cf09ad34437396c2992dd5b0e30))
+* **core:** move issue to Awaiting Workspace when Next Action Date/Hour is set ([cd53515](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/cd535156f4769c950cfb2ca8d15027aa54dfd1ce)), closes [#211](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/211)
+* **core:** pass existing PR branch name to aw command when issue has linked PR ([b0ec5c6](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/b0ec5c66fd4a90a0daec561ec4de475fbc42e4d8))
+* **core:** reduce maximumPreparingIssuesCount gradually based on weekly Claude usage ([bd0760e](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/bd0760e4fdb4fa644b2207e9ccff155a7ede8cb8))
+* **core:** reject issue status update if report has next step ([81a91ac](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/81a91acf8dad48f7b5fbc080e298d719d2bff358))
+
 ## [1.25.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.25.0...v1.25.1) (2026-03-13)
 
 

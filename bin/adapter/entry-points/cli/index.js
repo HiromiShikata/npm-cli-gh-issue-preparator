@@ -262,6 +262,7 @@ program
         getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(towerDefenceIssueRepository),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
         findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(graphqlIssueRepository),
+        getOpenPullRequest: graphqlIssueRepository.getOpenPullRequest.bind(graphqlIssueRepository),
     }, claudeRepository, localCommandRunner);
     let maximumPreparingIssuesCount = null;
     const rawMaxCount = config.maximumPreparingIssuesCount;
