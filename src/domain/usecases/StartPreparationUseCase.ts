@@ -166,7 +166,7 @@ export class StartPreparationUseCase {
           ?.replace('llm-model:', '')
           .trim() ||
         params.defaultLlmModelName ||
-        null;
+        'claude-sonnet-4.6';
       const isPrUrl = issue.url.includes('/pull/');
       let existingPRBranchName: string | null = null;
       if (isPrUrl) {
@@ -186,12 +186,11 @@ export class StartPreparationUseCase {
       const logFilePathArg = params.logFilePath
         ? `--logFilePath ${params.logFilePath}`
         : null;
-      const modelArg = model !== null ? ` ${model}` : '';
       const branchArg =
         existingPRBranchName !== null
           ? ` --branch ${existingPRBranchName}`
           : '';
-      const command = `aw ${issue.url} ${agent}${modelArg} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}${branchArg}`;
+      const command = `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}${branchArg}`;
       await this.localCommandRunner.runCommand(command);
       updatedCurrentPreparationIssueCount++;
     }

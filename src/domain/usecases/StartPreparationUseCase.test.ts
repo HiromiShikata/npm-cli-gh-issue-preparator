@@ -591,7 +591,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 research ${mockProject.url}`,
+      `aw url1 research claude-sonnet-4.6 ${mockProject.url}`,
     );
   });
   it('should use category label over defaultLlmAgentName when no llm-agent label', async () => {
@@ -627,7 +627,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url}`,
+      `aw url1 impl claude-sonnet-4.6 ${mockProject.url}`,
     );
   });
   it('should use defaultLlmAgentName over defaultAgentName when no label', async () => {
@@ -663,7 +663,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 default-llm-agent ${mockProject.url}`,
+      `aw url1 default-llm-agent claude-sonnet-4.6 ${mockProject.url}`,
     );
   });
   it('should use llm-model label over defaultLlmModelName', async () => {
@@ -702,7 +702,7 @@ describe('StartPreparationUseCase', () => {
       `aw url1 impl claude-sonnet ${mockProject.url}`,
     );
   });
-  it('should omit model argument when no llm-model label and no defaultLlmModelName', async () => {
+  it('should use claude-sonnet-4.6 as default model when no llm-model label and no defaultLlmModelName', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'url1',
@@ -735,7 +735,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl ${mockProject.url}`,
+      `aw url1 impl claude-sonnet-4.6 ${mockProject.url}`,
     );
   });
   it('should handle no awaiting workspace issues gracefully', async () => {
