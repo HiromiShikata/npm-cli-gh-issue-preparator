@@ -1,3 +1,12 @@
+## [1.26.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.26.0...v1.26.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* **cli:** add void operator to satisfy no-floating-promises lint rule ([41aec44](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/41aec443ddf47e478ccece86da81b2ebf7420ab5))
+* **cli:** use parseAsync and default model to claude-sonnet-4.6 ([24c256b](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/24c256bf2fe1cc7e85512cb8fdaf69b2267bc433)), closes [#233](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/233)
+* **core:** remove dead branch for model null check ([fbda1f7](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/fbda1f7fe79b497cf935ba274027611ef27b18cf))
+
 # [1.26.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.25.1...v1.26.0) (2026-04-08)
 
 

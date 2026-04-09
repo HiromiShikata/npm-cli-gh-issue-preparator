@@ -406,6 +406,6 @@ program
 });
 /* istanbul ignore next */
 if (process.argv && require.main === module) {
-    program.parse(process.argv);
+    void program.parseAsync(process.argv);
 }
 //# sourceMappingURL=index.js.map
