@@ -1387,6 +1387,54 @@ defaultAgentName: 'case-test-agent'
         }),
       );
     });
+
+    it('should work with only projectUrl in config when README provides all required fields', async () => {
+      const configWithOnlyProjectUrl = {
+        projectUrl: 'https://github.com/test/project',
+      };
+      writeConfig(configWithOnlyProjectUrl);
+
+      const readmeContent = [
+        '# Project',
+        '<details>',
+        '<summary>config</summary>',
+        "awaitingWorkspaceStatus: 'README Awaiting'",
+        "preparationStatus: 'README Preparing'",
+        "defaultAgentName: 'readme-agent'",
+        '</details>',
+      ].join('\n');
+      mockFetchReadme.mockResolvedValueOnce(readmeContent);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectUrl: 'https://github.com/test/project',
+          awaitingWorkspaceStatus: 'README Awaiting',
+          preparationStatus: 'README Preparing',
+          defaultAgentName: 'readme-agent',
+        }),
+      );
+    });
   });
 
   describe('notifyFinishedIssuePreparation', () => {
@@ -1908,6 +1956,56 @@ defaultAgentName: 'case-test-agent'
       expect(mockRun).toHaveBeenCalledTimes(1);
       expect(mockRun).toHaveBeenCalledWith(
         expect.objectContaining({
+          awaitingQualityCheckStatus: 'README QC',
+        }),
+      );
+    });
+
+    it('should work with only projectUrl in config when README provides all required fields', async () => {
+      const configWithOnlyProjectUrl = {
+        projectUrl: 'https://github.com/test/project',
+      };
+      writeConfig(configWithOnlyProjectUrl);
+
+      const readmeContent = [
+        '# Project',
+        '<details>',
+        '<summary>config</summary>',
+        "preparationStatus: 'README Preparing'",
+        "awaitingWorkspaceStatus: 'README Awaiting'",
+        "awaitingQualityCheckStatus: 'README QC'",
+        '</details>',
+      ].join('\n');
+      mockFetchReadme.mockResolvedValueOnce(readmeContent);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedNotifyFinishedUseCase = jest.mocked(
+        NotifyFinishedIssuePreparationUseCase,
+      );
+
+      MockedNotifyFinishedUseCase.mockImplementation(function (
+        this: NotifyFinishedIssuePreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'notifyFinishedIssuePreparation',
+        '--configFilePath',
+        configFilePath,
+        '--issueUrl',
+        'https://github.com/test/issue/1',
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectUrl: 'https://github.com/test/project',
+          preparationStatus: 'README Preparing',
+          awaitingWorkspaceStatus: 'README Awaiting',
           awaitingQualityCheckStatus: 'README QC',
         }),
       );
