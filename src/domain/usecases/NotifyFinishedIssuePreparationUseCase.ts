@@ -209,6 +209,13 @@ export class NotifyFinishedIssuePreparationUseCase {
       });
     }
 
+    if (
+      lastComment?.content.startsWith('From:') &&
+      this.reportBodyHasNoPrRequired(lastComment.content)
+    ) {
+      return rejections;
+    }
+
     const categoryLabels = issue.labels.filter((label) =>
       label.startsWith('category:'),
     );
@@ -304,6 +311,30 @@ export class NotifyFinishedIssuePreparationUseCase {
     }
     const nextStepValue = Reflect.get(reportJson, 'nextStep');
     return nextStepValue !== null && nextStepValue !== undefined;
+  };
+
+  private reportBodyHasNoPrRequired = (body: string): boolean => {
+    const reportMatch = body.match(/```json\n([\s\S]*?)\n```/);
+    if (!reportMatch || reportMatch.length < 2) {
+      return false;
+    }
+    let reportJson: unknown;
+    try {
+      reportJson = JSON.parse(reportMatch[1]);
+    } catch (error) {
+      console.warn(
+        'Invalid JSON in report body while checking noPrRequired:',
+        error,
+      );
+      return false;
+    }
+    if (typeof reportJson !== 'object' || reportJson === null) {
+      return false;
+    }
+    if (!('noPrRequired' in reportJson)) {
+      return false;
+    }
+    return Reflect.get(reportJson, 'noPrRequired') === true;
   };
 
   private sendWorkflowBlockerNotification = async (

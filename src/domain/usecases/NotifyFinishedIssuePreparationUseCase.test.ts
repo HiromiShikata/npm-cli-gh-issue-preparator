@@ -2262,4 +2262,112 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       );
     });
   });
+
+  describe('noPrRequired bypass via JSON report', () => {
+    it('should skip PR checks and approve when last comment has noPrRequired: true in JSON block', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+        labels: [],
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content:
+            'From: :robot: Agent\nInvestigation complete.\n```json\n{"noPrRequired": true}\n```',
+        }),
+      ]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
+      expect(mockIssueRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Awaiting Quality Check',
+        }),
+        mockProject,
+      );
+    });
+
+    it('should still run PR checks when last comment has noPrRequired: false in JSON block', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+        labels: [],
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content:
+            'From: :robot: Agent\nSome output\n```json\n{"noPrRequired": false}\n```',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.findRelatedOpenPRs).toHaveBeenCalled();
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://github.com/user/repo/issues/1',
+        }),
+        expect.stringContaining('PULL_REQUEST_NOT_FOUND'),
+      );
+    });
+
+    it('should still run PR checks when last comment has no JSON block', async () => {
+      const issue = createMockIssue({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Preparation',
+        labels: [],
+      });
+
+      mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+      mockIssueRepository.get.mockResolvedValue(issue);
+      mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+        createMockComment({
+          content: 'From: :robot: Agent\nInvestigation complete, no PR needed.',
+        }),
+      ]);
+      mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([]);
+
+      await useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        issueUrl: 'https://github.com/user/repo/issues/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting Workspace',
+        awaitingQualityCheckStatus: 'Awaiting Quality Check',
+        thresholdForAutoReject: 3,
+        workflowBlockerResolvedWebhookUrl: null,
+      });
+
+      expect(mockIssueRepository.findRelatedOpenPRs).toHaveBeenCalled();
+      expect(mockIssueCommentRepository.createComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://github.com/user/repo/issues/1',
+        }),
+        expect.stringContaining('PULL_REQUEST_NOT_FOUND'),
+      );
+    });
+  });
 });
