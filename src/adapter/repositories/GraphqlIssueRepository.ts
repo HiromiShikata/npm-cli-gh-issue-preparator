@@ -4,6 +4,11 @@ import {
 } from '../../domain/usecases/adapter-interfaces/IssueRepository';
 import { Issue } from '../../domain/entities/Issue';
 import { Project } from '../../domain/entities/Project';
+import {
+  defaultSleep,
+  GraphqlError,
+  isRateLimitError as isRateLimitErrors,
+} from './GraphqlRateLimitHelper';
 
 type StatusFieldOption = {
   id: string;
@@ -254,12 +259,6 @@ type IssueOrPullRequestData = {
   };
 };
 
-type GraphqlError = {
-  type?: string;
-  code?: string;
-  message: string;
-};
-
 type IssueResponse = {
   data?: {
     repository?: {
@@ -269,14 +268,6 @@ type IssueResponse = {
   };
   errors?: Array<GraphqlError>;
 };
-
-const isRateLimitErrors = (errors: GraphqlError[]): boolean =>
-  errors.some(
-    (e) =>
-      e.type === 'RATE_LIMIT' ||
-      e.code === 'graphql_rate_limit' ||
-      e.message.toLowerCase().includes('rate limit'),
-  );
 
 function isIssueResponse(value: unknown): value is IssueResponse {
   if (typeof value !== 'object' || value === null) return false;
@@ -381,8 +372,7 @@ export class GraphqlIssueRepository implements Pick<
   constructor(
     private readonly token: string,
     retryDelaysMs: number[] = [5000, 15000, 45000],
-    sleep: (ms: number) => Promise<void> = (ms) =>
-      new Promise((resolve) => setTimeout(resolve, ms)),
+    sleep: (ms: number) => Promise<void> = defaultSleep,
   ) {
     this.retryDelaysMs = retryDelaysMs;
     this.sleep = sleep;
@@ -464,9 +454,7 @@ export class GraphqlIssueRepository implements Pick<
 
       if (response.status === 429) {
         if (attempt < this.retryDelaysMs.length) continue;
-        throw new Error(
-          `Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`,
-        );
+        break;
       }
 
       if (!response.ok) {
@@ -490,9 +478,7 @@ export class GraphqlIssueRepository implements Pick<
           if (attempt < this.retryDelaysMs.length) {
             continue;
           }
-          throw new Error(
-            `Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`,
-          );
+          break;
         }
       }
 

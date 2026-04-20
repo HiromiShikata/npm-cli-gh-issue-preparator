@@ -1,8 +1,8 @@
-type GraphqlError = {
-  type?: string;
-  code?: string;
-  message: string;
-};
+import {
+  defaultSleep,
+  GraphqlError,
+  isRateLimitError,
+} from './GraphqlRateLimitHelper';
 
 type ProjectV2ReadmeResponse = {
   data?: {
@@ -35,14 +35,6 @@ const isProjectV2ReadmeResponse = (
   return true;
 };
 
-const isRateLimitError = (errors: GraphqlError[]): boolean =>
-  errors.some(
-    (e) =>
-      e.type === 'RATE_LIMIT' ||
-      e.code === 'graphql_rate_limit' ||
-      e.message.toLowerCase().includes('rate limit'),
-  );
-
 export class GraphqlProjectRepository {
   private readonly retryDelaysMs: number[];
   private readonly sleep: (ms: number) => Promise<void>;
@@ -50,8 +42,7 @@ export class GraphqlProjectRepository {
   constructor(
     private readonly token: string,
     retryDelaysMs: number[] = [5000, 15000, 45000],
-    sleep: (ms: number) => Promise<void> = (ms) =>
-      new Promise((resolve) => setTimeout(resolve, ms)),
+    sleep: (ms: number) => Promise<void> = defaultSleep,
   ) {
     this.retryDelaysMs = retryDelaysMs;
     this.sleep = sleep;
@@ -104,7 +95,7 @@ export class GraphqlProjectRepository {
         console.warn(
           'Rate limit exceeded fetching project README, all retries exhausted',
         );
-        return null;
+        break;
       }
 
       if (!response.ok) {
@@ -127,7 +118,7 @@ export class GraphqlProjectRepository {
           console.warn(
             `Rate limited fetching project README, all retries exhausted: ${JSON.stringify(responseData.errors)}`,
           );
-          return null;
+          break;
         }
         if (!projectData) {
           console.warn(
