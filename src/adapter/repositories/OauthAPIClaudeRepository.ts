@@ -222,10 +222,7 @@ export class OauthAPIClaudeRepository implements ClaudeRepository {
     ];
 
     for (const window of windows) {
-      if (
-        window?.utilization !== undefined &&
-        window.utilization >= threshold
-      ) {
+      if (window?.utilization !== undefined && window.utilization > threshold) {
         return false;
       }
     }

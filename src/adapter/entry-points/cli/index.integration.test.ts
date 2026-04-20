@@ -57,7 +57,7 @@ awaitingQualityCheckStatus: "Awaiting quality check"
   });
 
   describe('startDaemon', () => {
-    it('logs all credentials at capacity and exits cleanly when no credentials exist', () => {
+    it('logs Claude is unavailable and exits cleanly when no credentials exist', () => {
       const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'test-home-'));
       let threw = false;
       let output = '';

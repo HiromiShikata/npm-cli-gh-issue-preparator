@@ -363,6 +363,11 @@ describe('OauthAPIClaudeRepository', () => {
     it('should return false when no credential files exist and default credential is not accessible', async () => {
       mockExistsSync.mockReturnValue(true);
       mockReaddirSync.mockReturnValue(['.credentials.json']);
+      mockReadFileSync.mockImplementation(() => {
+        throw Object.assign(new Error('ENOENT: no such file or directory'), {
+          code: 'ENOENT',
+        });
+      });
 
       repository = new OauthAPIClaudeRepository();
       const result = await repository.isClaudeAvailable(80);
@@ -711,7 +716,7 @@ describe('OauthAPIClaudeRepository', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false when usage equals threshold', async () => {
+    it('should return true when usage equals threshold (at-threshold is still available)', async () => {
       mockExistsSync.mockReturnValue(true);
       mockReaddirSync.mockReturnValue([
         '.credentials.json',
@@ -734,7 +739,7 @@ describe('OauthAPIClaudeRepository', () => {
       repository = new OauthAPIClaudeRepository();
       const result = await repository.isClaudeAvailable(80);
 
-      expect(result).toBe(false);
+      expect(result).toBe(true);
     });
 
     it('should skip credential files with non-numeric priority', async () => {

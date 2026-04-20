@@ -188,8 +188,7 @@ class OauthAPIClaudeRepository {
             usageResponse.seven_day_sonnet,
         ];
         for (const window of windows) {
-            if (window?.utilization !== undefined &&
-                window.utilization >= threshold) {
+            if (window?.utilization !== undefined && window.utilization > threshold) {
                 return false;
             }
         }
