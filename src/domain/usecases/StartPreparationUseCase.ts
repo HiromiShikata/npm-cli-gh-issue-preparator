@@ -17,7 +17,10 @@ export class StartPreparationUseCase {
       | 'findRelatedOpenPRs'
       | 'getOpenPullRequest'
     >,
-    private readonly claudeRepository: Pick<ClaudeRepository, 'getUsage'>,
+    private readonly claudeRepository: Pick<
+      ClaudeRepository,
+      'isClaudeAvailable'
+    >,
     private readonly localCommandRunner: LocalCommandRunner,
   ) {}
 
@@ -33,54 +36,15 @@ export class StartPreparationUseCase {
     utilizationPercentageThreshold: number;
     allowedIssueAuthors: string[] | null;
   }): Promise<void> => {
-    const claudeUsages = await this.claudeRepository.getUsage();
-    const weeklyWindowHours = 168;
-    const nonWeeklyUsages = claudeUsages.filter(
-      (usage) => usage.hour !== weeklyWindowHours,
+    const isAvailable = await this.claudeRepository.isClaudeAvailable(
+      params.utilizationPercentageThreshold,
     );
-    if (
-      nonWeeklyUsages.some(
-        (usage) =>
-          usage.utilizationPercentage > params.utilizationPercentageThreshold,
-      )
-    ) {
-      console.warn(
-        'Claude usage limit exceeded. Skipping starting preparation.',
-      );
+    if (!isAvailable) {
+      console.warn('all credentials at capacity');
       return;
     }
 
-    let maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
-
-    const weeklyUsages = claudeUsages.filter(
-      (usage) => usage.hour === weeklyWindowHours,
-    );
-    if (
-      weeklyUsages.length > 0 &&
-      params.utilizationPercentageThreshold < 100
-    ) {
-      const maxWeeklyUtilization = Math.max(
-        ...weeklyUsages.map((usage) => usage.utilizationPercentage),
-      );
-      if (maxWeeklyUtilization > params.utilizationPercentageThreshold) {
-        const normalizedUtilizationBeyondThreshold =
-          (maxWeeklyUtilization - params.utilizationPercentageThreshold) /
-          (100 - params.utilizationPercentageThreshold);
-        maximumPreparingIssuesCount = Math.floor(
-          maximumPreparingIssuesCount *
-            Math.pow(1 - normalizedUtilizationBeyondThreshold, 2),
-        );
-        if (maximumPreparingIssuesCount <= 0) {
-          console.warn(
-            `Weekly Claude usage (${maxWeeklyUtilization}%) exceeds threshold (${params.utilizationPercentageThreshold}%). Skipping starting preparation.`,
-          );
-          return;
-        }
-        console.warn(
-          `Weekly Claude usage (${maxWeeklyUtilization}%) exceeds threshold (${params.utilizationPercentageThreshold}%). Reducing maximumPreparingIssuesCount to ${maximumPreparingIssuesCount}.`,
-        );
-      }
-    }
+    const maximumPreparingIssuesCount = params.maximumPreparingIssuesCount ?? 6;
     let project = await this.projectRepository.getByUrl(params.projectUrl);
     project = await this.projectRepository.prepareStatus(
       params.awaitingWorkspaceStatus,

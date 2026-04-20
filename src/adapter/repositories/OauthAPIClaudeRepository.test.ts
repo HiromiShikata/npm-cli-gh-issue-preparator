@@ -360,7 +360,7 @@ describe('OauthAPIClaudeRepository', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false when no credential files exist', async () => {
+    it('should return false when no credential files exist and default credential is not accessible', async () => {
       mockExistsSync.mockReturnValue(true);
       mockReaddirSync.mockReturnValue(['.credentials.json']);
 
@@ -368,6 +368,63 @@ describe('OauthAPIClaudeRepository', () => {
       const result = await repository.isClaudeAvailable(80);
 
       expect(result).toBe(false);
+    });
+
+    it('should return true using default credential when no named credential files exist and usage is under threshold', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue(['.credentials.json']);
+      mockReadFileSync.mockReturnValue(
+        JSON.stringify({
+          claudeAiOauth: { accessToken: 'default-token' },
+        }),
+      );
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          five_hour: { utilization: 50.0, resets_at: '2026-01-12T10:00:00Z' },
+        }),
+      });
+
+      repository = new OauthAPIClaudeRepository();
+      const result = await repository.isClaudeAvailable(80);
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.anthropic.com/api/oauth/usage',
+        expect.objectContaining({
+          method: 'GET',
+          headers: {
+            Accept: 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+            'User-Agent': 'claude-code/2.0.32',
+            Authorization: 'Bearer default-token',
+            'anthropic-beta': 'oauth-2025-04-20',
+          },
+        }),
+      );
+      expect(mockCopyFileSync).not.toHaveBeenCalled();
+    });
+
+    it('should return false using default credential when no named credential files exist and usage is at capacity', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue(['.credentials.json']);
+      mockReadFileSync.mockReturnValue(
+        JSON.stringify({
+          claudeAiOauth: { accessToken: 'default-token' },
+        }),
+      );
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          five_hour: { utilization: 90.0 },
+        }),
+      });
+
+      repository = new OauthAPIClaudeRepository();
+      const result = await repository.isClaudeAvailable(80);
+
+      expect(result).toBe(false);
+      expect(mockCopyFileSync).not.toHaveBeenCalled();
     });
 
     it('should return true and copy credential file when usage is under threshold', async () => {

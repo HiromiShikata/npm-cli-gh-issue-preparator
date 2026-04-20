@@ -246,7 +246,13 @@ export class OauthAPIClaudeRepository implements ClaudeRepository {
     const credentials = findCredentials(filePathList);
 
     if (credentials.length === 0) {
-      return false;
+      try {
+        const accessToken = this.getAccessToken();
+        const usageResponse = await this.getUsageWithToken(accessToken);
+        return this.isUsageUnderThreshold(usageResponse, threshold);
+      } catch {
+        return false;
+      }
     }
 
     for (const credential of credentials) {

@@ -57,12 +57,12 @@ awaitingQualityCheckStatus: "Awaiting quality check"
   });
 
   describe('startDaemon', () => {
-    it('propagates Claude usage errors instead of swallowing them', () => {
+    it('logs all credentials at capacity and exits cleanly when no credentials exist', () => {
       const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'test-home-'));
       let threw = false;
       let output = '';
       try {
-        execSync(
+        output = execSync(
           `npx ts-node ./src/adapter/entry-points/cli/index.ts startDaemon --configFilePath ${configFilePath} 2>&1`,
           {
             encoding: 'utf-8',
@@ -91,8 +91,8 @@ awaitingQualityCheckStatus: "Awaiting quality check"
       } finally {
         fs.rmSync(tmpHome, { recursive: true, force: true });
       }
-      expect(threw).toBe(true);
-      expect(output).toContain('Claude credentials file not found');
+      expect(threw).toBe(false);
+      expect(output).toContain('all credentials at capacity');
     }, 600000);
   });
 
