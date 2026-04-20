@@ -3,7 +3,9 @@ import { Issue } from '../../domain/entities/Issue';
 import { Project } from '../../domain/entities/Project';
 export declare class GraphqlIssueRepository implements Pick<IssueRepository, 'get' | 'update' | 'findRelatedOpenPRs' | 'getOpenPullRequest'> {
     private readonly token;
-    constructor(token: string);
+    private readonly retryDelaysMs;
+    private readonly sleep;
+    constructor(token: string, retryDelaysMs?: number[], sleep?: (ms: number) => Promise<void>);
     get(issueUrl: string, project: Project): Promise<Issue | null>;
     private parseProjectUrl;
     private getStatusOptionId;

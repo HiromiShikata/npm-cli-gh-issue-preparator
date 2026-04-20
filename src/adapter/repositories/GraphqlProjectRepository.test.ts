@@ -341,5 +341,214 @@ describe('GraphqlProjectRepository', () => {
       expect(serializedCall).toContain('\\"owner\\":\\"test-org\\"');
       expect(serializedCall).toContain('\\"number\\":123');
     });
+
+    it('should retry on HTTP 429 and return readme when retry succeeds', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlProjectRepository(
+        token,
+        [5000, 15000, 45000],
+        mockSleep,
+      );
+      fetchSpy
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                organization: {
+                  projectV2: { readme: '# Readme after retry' },
+                },
+                user: null,
+              },
+            }),
+        });
+
+      const result = await retryRepository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBe('# Readme after retry');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledWith(5000);
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Rate limited fetching project README, retrying in 5s',
+        ),
+      );
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry on GraphQL RATE_LIMIT error and return readme when retry succeeds', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlProjectRepository(
+        token,
+        [5000, 15000, 45000],
+        mockSleep,
+      );
+      fetchSpy
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [
+                {
+                  type: 'RATE_LIMIT',
+                  message: 'API rate limit already exceeded for user ID 123.',
+                },
+              ],
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                organization: {
+                  projectV2: { readme: '# Readme after rate limit retry' },
+                },
+                user: null,
+              },
+            }),
+        });
+
+      const result = await retryRepository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBe('# Readme after rate limit retry');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledWith(5000);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should return null after exhausting all retries on HTTP 429', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlProjectRepository(
+        token,
+        [5000, 15000, 45000],
+        mockSleep,
+      );
+      fetchSpy.mockResolvedValue({ ok: false, status: 429 });
+
+      const result = await retryRepository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
+      expect(mockSleep).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenNthCalledWith(1, 5000);
+      expect(mockSleep).toHaveBeenNthCalledWith(2, 15000);
+      expect(mockSleep).toHaveBeenNthCalledWith(3, 45000);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Rate limit exceeded fetching project README, all retries exhausted',
+      );
+      consoleWarnSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should return null after exhausting all retries on GraphQL RATE_LIMIT error', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlProjectRepository(
+        token,
+        [5000, 15000, 45000],
+        mockSleep,
+      );
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            errors: [
+              {
+                type: 'RATE_LIMIT',
+                code: 'graphql_rate_limit',
+                message: 'API rate limit already exceeded for user ID 123.',
+              },
+            ],
+          }),
+      });
+
+      const result = await retryRepository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
+      expect(mockSleep).toHaveBeenCalledTimes(3);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Rate limited fetching project README, all retries exhausted',
+        ),
+      );
+      consoleWarnSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should use exponential backoff delays between retries', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlProjectRepository(
+        token,
+        [5000, 15000, 45000],
+        mockSleep,
+      );
+      fetchSpy.mockResolvedValue({ ok: false, status: 429 });
+
+      await retryRepository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(mockSleep).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenNthCalledWith(1, 5000);
+      expect(mockSleep).toHaveBeenNthCalledWith(2, 15000);
+      expect(mockSleep).toHaveBeenNthCalledWith(3, 45000);
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should log retry attempt number and delay', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlProjectRepository(
+        token,
+        [5000, 15000, 45000],
+        mockSleep,
+      );
+      fetchSpy
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                organization: { projectV2: { readme: 'ok' } },
+                user: null,
+              },
+            }),
+        });
+
+      await retryRepository.fetchReadme(
+        'https://github.com/orgs/my-org/projects/42',
+      );
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('retrying in 5s... (attempt 1/3)'),
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('retrying in 15s... (attempt 2/3)'),
+      );
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
   });
 });

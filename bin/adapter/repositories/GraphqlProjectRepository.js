@@ -13,9 +13,14 @@ const isProjectV2ReadmeResponse = (value) => {
         return false;
     return true;
 };
+const isRateLimitError = (errors) => errors.some((e) => e.type === 'RATE_LIMIT' ||
+    e.code === 'graphql_rate_limit' ||
+    e.message.toLowerCase().includes('rate limit'));
 class GraphqlProjectRepository {
-    constructor(token) {
+    constructor(token, retryDelaysMs = [5000, 15000, 45000], sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {
         this.token = token;
+        this.retryDelaysMs = retryDelaysMs;
+        this.sleep = sleep;
     }
     async fetchReadme(projectUrl) {
         const { owner, projectNumber } = this.parseProjectUrl(projectUrl);
@@ -33,35 +38,57 @@ class GraphqlProjectRepository {
         }
       }
     `;
-        const response = await fetch('https://api.github.com/graphql', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${this.token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                query,
-                variables: {
-                    owner,
-                    number: projectNumber,
+        for (let attempt = 0; attempt <= this.retryDelaysMs.length; attempt++) {
+            if (attempt > 0) {
+                const delay = this.retryDelaysMs[attempt - 1];
+                console.log(`Rate limited fetching project README, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.retryDelaysMs.length})`);
+                await this.sleep(delay);
+            }
+            const response = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
                 },
-            }),
-        });
-        if (!response.ok) {
-            console.warn('Failed to fetch project README from GitHub GraphQL API');
-            return null;
+                body: JSON.stringify({
+                    query,
+                    variables: {
+                        owner,
+                        number: projectNumber,
+                    },
+                }),
+            });
+            if (response.status === 429) {
+                if (attempt < this.retryDelaysMs.length)
+                    continue;
+                console.warn('Rate limit exceeded fetching project README, all retries exhausted');
+                return null;
+            }
+            if (!response.ok) {
+                console.warn('Failed to fetch project README from GitHub GraphQL API');
+                return null;
+            }
+            const responseData = await response.json();
+            if (!isProjectV2ReadmeResponse(responseData)) {
+                return null;
+            }
+            const projectData = responseData.data?.organization?.projectV2 ||
+                responseData.data?.user?.projectV2;
+            if (responseData.errors && responseData.errors.length > 0) {
+                if (isRateLimitError(responseData.errors) && !projectData) {
+                    if (attempt < this.retryDelaysMs.length)
+                        continue;
+                    console.warn(`Rate limited fetching project README, all retries exhausted: ${JSON.stringify(responseData.errors)}`);
+                    return null;
+                }
+                if (!projectData) {
+                    console.warn(`GraphQL errors in project README response: ${JSON.stringify(responseData.errors)}`);
+                    return null;
+                }
+            }
+            return projectData?.readme ?? null;
         }
-        const responseData = await response.json();
-        if (!isProjectV2ReadmeResponse(responseData)) {
-            return null;
-        }
-        const projectData = responseData.data?.organization?.projectV2 ||
-            responseData.data?.user?.projectV2;
-        if (responseData.errors && !projectData) {
-            console.warn(`GraphQL errors in project README response: ${JSON.stringify(responseData.errors)}`);
-            return null;
-        }
-        return projectData?.readme ?? null;
+        return null;
     }
     parseProjectUrl(projectUrl) {
         const urlMatch = projectUrl.match(/github\.com\/(?:orgs|users)\/([^/]+)\/projects\/(\d+)/);

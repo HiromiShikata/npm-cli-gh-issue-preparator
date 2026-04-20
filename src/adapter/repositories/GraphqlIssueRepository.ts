@@ -254,6 +254,12 @@ type IssueOrPullRequestData = {
   };
 };
 
+type GraphqlError = {
+  type?: string;
+  code?: string;
+  message: string;
+};
+
 type IssueResponse = {
   data?: {
     repository?: {
@@ -261,7 +267,16 @@ type IssueResponse = {
       pullRequest?: IssueOrPullRequestData;
     };
   };
+  errors?: Array<GraphqlError>;
 };
+
+const isRateLimitErrors = (errors: GraphqlError[]): boolean =>
+  errors.some(
+    (e) =>
+      e.type === 'RATE_LIMIT' ||
+      e.code === 'graphql_rate_limit' ||
+      e.message.toLowerCase().includes('rate limit'),
+  );
 
 function isIssueResponse(value: unknown): value is IssueResponse {
   if (typeof value !== 'object' || value === null) return false;
@@ -360,7 +375,18 @@ export class GraphqlIssueRepository implements Pick<
   IssueRepository,
   'get' | 'update' | 'findRelatedOpenPRs' | 'getOpenPullRequest'
 > {
-  constructor(private readonly token: string) {}
+  private readonly retryDelaysMs: number[];
+  private readonly sleep: (ms: number) => Promise<void>;
+
+  constructor(
+    private readonly token: string,
+    retryDelaysMs: number[] = [5000, 15000, 45000],
+    sleep: (ms: number) => Promise<void> = (ms) =>
+      new Promise((resolve) => setTimeout(resolve, ms)),
+  ) {
+    this.retryDelaysMs = retryDelaysMs;
+    this.sleep = sleep;
+  }
 
   async get(issueUrl: string, project: Project): Promise<Issue | null> {
     const { owner, repo, issueNumber, isPr } = this.parseIssueUrl(issueUrl);
@@ -408,78 +434,118 @@ export class GraphqlIssueRepository implements Pick<
       }
     `;
 
-    const response = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          owner,
-          repo,
-          issueNumber,
-        },
-      }),
-    });
     // projectNumber is used below to filter project items, not in GraphQL query
     void projectNumber;
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch issue from GitHub GraphQL API');
+    for (let attempt = 0; attempt <= this.retryDelaysMs.length; attempt++) {
+      if (attempt > 0) {
+        const delay = this.retryDelaysMs[attempt - 1];
+        console.log(
+          `Rate limited fetching issue ${issueUrl}, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.retryDelaysMs.length})`,
+        );
+        await this.sleep(delay);
+      }
+
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          variables: {
+            owner,
+            repo,
+            issueNumber,
+          },
+        }),
+      });
+
+      if (response.status === 429) {
+        if (attempt < this.retryDelaysMs.length) continue;
+        throw new Error(
+          `Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`,
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch issue from GitHub GraphQL API');
+      }
+
+      const responseData: unknown = await response.json();
+      if (!isIssueResponse(responseData)) {
+        throw new Error('Unexpected response shape when fetching issue');
+      }
+
+      if (
+        responseData.errors &&
+        responseData.errors.length > 0 &&
+        isRateLimitErrors(responseData.errors)
+      ) {
+        const issueDataCheck = isPr
+          ? responseData.data?.repository?.pullRequest
+          : responseData.data?.repository?.issue;
+        if (!issueDataCheck) {
+          if (attempt < this.retryDelaysMs.length) {
+            continue;
+          }
+          throw new Error(
+            `Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`,
+          );
+        }
+      }
+
+      const issueData = isPr
+        ? responseData.data?.repository?.pullRequest
+        : responseData.data?.repository?.issue;
+      if (!issueData) {
+        return null;
+      }
+
+      const projectItem = issueData.projectItems?.nodes.find(
+        (item) => item.project?.number === projectNumber,
+      );
+
+      const mapState = (state: string): Issue['state'] => {
+        if (state === 'OPEN') return 'OPEN';
+        if (state === 'CLOSED') return 'CLOSED';
+        if (state === 'MERGED') return 'MERGED';
+        return 'OPEN';
+      };
+
+      const issue: Issue = {
+        nameWithOwner: `${owner}/${repo}`,
+        number: issueData.number,
+        title: issueData.title,
+        state: mapState(issueData.state),
+        status: projectItem?.fieldValueByName?.name ?? null,
+        story: null,
+        nextActionDate: null,
+        nextActionHour: null,
+        estimationMinutes: null,
+        dependedIssueUrls: [],
+        completionDate50PercentConfidence: null,
+        url: issueData.url,
+        assignees: issueData.assignees.nodes.map((a) => a.login),
+        labels: issueData.labels.nodes.map((l) => l.name),
+        org: owner,
+        repo: repo,
+        body: issueData.body,
+        itemId: projectItem?.id ?? '',
+        isPr,
+        isInProgress: false,
+        isClosed: issueData.state === 'CLOSED',
+        createdAt: new Date(issueData.createdAt),
+        author: issueData.author?.login ?? '',
+      };
+
+      return issue;
     }
 
-    const responseData: unknown = await response.json();
-    if (!isIssueResponse(responseData)) {
-      throw new Error('Unexpected response shape when fetching issue');
-    }
-
-    const issueData = isPr
-      ? responseData.data?.repository?.pullRequest
-      : responseData.data?.repository?.issue;
-    if (!issueData) {
-      return null;
-    }
-
-    const projectItem = issueData.projectItems?.nodes.find(
-      (item) => item.project?.number === projectNumber,
+    throw new Error(
+      `Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`,
     );
-
-    const mapState = (state: string): Issue['state'] => {
-      if (state === 'OPEN') return 'OPEN';
-      if (state === 'CLOSED') return 'CLOSED';
-      if (state === 'MERGED') return 'MERGED';
-      return 'OPEN';
-    };
-
-    const issue: Issue = {
-      nameWithOwner: `${owner}/${repo}`,
-      number: issueData.number,
-      title: issueData.title,
-      state: mapState(issueData.state),
-      status: projectItem?.fieldValueByName?.name ?? null,
-      story: null,
-      nextActionDate: null,
-      nextActionHour: null,
-      estimationMinutes: null,
-      dependedIssueUrls: [],
-      completionDate50PercentConfidence: null,
-      url: issueData.url,
-      assignees: issueData.assignees.nodes.map((a) => a.login),
-      labels: issueData.labels.nodes.map((l) => l.name),
-      org: owner,
-      repo: repo,
-      body: issueData.body,
-      itemId: projectItem?.id ?? '',
-      isPr,
-      isInProgress: false,
-      isClosed: issueData.state === 'CLOSED',
-      createdAt: new Date(issueData.createdAt),
-      author: issueData.author?.login ?? '',
-    };
-
-    return issue;
   }
 
   private parseProjectUrl(projectUrl: string): {
