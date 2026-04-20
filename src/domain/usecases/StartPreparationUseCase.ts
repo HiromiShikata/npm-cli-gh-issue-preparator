@@ -40,7 +40,9 @@ export class StartPreparationUseCase {
       params.utilizationPercentageThreshold,
     );
     if (!isAvailable) {
-      console.warn('all credentials at capacity');
+      console.warn(
+        'Claude is unavailable: no configured credentials found or all credentials are at capacity',
+      );
       return;
     }
 

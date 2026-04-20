@@ -205,7 +205,15 @@ class OauthAPIClaudeRepository {
             .map((file) => path.join(this.claudeDir, file));
         const credentials = findCredentials(filePathList);
         if (credentials.length === 0) {
-            return false;
+            try {
+                const accessToken = this.getAccessToken();
+                const usageResponse = await this.getUsageWithToken(accessToken);
+                return this.isUsageUnderThreshold(usageResponse, threshold);
+            }
+            catch (error) {
+                console.warn('Failed to check Claude availability for default credential:', error);
+                return false;
+            }
         }
         for (const credential of credentials) {
             const fileContent = fs.readFileSync(credential.filePath, 'utf-8');
@@ -224,7 +232,8 @@ class OauthAPIClaudeRepository {
                     return true;
                 }
             }
-            catch {
+            catch (error) {
+                console.warn(`Failed to check Claude availability for credential ${credential.name}:`, error);
                 continue;
             }
         }

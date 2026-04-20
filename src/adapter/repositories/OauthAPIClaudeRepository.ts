@@ -250,7 +250,11 @@ export class OauthAPIClaudeRepository implements ClaudeRepository {
         const accessToken = this.getAccessToken();
         const usageResponse = await this.getUsageWithToken(accessToken);
         return this.isUsageUnderThreshold(usageResponse, threshold);
-      } catch {
+      } catch (error) {
+        console.warn(
+          'Failed to check Claude availability for default credential:',
+          error,
+        );
         return false;
       }
     }
@@ -275,7 +279,11 @@ export class OauthAPIClaudeRepository implements ClaudeRepository {
           fs.copyFileSync(credential.filePath, this.credentialsPath);
           return true;
         }
-      } catch {
+      } catch (error) {
+        console.warn(
+          `Failed to check Claude availability for credential ${credential.name}:`,
+          error,
+        );
         continue;
       }
     }

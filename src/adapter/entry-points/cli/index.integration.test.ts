@@ -92,7 +92,7 @@ awaitingQualityCheckStatus: "Awaiting quality check"
         fs.rmSync(tmpHome, { recursive: true, force: true });
       }
       expect(threw).toBe(false);
-      expect(output).toContain('all credentials at capacity');
+      expect(output).toContain('Claude is unavailable: no configured credentials found or all credentials are at capacity');
     }, 600000);
   });
 
