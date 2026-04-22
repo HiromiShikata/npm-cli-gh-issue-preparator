@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphqlProjectRepository = void 0;
+const GraphqlRateLimitHelper_1 = require("./GraphqlRateLimitHelper");
 const isProjectV2ReadmeResponse = (value) => {
     if (typeof value !== 'object' || value === null)
         return false;
@@ -13,11 +14,8 @@ const isProjectV2ReadmeResponse = (value) => {
         return false;
     return true;
 };
-const isRateLimitError = (errors) => errors.some((e) => e.type === 'RATE_LIMIT' ||
-    e.code === 'graphql_rate_limit' ||
-    e.message.toLowerCase().includes('rate limit'));
 class GraphqlProjectRepository {
-    constructor(token, retryDelaysMs = [5000, 15000, 45000], sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {
+    constructor(token, retryDelaysMs = [5000, 15000, 45000], sleep = GraphqlRateLimitHelper_1.defaultSleep) {
         this.token = token;
         this.retryDelaysMs = retryDelaysMs;
         this.sleep = sleep;
@@ -62,7 +60,7 @@ class GraphqlProjectRepository {
                 if (attempt < this.retryDelaysMs.length)
                     continue;
                 console.warn('Rate limit exceeded fetching project README, all retries exhausted');
-                return null;
+                break;
             }
             if (!response.ok) {
                 console.warn('Failed to fetch project README from GitHub GraphQL API');
@@ -75,11 +73,11 @@ class GraphqlProjectRepository {
             const projectData = responseData.data?.organization?.projectV2 ||
                 responseData.data?.user?.projectV2;
             if (responseData.errors && responseData.errors.length > 0) {
-                if (isRateLimitError(responseData.errors) && !projectData) {
+                if ((0, GraphqlRateLimitHelper_1.isRateLimitError)(responseData.errors) && !projectData) {
                     if (attempt < this.retryDelaysMs.length)
                         continue;
                     console.warn(`Rate limited fetching project README, all retries exhausted: ${JSON.stringify(responseData.errors)}`);
-                    return null;
+                    break;
                 }
                 if (!projectData) {
                     console.warn(`GraphQL errors in project README response: ${JSON.stringify(responseData.errors)}`);

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphqlIssueRepository = void 0;
+const GraphqlRateLimitHelper_1 = require("./GraphqlRateLimitHelper");
 const fnmatch = (pattern, str) => {
     let regexStr = '^';
     let i = 0;
@@ -73,9 +74,6 @@ function isIssueTimelineResponse(value) {
         return false;
     return true;
 }
-const isRateLimitErrors = (errors) => errors.some((e) => e.type === 'RATE_LIMIT' ||
-    e.code === 'graphql_rate_limit' ||
-    e.message.toLowerCase().includes('rate limit'));
 function isIssueResponse(value) {
     if (typeof value !== 'object' || value === null)
         return false;
@@ -87,7 +85,7 @@ function isDirectPullRequestResponse(value) {
     return true;
 }
 class GraphqlIssueRepository {
-    constructor(token, retryDelaysMs = [5000, 15000, 45000], sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))) {
+    constructor(token, retryDelaysMs = [5000, 15000, 45000], sleep = GraphqlRateLimitHelper_1.defaultSleep) {
         this.token = token;
         this.retryDelaysMs = retryDelaysMs;
         this.sleep = sleep;
@@ -162,7 +160,7 @@ class GraphqlIssueRepository {
             if (response.status === 429) {
                 if (attempt < this.retryDelaysMs.length)
                     continue;
-                throw new Error(`Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`);
+                break;
             }
             if (!response.ok) {
                 throw new Error('Failed to fetch issue from GitHub GraphQL API');
@@ -173,7 +171,7 @@ class GraphqlIssueRepository {
             }
             if (responseData.errors &&
                 responseData.errors.length > 0 &&
-                isRateLimitErrors(responseData.errors)) {
+                (0, GraphqlRateLimitHelper_1.isRateLimitError)(responseData.errors)) {
                 const issueDataCheck = isPr
                     ? responseData.data?.repository?.pullRequest
                     : responseData.data?.repository?.issue;
@@ -181,7 +179,7 @@ class GraphqlIssueRepository {
                     if (attempt < this.retryDelaysMs.length) {
                         continue;
                     }
-                    throw new Error(`Rate limit exceeded fetching issue ${issueUrl}, all retries exhausted`);
+                    break;
                 }
             }
             const issueData = isPr

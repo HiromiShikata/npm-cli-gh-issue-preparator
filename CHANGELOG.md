@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.26.1...v1.27.0) (2026-04-22)
+
+
+### Features
+
+* **src:** add exponential backoff retry for GitHub GraphQL rate limits ([13e5410](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/13e541036bdc41f2d71605b44490abd9b0fa4e03))
+
 ## [1.26.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.26.0...v1.26.1) (2026-04-09)
 
 
