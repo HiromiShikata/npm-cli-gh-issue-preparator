@@ -76,7 +76,7 @@ Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet`
 1. `llm-model:` label (highest priority)
 2. `defaultLlmModelName` parameter (lowest priority)
 
-**Note:** The `category:` label serves an additional role beyond agent selection: in `notifyFinishedIssuePreparation`, issues with a non-e2e `category:` label skip the PR check. Issues using only `llm-agent:` for agent selection still require a `category:` label (other than `category:e2e`) to skip the PR check during notification.
+**PR check bypass in `notifyFinishedIssuePreparation`:** Issues with an `llm-agent:*` label (including plain `llm-agent`) or a non-e2e `category:*` label skip the open-PR requirement. Issues with a `category:e2e` label, and issues with no `llm-agent:*` or `category:*` labels, still require an open PR linked to the issue. For investigation-only or non-coding tasks, add an `llm-agent:*` label (e.g. `llm-agent:investigation`) to the issue to skip the PR check.
 
 ## Example 📖
 
