@@ -7,6 +7,7 @@ import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
+import { RevertOrphanedPreparationUseCase } from '../../../domain/usecases/RevertOrphanedPreparationUseCase';
 import { TowerDefenceIssueRepository } from '../../repositories/TowerDefenceIssueRepository';
 import { GraphqlIssueRepository } from '../../repositories/GraphqlIssueRepository';
 import { TowerDefenceProjectRepository } from '../../repositories/TowerDefenceProjectRepository';
@@ -30,6 +31,7 @@ type ConfigFile = {
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: number;
   workflowBlockerResolvedWebhookUrl?: string;
+  preparationProcessCheckCommand?: string;
 };
 
 type StartDaemonOptions = {
@@ -43,6 +45,7 @@ type StartDaemonOptions = {
   maximumPreparingIssuesCount?: string;
   utilizationPercentageThreshold?: string;
   allowedIssueAuthors?: string;
+  preparationProcessCheckCommand?: string;
   configFilePath: string;
 };
 
@@ -112,6 +115,10 @@ const loadConfigFile = (configFilePath: string): ConfigFile => {
         parsed,
         'workflowBlockerResolvedWebhookUrl',
       ),
+      preparationProcessCheckCommand: getStringValue(
+        parsed,
+        'preparationProcessCheckCommand',
+      ),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -165,6 +172,10 @@ const parseProjectReadmeConfig = (readme: string): ConfigFile => {
       workflowBlockerResolvedWebhookUrl: getStringValue(
         parsed,
         'workflowBlockerResolvedWebhookUrl',
+      ),
+      preparationProcessCheckCommand: getStringValue(
+        parsed,
+        'preparationProcessCheckCommand',
       ),
     };
   } catch {
@@ -227,6 +238,10 @@ const mergeConfigs = (
     readmeOverrides.workflowBlockerResolvedWebhookUrl ??
     cliOverrides.workflowBlockerResolvedWebhookUrl ??
     configFile.workflowBlockerResolvedWebhookUrl,
+  preparationProcessCheckCommand:
+    readmeOverrides.preparationProcessCheckCommand ??
+    cliOverrides.preparationProcessCheckCommand ??
+    configFile.preparationProcessCheckCommand,
 });
 
 const fetchProjectReadme = async (
@@ -276,6 +291,10 @@ program
     '--allowedIssueAuthors <authors>',
     'Comma-separated list of allowed issue authors (default: all authors allowed)',
   )
+  .option(
+    '--preparationProcessCheckCommand <template>',
+    'Shell command template with {URL} placeholder to check if a worker process is alive for a Preparation issue',
+  )
   .action(async (options: StartDaemonOptions) => {
     const token = process.env.GH_TOKEN;
     if (!token) {
@@ -300,6 +319,7 @@ program
         ? Number(options.utilizationPercentageThreshold)
         : undefined,
       allowedIssueAuthors: options.allowedIssueAuthors,
+      preparationProcessCheckCommand: options.preparationProcessCheckCommand,
     };
 
     const tempProjectUrl =
@@ -363,6 +383,21 @@ program
     const graphqlIssueRepository = new GraphqlIssueRepository(token);
     const claudeRepository = new OauthAPIClaudeRepository();
     const localCommandRunner = new NodeLocalCommandRunner();
+
+    const issueCommentRepository = new GitHubIssueCommentRepository(token);
+
+    const revertOrphanedPreparationUseCase =
+      new RevertOrphanedPreparationUseCase(
+        projectRepository,
+        {
+          getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(
+            towerDefenceIssueRepository,
+          ),
+          update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        },
+        issueCommentRepository,
+        localCommandRunner,
+      );
 
     const useCase = new StartPreparationUseCase(
       projectRepository,
@@ -434,6 +469,17 @@ program
     console.log(
       `maximumPreparingIssuesCount: ${maximumPreparingIssuesCount ?? 'null (default: 6)'}, utilizationPercentageThreshold: ${utilizationPercentageThreshold}`,
     );
+
+    const preparationProcessCheckCommand =
+      config.preparationProcessCheckCommand ?? null;
+    if (preparationProcessCheckCommand !== null) {
+      await revertOrphanedPreparationUseCase.run({
+        projectUrl,
+        preparationStatus,
+        awaitingWorkspaceStatus,
+        preparationProcessCheckCommand,
+      });
+    }
 
     await useCase.run({
       projectUrl,

@@ -54,6 +54,7 @@ Only the content inside the `<details><summary>config</summary>` section is pars
 ### Parameters
 
 - `thresholdForAutoReject` (default: `3`) - Number of consecutive auto-rejection comments before automatically escalating the issue to the awaiting quality check status. Can be set via CLI argument `--thresholdForAutoReject`, config file, or GitHub Project README config.
+- `preparationProcessCheckCommand` (optional) - Shell command template with a `{URL}` placeholder to check whether a worker process is alive for an issue in `Preparation` status. When provided, the daemon runs this check before starting new preparations and reverts any orphaned `Preparation` issue (no live process found) back to `Awaiting workspace`. Example: `pgrep -fa "claude-agent.*{URL}"`. Can be set via CLI argument `--preparationProcessCheckCommand`, config file, or GitHub Project README config.
 
 ### Issue Labels
 

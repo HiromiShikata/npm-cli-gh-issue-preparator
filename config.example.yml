@@ -27,3 +27,4 @@ allowedIssueAuthors: 'HiromiShikata,other-author'
 awaitingQualityCheckStatus: 'Awaiting quality check'
 thresholdForAutoReject: 3
 workflowBlockerResolvedWebhookUrl: 'https://example.com/webhook?url={URL}&message={MESSAGE}'
+preparationProcessCheckCommand: 'pgrep -fa "claude-agent.*{URL}"'

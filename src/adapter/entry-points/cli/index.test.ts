@@ -9,9 +9,11 @@ import {
 } from './index';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
+import { RevertOrphanedPreparationUseCase } from '../../../domain/usecases/RevertOrphanedPreparationUseCase';
 
 jest.mock('../../../domain/usecases/StartPreparationUseCase');
 jest.mock('../../../domain/usecases/NotifyFinishedIssuePreparationUseCase');
+jest.mock('../../../domain/usecases/RevertOrphanedPreparationUseCase');
 jest.mock('../../repositories/TowerDefenceIssueRepository', () => ({
   TowerDefenceIssueRepository: jest.fn().mockImplementation(() => ({
     getAllOpened: jest.fn(),
@@ -1432,6 +1434,146 @@ defaultAgentName: 'case-test-agent'
           awaitingWorkspaceStatus: 'README Awaiting',
           preparationStatus: 'README Preparing',
           defaultAgentName: 'readme-agent',
+        }),
+      );
+    });
+
+    it('should call RevertOrphanedPreparationUseCase before StartPreparationUseCase when preparationProcessCheckCommand is set', async () => {
+      const configWithCheckCommand = {
+        ...defaultConfig,
+        preparationProcessCheckCommand: 'pgrep -fa "claude-agent.*{URL}"',
+      };
+      writeConfig(configWithCheckCommand);
+
+      const callOrder: string[] = [];
+      const mockRevertRun = jest.fn().mockImplementation(() => {
+        callOrder.push('revert.run');
+        return Promise.resolve(undefined);
+      });
+      const mockStartRun = jest.fn().mockImplementation(() => {
+        callOrder.push('start.run');
+        return Promise.resolve(undefined);
+      });
+
+      const MockedRevertOrphanedPreparationUseCase = jest.mocked(
+        RevertOrphanedPreparationUseCase,
+      );
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedRevertOrphanedPreparationUseCase.mockImplementation(function (
+        this: RevertOrphanedPreparationUseCase,
+      ) {
+        this.run = mockRevertRun;
+        return this;
+      });
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockStartRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRevertRun).toHaveBeenCalledTimes(1);
+      expect(mockRevertRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        preparationStatus: 'Preparing',
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationProcessCheckCommand: 'pgrep -fa "claude-agent.*{URL}"',
+      });
+      expect(mockStartRun).toHaveBeenCalledTimes(1);
+      expect(callOrder).toEqual(['revert.run', 'start.run']);
+    });
+
+    it('should not call RevertOrphanedPreparationUseCase when preparationProcessCheckCommand is not set', async () => {
+      const mockRevertRun = jest.fn().mockResolvedValue(undefined);
+      const mockStartRun = jest.fn().mockResolvedValue(undefined);
+
+      const MockedRevertOrphanedPreparationUseCase = jest.mocked(
+        RevertOrphanedPreparationUseCase,
+      );
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedRevertOrphanedPreparationUseCase.mockImplementation(function (
+        this: RevertOrphanedPreparationUseCase,
+      ) {
+        this.run = mockRevertRun;
+        return this;
+      });
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockStartRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRevertRun).not.toHaveBeenCalled();
+      expect(mockStartRun).toHaveBeenCalledTimes(1);
+    });
+
+    it('should pass preparationProcessCheckCommand from CLI overriding config', async () => {
+      const configWithCheckCommand = {
+        ...defaultConfig,
+        preparationProcessCheckCommand: 'config-check-command {URL}',
+      };
+      writeConfig(configWithCheckCommand);
+
+      const mockRevertRun = jest.fn().mockResolvedValue(undefined);
+      const mockStartRun = jest.fn().mockResolvedValue(undefined);
+
+      const MockedRevertOrphanedPreparationUseCase = jest.mocked(
+        RevertOrphanedPreparationUseCase,
+      );
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedRevertOrphanedPreparationUseCase.mockImplementation(function (
+        this: RevertOrphanedPreparationUseCase,
+      ) {
+        this.run = mockRevertRun;
+        return this;
+      });
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockStartRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+        '--preparationProcessCheckCommand',
+        'cli-check-command {URL}',
+      ]);
+
+      expect(mockRevertRun).toHaveBeenCalledTimes(1);
+      expect(mockRevertRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          preparationProcessCheckCommand: 'cli-check-command {URL}',
         }),
       );
     });
