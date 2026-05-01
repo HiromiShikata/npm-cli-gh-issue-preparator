@@ -15,7 +15,7 @@
     "lint": "npm run lint:eslint && npm run lint:bypasscheck",
     "lint-fix": "eslint src --fix",
     "fmt": "npm run prettier && npm run lint-fix",
-    "build": "tsc -p ./tsconfig.build.json",
+    "build": "tsc -p ./tsconfig.build.json && prettier --write 'types/**/*.d.ts'",
     "test": "jest"
   },
   "bin": {
