@@ -44,6 +44,7 @@ export class NotifyFinishedIssuePreparationUseCase {
       IssueRepository,
       | 'get'
       | 'update'
+      | 'updateNextActionDate'
       | 'findRelatedOpenPRs'
       | 'getStoryObjectMap'
       | 'getOpenPullRequest'
@@ -327,14 +328,13 @@ export class NotifyFinishedIssuePreparationUseCase {
     prUrl: string,
     project: Parameters<IssueRepository['get']>[1],
   ): Promise<void> => {
-    const prIssue = await this.issueRepository.get(prUrl, project);
-    if (prIssue === null) {
-      return;
-    }
     const nextActionDate = new Date();
     nextActionDate.setMonth(nextActionDate.getMonth() + 1);
-    prIssue.nextActionDate = nextActionDate;
-    await this.issueRepository.update(prIssue, project);
+    await this.issueRepository.updateNextActionDate(
+      prUrl,
+      project,
+      nextActionDate,
+    );
   };
 
   private sendWorkflowBlockerNotification = async (

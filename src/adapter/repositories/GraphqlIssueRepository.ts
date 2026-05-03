@@ -364,7 +364,11 @@ function isDirectPullRequestResponse(
 
 export class GraphqlIssueRepository implements Pick<
   IssueRepository,
-  'get' | 'update' | 'findRelatedOpenPRs' | 'getOpenPullRequest'
+  | 'get'
+  | 'update'
+  | 'updateNextActionDate'
+  | 'findRelatedOpenPRs'
+  | 'getOpenPullRequest'
 > {
   private readonly retryDelaysMs: number[];
   private readonly sleep: (ms: number) => Promise<void>;
@@ -705,6 +709,71 @@ export class GraphqlIssueRepository implements Pick<
           itemId: issue.itemId,
           fieldId: statusInfo.fieldId,
           value: { singleSelectOptionId: statusInfo.optionId },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error`);
+    }
+
+    const responseData: unknown = await response.json();
+
+    if (!isUpdateItemResponse(responseData)) {
+      throw new Error('Invalid API response format');
+    }
+
+    if (responseData.errors) {
+      throw new Error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
+    }
+  }
+
+  async updateNextActionDate(
+    issueUrl: string,
+    project: Project,
+    date: Date,
+  ): Promise<void> {
+    if (!project.nextActionDate) {
+      return;
+    }
+
+    const issue = await this.get(issueUrl, project);
+    if (!issue || !issue.itemId) {
+      return;
+    }
+
+    const dateStr = date.toISOString().split('T')[0];
+
+    const mutation = `
+      mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
+        updateProjectV2ItemFieldValue(
+          input: {
+            projectId: $projectId
+            itemId: $itemId
+            fieldId: $fieldId
+            value: $value
+          }
+        ) {
+          projectV2Item {
+            id
+          }
+        }
+      }
+    `;
+
+    const response = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: mutation,
+        variables: {
+          projectId: project.id,
+          itemId: issue.itemId,
+          fieldId: project.nextActionDate.fieldId,
+          value: { date: dateStr },
         },
       }),
     });

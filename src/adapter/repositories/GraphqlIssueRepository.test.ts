@@ -5559,4 +5559,173 @@ describe('GraphqlIssueRepository', () => {
       expect(result?.isPassedAllCiJob).toBe(true);
     });
   });
+
+  describe('updateNextActionDate', () => {
+    const createProjectWithNextActionDate = () => ({
+      ...createMockProject(),
+      id: 'proj-node-id',
+      nextActionDate: {
+        name: 'nextactiondate',
+        fieldId: 'next-action-date-field-id',
+      },
+    });
+
+    const mockGetResponse = (itemId: string) => ({
+      ok: true,
+      json: async () => ({
+        data: {
+          repository: {
+            issue: {
+              number: 1,
+              title: 'Test PR',
+              state: 'OPEN',
+              body: '',
+              createdAt: '2024-01-01T00:00:00Z',
+              url: 'https://github.com/user/repo/pull/1',
+              author: { login: 'testuser' },
+              assignees: { nodes: [] },
+              labels: { nodes: [] },
+              projectItems: {
+                nodes: itemId
+                  ? [
+                      {
+                        id: itemId,
+                        project: { number: 1 },
+                        fieldValueByName: null,
+                      },
+                    ]
+                  : [],
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    it('should skip when project.nextActionDate is null', async () => {
+      const project = createMockProject();
+
+      await repository.updateNextActionDate(
+        'https://github.com/user/repo/pull/1',
+        project,
+        new Date('2024-02-15T00:00:00.000Z'),
+      );
+
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should skip when get returns null', async () => {
+      const project = createProjectWithNextActionDate();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { repository: { pullRequest: null } },
+        }),
+      });
+
+      await repository.updateNextActionDate(
+        'https://github.com/user/repo/pull/1',
+        project,
+        new Date('2024-02-15T00:00:00.000Z'),
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip when issue has empty itemId', async () => {
+      const project = createProjectWithNextActionDate();
+
+      mockFetch.mockResolvedValueOnce(mockGetResponse(''));
+
+      await repository.updateNextActionDate(
+        'https://github.com/user/repo/issues/1',
+        project,
+        new Date('2024-02-15T00:00:00.000Z'),
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should update next action date via GraphQL mutation', async () => {
+      const project = createProjectWithNextActionDate();
+
+      mockFetch
+        .mockResolvedValueOnce(mockGetResponse('item-123'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await repository.updateNextActionDate(
+        'https://github.com/user/repo/issues/1',
+        project,
+        new Date('2024-02-15T00:00:00.000Z'),
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw error when mutation API response is not ok', async () => {
+      const project = createProjectWithNextActionDate();
+
+      mockFetch
+        .mockResolvedValueOnce(mockGetResponse('item-123'))
+        .mockResolvedValueOnce({ ok: false, status: 500 });
+
+      await expect(
+        repository.updateNextActionDate(
+          'https://github.com/user/repo/issues/1',
+          project,
+          new Date('2024-02-15T00:00:00.000Z'),
+        ),
+      ).rejects.toThrow('GitHub API error');
+    });
+
+    it('should throw error when mutation response is not a valid object', async () => {
+      const project = createProjectWithNextActionDate();
+
+      mockFetch
+        .mockResolvedValueOnce(mockGetResponse('item-123'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+        });
+
+      await expect(
+        repository.updateNextActionDate(
+          'https://github.com/user/repo/issues/1',
+          project,
+          new Date('2024-02-15T00:00:00.000Z'),
+        ),
+      ).rejects.toThrow('Invalid API response format');
+    });
+
+    it('should throw error when mutation returns GraphQL errors', async () => {
+      const project = createProjectWithNextActionDate();
+
+      mockFetch
+        .mockResolvedValueOnce(mockGetResponse('item-123'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [{ message: 'Field not found' }],
+          }),
+        });
+
+      await expect(
+        repository.updateNextActionDate(
+          'https://github.com/user/repo/issues/1',
+          project,
+          new Date('2024-02-15T00:00:00.000Z'),
+        ),
+      ).rejects.toThrow('GraphQL errors');
+    });
+  });
 });

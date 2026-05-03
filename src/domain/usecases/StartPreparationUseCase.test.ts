@@ -101,6 +101,7 @@ describe('StartPreparationUseCase', () => {
       getStoryObjectMap: jest.fn().mockResolvedValue(new Map()),
       get: jest.fn(),
       update: jest.fn(),
+      updateNextActionDate: jest.fn(),
       findRelatedOpenPRs: jest.fn().mockResolvedValue([]),
       getOpenPullRequest: jest.fn().mockResolvedValue(null),
     };
