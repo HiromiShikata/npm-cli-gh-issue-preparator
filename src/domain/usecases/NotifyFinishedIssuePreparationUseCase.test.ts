@@ -179,9 +179,125 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
     });
+    const prIssue = createMockIssue({
+      url: 'https://github.com/user/repo/pull/1',
+      isPr: true,
+      nextActionDate: null,
+    });
 
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
-    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.get
+      .mockResolvedValueOnce(issue)
+      .mockResolvedValueOnce(prIssue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        branchName: null,
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+
+    expect(mockIssueRepository.update).toHaveBeenCalledTimes(2);
+    expect(mockIssueRepository.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        url: 'https://github.com/user/repo/issues/1',
+        status: 'Awaiting Quality Check',
+      }),
+      mockProject,
+    );
+    expect(mockIssueRepository.update).toHaveBeenNthCalledWith(
+      2,
+      prIssue,
+      mockProject,
+    );
+    expect(prIssue.nextActionDate).not.toBeNull();
+  });
+
+  it('should set PR next action date to approximately 1 month from now when approved', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+    const prIssue = createMockIssue({
+      url: 'https://github.com/user/repo/pull/1',
+      isPr: true,
+      nextActionDate: null,
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get
+      .mockResolvedValueOnce(issue)
+      .mockResolvedValueOnce(prIssue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        branchName: null,
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    const beforeRun = new Date();
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+    const afterRun = new Date();
+
+    const expectedMinDate = new Date(beforeRun);
+    expectedMinDate.setMonth(expectedMinDate.getMonth() + 1);
+    const expectedMaxDate = new Date(afterRun);
+    expectedMaxDate.setMonth(expectedMaxDate.getMonth() + 1);
+    expect(prIssue.nextActionDate).toBeInstanceOf(Date);
+    expect(prIssue.nextActionDate?.getTime()).toBeGreaterThanOrEqual(
+      expectedMinDate.getTime(),
+    );
+    expect(prIssue.nextActionDate?.getTime()).toBeLessThanOrEqual(
+      expectedMaxDate.getTime(),
+    );
+  });
+
+  it('should skip PR next action date update when get returns null for PR URL', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get
+      .mockResolvedValueOnce(issue)
+      .mockResolvedValueOnce(null);
     mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
       createMockComment({ content: 'From: Test report' }),
     ]);
