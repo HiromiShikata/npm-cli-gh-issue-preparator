@@ -6,7 +6,11 @@ import { Issue } from '../../domain/entities/Issue';
 import { Project } from '../../domain/entities/Project';
 export declare class GraphqlIssueRepository implements Pick<
   IssueRepository,
-  'get' | 'update' | 'findRelatedOpenPRs' | 'getOpenPullRequest'
+  | 'get'
+  | 'update'
+  | 'updateNextActionDate'
+  | 'findRelatedOpenPRs'
+  | 'getOpenPullRequest'
 > {
   private readonly token;
   private readonly retryDelaysMs;
@@ -20,6 +24,11 @@ export declare class GraphqlIssueRepository implements Pick<
   private parseProjectUrl;
   private getStatusOptionId;
   update(issue: Issue, project: Project): Promise<void>;
+  updateNextActionDate(
+    issueUrl: string,
+    project: Project,
+    date: Date,
+  ): Promise<void>;
   private computePrStatus;
   private parseIssueUrl;
   findRelatedOpenPRs(issueUrl: string): Promise<RelatedPullRequest[]>;

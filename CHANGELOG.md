@@ -1,3 +1,15 @@
+# [1.28.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.27.0...v1.28.0) (2026-05-03)
+
+
+### Bug Fixes
+
+* **core:** use dedicated updateNextActionDate to actually persist next action date on PR ([8b090c0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/8b090c0c6e0a8255cff36037201fcb944dbed344))
+
+
+### Features
+
+* **core:** put next action date to PR when receive finish notification ([353569a](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/353569a3819fb8fec970cd49ffc5fa4d8e179747)), closes [#272](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/272)
+
 # [1.27.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.26.1...v1.27.0) (2026-04-22)
 
 

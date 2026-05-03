@@ -382,6 +382,58 @@ class GraphqlIssueRepository {
             throw new Error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
         }
     }
+    async updateNextActionDate(issueUrl, project, date) {
+        if (!project.nextActionDate) {
+            return;
+        }
+        const issue = await this.get(issueUrl, project);
+        if (!issue || !issue.itemId) {
+            return;
+        }
+        const dateStr = date.toISOString().split('T')[0];
+        const mutation = `
+      mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
+        updateProjectV2ItemFieldValue(
+          input: {
+            projectId: $projectId
+            itemId: $itemId
+            fieldId: $fieldId
+            value: $value
+          }
+        ) {
+          projectV2Item {
+            id
+          }
+        }
+      }
+    `;
+        const response = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                query: mutation,
+                variables: {
+                    projectId: project.id,
+                    itemId: issue.itemId,
+                    fieldId: project.nextActionDate.fieldId,
+                    value: { date: dateStr },
+                },
+            }),
+        });
+        if (!response.ok) {
+            throw new Error(`GitHub API error`);
+        }
+        const responseData = await response.json();
+        if (!isUpdateItemResponse(responseData)) {
+            throw new Error('Invalid API response format');
+        }
+        if (responseData.errors) {
+            throw new Error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
+        }
+    }
     computePrStatus(prUrl, headRefName, baseRefName, data) {
         const isConflicted = data.mergeable === 'CONFLICTING';
         const lastCommit = data.commits?.nodes[0]?.commit;

@@ -16,6 +16,11 @@ export interface IssueRepository {
   getStoryObjectMap(project: Project): Promise<StoryObjectMap>;
   get(issueUrl: string, project: Project): Promise<Issue | null>;
   update(issue: Issue, project: Project): Promise<void>;
+  updateNextActionDate(
+    issueUrl: string,
+    project: Project,
+    date: Date,
+  ): Promise<void>;
   findRelatedOpenPRs(issueUrl: string): Promise<RelatedPullRequest[]>;
   getOpenPullRequest(prUrl: string): Promise<RelatedPullRequest | null>;
 }

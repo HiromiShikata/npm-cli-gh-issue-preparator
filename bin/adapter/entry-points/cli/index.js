@@ -378,6 +378,7 @@ program
     const useCase = new NotifyFinishedIssuePreparationUseCase_1.NotifyFinishedIssuePreparationUseCase(projectRepository, {
         get: graphqlIssueRepository.get.bind(graphqlIssueRepository),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        updateNextActionDate: graphqlIssueRepository.updateNextActionDate.bind(graphqlIssueRepository),
         findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(graphqlIssueRepository),
         getOpenPullRequest: graphqlIssueRepository.getOpenPullRequest.bind(graphqlIssueRepository),
         getStoryObjectMap: towerDefenceIssueRepository.getStoryObjectMap.bind(towerDefenceIssueRepository),

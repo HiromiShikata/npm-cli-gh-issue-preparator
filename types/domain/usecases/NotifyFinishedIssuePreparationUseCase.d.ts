@@ -23,6 +23,7 @@ export declare class NotifyFinishedIssuePreparationUseCase {
       IssueRepository,
       | 'get'
       | 'update'
+      | 'updateNextActionDate'
       | 'findRelatedOpenPRs'
       | 'getStoryObjectMap'
       | 'getOpenPullRequest'
@@ -45,6 +46,7 @@ export declare class NotifyFinishedIssuePreparationUseCase {
   private collectRejections;
   private resolveOpenPrsForPrItem;
   private reportBodyHasNextStep;
+  private setPrNextActionDate;
   private sendWorkflowBlockerNotification;
 }
 //# sourceMappingURL=NotifyFinishedIssuePreparationUseCase.d.ts.map
