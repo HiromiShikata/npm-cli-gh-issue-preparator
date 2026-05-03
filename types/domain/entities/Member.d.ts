@@ -1,4 +1,4 @@
 export type Member = {
-  name: string;
+    name: string;
 };
 //# sourceMappingURL=Member.d.ts.map
