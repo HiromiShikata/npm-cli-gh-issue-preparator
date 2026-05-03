@@ -92,6 +92,7 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       getStoryObjectMap: jest.fn(),
       get: jest.fn(),
       update: jest.fn(),
+      updateNextActionDate: jest.fn(),
       findRelatedOpenPRs: jest.fn(),
       getOpenPullRequest: jest.fn(),
     };
@@ -175,13 +176,16 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
   });
 
   it('should update issue status from Preparation to Awaiting Quality Check when last comment starts with From:', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-01-15T00:00:00.000Z'));
+
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
     });
 
     mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
-    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueRepository.get.mockResolvedValueOnce(issue);
     mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
       createMockComment({ content: 'From: Test report' }),
     ]);
@@ -208,6 +212,11 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       workflowBlockerResolvedWebhookUrl: null,
     });
 
+    jest.useRealTimers();
+
+    const expectedDate = new Date('2024-01-15T00:00:00.000Z');
+    expectedDate.setMonth(expectedDate.getMonth() + 1);
+
     expect(mockIssueRepository.update).toHaveBeenCalledTimes(1);
     expect(mockIssueRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -215,6 +224,63 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
         status: 'Awaiting Quality Check',
       }),
       mockProject,
+    );
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledTimes(1);
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledWith(
+      'https://github.com/user/repo/pull/1',
+      mockProject,
+      expectedDate,
+    );
+  });
+
+  it('should set PR next action date to 1 month from now when approved', async () => {
+    const fakeNow = new Date('2024-06-15T00:00:00.000Z');
+    jest.useFakeTimers();
+    jest.setSystemTime(fakeNow);
+
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValueOnce(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'From: Test report' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        branchName: null,
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+
+    jest.useRealTimers();
+
+    const expectedDate = new Date('2024-06-15T00:00:00.000Z');
+    expectedDate.setMonth(expectedDate.getMonth() + 1);
+
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledTimes(1);
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledWith(
+      'https://github.com/user/repo/pull/1',
+      mockProject,
+      expectedDate,
     );
   });
 

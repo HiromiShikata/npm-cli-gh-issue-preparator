@@ -563,6 +563,9 @@ program
       {
         get: graphqlIssueRepository.get.bind(graphqlIssueRepository),
         update: graphqlIssueRepository.update.bind(graphqlIssueRepository),
+        updateNextActionDate: graphqlIssueRepository.updateNextActionDate.bind(
+          graphqlIssueRepository,
+        ),
         findRelatedOpenPRs: graphqlIssueRepository.findRelatedOpenPRs.bind(
           graphqlIssueRepository,
         ),

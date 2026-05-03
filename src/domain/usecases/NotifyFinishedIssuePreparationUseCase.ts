@@ -44,6 +44,7 @@ export class NotifyFinishedIssuePreparationUseCase {
       IssueRepository,
       | 'get'
       | 'update'
+      | 'updateNextActionDate'
       | 'findRelatedOpenPRs'
       | 'getStoryObjectMap'
       | 'getOpenPullRequest'
@@ -137,7 +138,10 @@ export class NotifyFinishedIssuePreparationUseCase {
     const comments =
       await this.issueCommentRepository.getCommentsFromIssue(issue);
 
-    const rejections = await this.collectRejections(issue, comments);
+    const { rejections, approvedPrUrl } = await this.collectRejections(
+      issue,
+      comments,
+    );
 
     const rejectionStatusMessage =
       rejections.length > 0
@@ -174,6 +178,9 @@ export class NotifyFinishedIssuePreparationUseCase {
     if (rejections.length <= 0) {
       issue.status = params.awaitingQualityCheckStatus;
       await this.issueRepository.update(issue, project);
+      if (approvedPrUrl !== null) {
+        await this.setPrNextActionDate(approvedPrUrl, project);
+      }
       await this.sendWorkflowBlockerNotification(
         params.issueUrl,
         params.workflowBlockerResolvedWebhookUrl,
@@ -194,8 +201,12 @@ export class NotifyFinishedIssuePreparationUseCase {
   private collectRejections = async (
     issue: { url: string; labels: string[]; isPr: boolean },
     comments: { content: string }[],
-  ): Promise<{ type: RejectedReasonType; detail: string }[]> => {
+  ): Promise<{
+    rejections: { type: RejectedReasonType; detail: string }[];
+    approvedPrUrl: string | null;
+  }> => {
     const rejections: { type: RejectedReasonType; detail: string }[] = [];
+    let approvedPrUrl: string | null = null;
     const lastComment = comments[comments.length - 1];
     if (!lastComment || !lastComment.content.startsWith('From:')) {
       rejections.push({
@@ -265,10 +276,17 @@ export class NotifyFinishedIssuePreparationUseCase {
             detail: `ANY_REVIEW_COMMENT_NOT_RESOLVED: ${pr.url}`,
           });
         }
+        if (
+          !pr.isConflicted &&
+          pr.isPassedAllCiJob &&
+          pr.isResolvedAllReviewComments
+        ) {
+          approvedPrUrl = pr.url;
+        }
       }
     }
 
-    return rejections;
+    return { rejections, approvedPrUrl };
   };
 
   private resolveOpenPrsForPrItem = async (
@@ -304,6 +322,19 @@ export class NotifyFinishedIssuePreparationUseCase {
     }
     const nextStepValue = Reflect.get(reportJson, 'nextStep');
     return nextStepValue !== null && nextStepValue !== undefined;
+  };
+
+  private setPrNextActionDate = async (
+    prUrl: string,
+    project: Parameters<IssueRepository['get']>[1],
+  ): Promise<void> => {
+    const nextActionDate = new Date();
+    nextActionDate.setMonth(nextActionDate.getMonth() + 1);
+    await this.issueRepository.updateNextActionDate(
+      prUrl,
+      project,
+      nextActionDate,
+    );
   };
 
   private sendWorkflowBlockerNotification = async (

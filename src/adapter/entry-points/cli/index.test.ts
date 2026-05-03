@@ -22,6 +22,7 @@ jest.mock('../../repositories/GraphqlIssueRepository', () => ({
   GraphqlIssueRepository: jest.fn().mockImplementation(() => ({
     get: jest.fn(),
     update: jest.fn(),
+    updateNextActionDate: jest.fn(),
     findRelatedOpenPRs: jest.fn(),
     getOpenPullRequest: jest.fn(),
   })),
