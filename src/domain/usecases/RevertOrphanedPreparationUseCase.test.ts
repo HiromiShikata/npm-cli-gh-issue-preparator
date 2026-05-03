@@ -128,7 +128,7 @@ describe('RevertOrphanedPreparationUseCase', () => {
     );
   });
 
-  it('should revert a stuck Preparation issue to Awaiting workspace when check command exits non-zero', async () => {
+  it('should revert a stuck Preparation issue to Awaiting workspace when check command exits 1', async () => {
     const stuckIssue = createMockIssue({
       url: 'https://github.com/user/repo/issues/42',
       status: 'Preparation',
@@ -152,14 +152,15 @@ describe('RevertOrphanedPreparationUseCase', () => {
       'pgrep -fa "claude-agent.*https://github.com/user/repo/issues/42"',
     );
     expect(mockIssueRepository.update).toHaveBeenCalledTimes(1);
-    expect(mockIssueRepository.update.mock.calls[0][0]).toMatchObject({
+    const updatedIssue = mockIssueRepository.update.mock.calls[0][0];
+    expect(updatedIssue).toMatchObject({
       url: 'https://github.com/user/repo/issues/42',
       status: 'Awaiting workspace',
     });
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockIssueCommentRepository.createComment).toHaveBeenCalledTimes(1);
     expect(mockIssueCommentRepository.createComment.mock.calls[0][0]).toEqual(
-      stuckIssue,
+      updatedIssue,
     );
     expect(mockIssueCommentRepository.createComment.mock.calls[0][1]).toContain(
       'Preparation',
@@ -167,6 +168,95 @@ describe('RevertOrphanedPreparationUseCase', () => {
     expect(mockIssueCommentRepository.createComment.mock.calls[0][1]).toContain(
       'Awaiting workspace',
     );
+  });
+
+  it('should skip and log when check command exits with unexpected code (not 0 or 1)', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/55',
+      status: 'Preparation',
+    });
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValue([issue]);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: 'pgrep: invalid option',
+      exitCode: 2,
+    });
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting workspace',
+      preparationProcessCheckCommand: 'pgrep -fa "claude-agent.*{URL}"',
+    });
+
+    expect(mockIssueRepository.update).not.toHaveBeenCalled();
+    expect(mockIssueCommentRepository.createComment).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('2'));
+    consoleSpy.mockRestore();
+  });
+
+  it('should throw when preparationProcessCheckCommand does not contain {URL}', async () => {
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValue([]);
+
+    await expect(
+      useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting workspace',
+        preparationProcessCheckCommand: 'pgrep -fa claude-agent',
+      }),
+    ).rejects.toThrow('{URL}');
+  });
+
+  it('should replace all occurrences of {URL} in the command template', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/77',
+      status: 'Preparation',
+    });
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValue([issue]);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 1,
+    });
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting workspace',
+      preparationProcessCheckCommand: 'check {URL} && verify {URL}',
+    });
+
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith(
+      'check https://github.com/user/repo/issues/77 && verify https://github.com/user/repo/issues/77',
+    );
+  });
+
+  it('should propagate error when runCommand rejects', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/88',
+      status: 'Preparation',
+    });
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getAllOpened.mockResolvedValue([issue]);
+    mockLocalCommandRunner.runCommand.mockRejectedValue(
+      new Error('spawn failed'),
+    );
+
+    await expect(
+      useCase.run({
+        projectUrl: 'https://github.com/users/user/projects/1',
+        preparationStatus: 'Preparation',
+        awaitingWorkspaceStatus: 'Awaiting workspace',
+        preparationProcessCheckCommand: 'pgrep -fa "claude-agent.*{URL}"',
+      }),
+    ).rejects.toThrow('spawn failed');
   });
 
   it('should leave an in-flight Preparation issue untouched when check command exits zero', async () => {

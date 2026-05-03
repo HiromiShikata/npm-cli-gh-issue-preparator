@@ -26,6 +26,12 @@ export class RevertOrphanedPreparationUseCase {
     awaitingWorkspaceStatus: string;
     preparationProcessCheckCommand: string;
   }): Promise<void> => {
+    if (!params.preparationProcessCheckCommand.includes('{URL}')) {
+      throw new Error(
+        `preparationProcessCheckCommand must contain '{URL}' placeholder: ${params.preparationProcessCheckCommand}`,
+      );
+    }
+
     let project = await this.projectRepository.getByUrl(params.projectUrl);
     project = await this.projectRepository.prepareStatus(
       params.preparationStatus,
@@ -42,19 +48,28 @@ export class RevertOrphanedPreparationUseCase {
     );
 
     for (const issue of preparationIssues) {
-      const command = params.preparationProcessCheckCommand.replace(
-        '{URL}',
-        issue.url,
-      );
+      const command = params.preparationProcessCheckCommand
+        .split('{URL}')
+        .join(issue.url);
       const { exitCode } = await this.localCommandRunner.runCommand(command);
-      if (exitCode !== 0) {
-        issue.status = params.awaitingWorkspaceStatus;
-        await this.issueRepository.update(issue, project);
-        await this.issueCommentRepository.createComment(
-          issue,
-          `Reverted from ${params.preparationStatus} to ${params.awaitingWorkspaceStatus}: no live worker process found for this issue (check command exited with code ${exitCode}).`,
-        );
+      if (exitCode === 0) {
+        continue;
       }
+      if (exitCode !== 1) {
+        console.error(
+          `Check command exited with unexpected code ${exitCode} for issue ${issue.url}; skipping revert to avoid false positives.`,
+        );
+        continue;
+      }
+      const revertedIssue = {
+        ...issue,
+        status: params.awaitingWorkspaceStatus,
+      };
+      await this.issueRepository.update(revertedIssue, project);
+      await this.issueCommentRepository.createComment(
+        revertedIssue,
+        `Reverted from ${params.preparationStatus} to ${params.awaitingWorkspaceStatus}: no live worker process found for this issue (check command exited with code ${exitCode}).`,
+      );
     }
   };
 }

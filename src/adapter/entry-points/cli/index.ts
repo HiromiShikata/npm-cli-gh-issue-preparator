@@ -173,10 +173,6 @@ const parseProjectReadmeConfig = (readme: string): ConfigFile => {
         parsed,
         'workflowBlockerResolvedWebhookUrl',
       ),
-      preparationProcessCheckCommand: getStringValue(
-        parsed,
-        'preparationProcessCheckCommand',
-      ),
     };
   } catch {
     console.warn('Failed to parse YAML from project README config section');
@@ -239,7 +235,6 @@ const mergeConfigs = (
     cliOverrides.workflowBlockerResolvedWebhookUrl ??
     configFile.workflowBlockerResolvedWebhookUrl,
   preparationProcessCheckCommand:
-    readmeOverrides.preparationProcessCheckCommand ??
     cliOverrides.preparationProcessCheckCommand ??
     configFile.preparationProcessCheckCommand,
 });
