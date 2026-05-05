@@ -175,5 +175,68 @@ describe('TowerDefenceIssueRepository', () => {
 
       expect(getStoryObjectMap).toHaveBeenCalledTimes(1);
     });
+
+    it('should retry on error and succeed when retry succeeds', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const mockIssues: Issue[] = [createMockIssue({ state: 'OPEN' })];
+      mockedGetStoryObjectMap
+        .mockRejectedValueOnce(
+          new TypeError(
+            "Cannot read properties of undefined (reading 'organization')",
+          ),
+        )
+        .mockResolvedValueOnce({
+          project: createMockTowerDefenceProject(),
+          issues: mockIssues,
+          cacheUsed: false,
+          storyObjectMap: createMockStoryObjectMap(),
+        });
+
+      const result = await retryRepository.getAllOpened(createMockProject());
+
+      expect(result).toHaveLength(1);
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      expect(mockSleep).toHaveBeenCalledWith(100);
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should throw with clear error message after exhausting all retries', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const originalError = new TypeError(
+        "Cannot read properties of undefined (reading 'organization')",
+      );
+      mockedGetStoryObjectMap.mockRejectedValue(originalError);
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow(
+        "GitHub API error loading project data from /path/to/config.yml, all retries exhausted: Cannot read properties of undefined (reading 'organization')",
+      );
+
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
   });
 });
