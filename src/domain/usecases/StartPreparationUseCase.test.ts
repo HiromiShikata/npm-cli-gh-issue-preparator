@@ -332,6 +332,52 @@ describe('StartPreparationUseCase', () => {
     );
     consoleWarnSpy.mockRestore();
   });
+  it('should skip and not call wrapper when PR URL has open PR with null branchName', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'https://github.com/user/repo/pull/999',
+        title: 'PR 999',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockIssueRepository.getOpenPullRequest.mockResolvedValue({
+      url: 'https://github.com/user/repo/pull/999',
+      branchName: null,
+      isConflicted: false,
+      isPassedAllCiJob: false,
+      isCiStateSuccess: false,
+      isResolvedAllReviewComments: false,
+      isBranchOutOfDate: false,
+      missingRequiredCheckNames: [],
+    });
+    const consoleWarnSpy = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Skipping PR https://github.com/user/repo/pull/999: head branch is unavailable.',
+    );
+    consoleWarnSpy.mockRestore();
+  });
   it('should skip and not call wrapper when issue has multiple related open PRs', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
