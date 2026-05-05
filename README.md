@@ -62,7 +62,7 @@ You can use GitHub issue labels to customize the agent and model selection for i
 - `llm-agent:{agent-name}` - Overrides the default LLM agent for this issue
 - `llm-model:{model-name}` - Overrides the default LLM model for this issue
 
-Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet`
+Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet-4-6`
 
 **Label priority for agent selection:**
 
@@ -75,6 +75,8 @@ Example: `llm-agent:custom-impl`, `llm-model:claude-sonnet`
 
 1. `llm-model:` label (highest priority)
 2. `defaultLlmModelName` parameter (lowest priority)
+
+If neither is configured for an issue, the use case throws an error. A model must always be provided via `--defaultLlmModelName` or an `llm-model:` label.
 
 **Note:** The `category:` label serves an additional role beyond agent selection: in `notifyFinishedIssuePreparation`, issues with a non-e2e `category:` label skip the PR check. Issues using only `llm-agent:` for agent selection still require a `category:` label (other than `category:e2e`) to skip the PR check during notification.
 

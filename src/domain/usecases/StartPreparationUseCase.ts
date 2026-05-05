@@ -164,9 +164,12 @@ export class StartPreparationUseCase {
         issue.labels
           .find((label: string) => label.startsWith('llm-model:'))
           ?.replace('llm-model:', '')
-          .trim() ||
-        params.defaultLlmModelName ||
-        'claude-sonnet-4.6';
+          .trim() || params.defaultLlmModelName;
+      if (!model) {
+        throw new Error(
+          `No LLM model configured for issue ${issue.url}. Provide --defaultLlmModelName or add an llm-model: label.`,
+        );
+      }
       const isPrUrl = issue.url.includes('/pull/');
       let existingPRBranchName: string | null = null;
       if (isPrUrl) {

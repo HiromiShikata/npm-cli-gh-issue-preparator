@@ -1,3 +1,9 @@
+# [Unreleased]
+
+### Breaking Changes
+
+* **core:** remove hardcoded default LLM model; `defaultLlmModelName` or an `llm-model:` label is now required — omitting both throws an error instead of silently using `claude-sonnet-4.6`
+
 # [1.28.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.27.0...v1.28.0) (2026-05-03)
 
 
