@@ -922,7 +922,9 @@ describe('GraphqlIssueRepository', () => {
         .mockResolvedValue({
           ok: true,
           json: async () => ({
-            errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
           }),
         });
 
