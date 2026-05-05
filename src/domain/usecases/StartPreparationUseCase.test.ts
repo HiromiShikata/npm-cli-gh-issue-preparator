@@ -419,7 +419,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -583,7 +583,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: 'default-llm-agent',
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -592,7 +592,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 research claude-sonnet-4.6 ${mockProject.url}`,
+      `aw url1 research claude-sonnet-4-6 ${mockProject.url}`,
     );
   });
   it('should use category label over defaultLlmAgentName when no llm-agent label', async () => {
@@ -619,7 +619,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: 'default-llm-agent',
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -628,7 +628,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-sonnet-4.6 ${mockProject.url}`,
+      `aw url1 impl claude-sonnet-4-6 ${mockProject.url}`,
     );
   });
   it('should use defaultLlmAgentName over defaultAgentName when no label', async () => {
@@ -655,7 +655,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: 'default-llm-agent',
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -664,7 +664,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 default-llm-agent claude-sonnet-4.6 ${mockProject.url}`,
+      `aw url1 default-llm-agent claude-sonnet-4-6 ${mockProject.url}`,
     );
   });
   it('should use llm-model label over defaultLlmModelName', async () => {
@@ -703,7 +703,7 @@ describe('StartPreparationUseCase', () => {
       `aw url1 impl claude-sonnet ${mockProject.url}`,
     );
   });
-  it('should use claude-sonnet-4.6 as default model when no llm-model label and no defaultLlmModelName', async () => {
+  it('should log error and skip issue when no llm-model label and no defaultLlmModelName', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'url1',
@@ -722,6 +722,9 @@ describe('StartPreparationUseCase', () => {
       stderr: '',
       exitCode: 0,
     });
+    const consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     await useCase.run({
       projectUrl: 'https://github.com/user/repo',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
@@ -734,10 +737,62 @@ describe('StartPreparationUseCase', () => {
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-sonnet-4.6 ${mockProject.url}`,
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'No LLM model configured for issue url1. Provide --defaultLlmModelName or add an llm-model: label.',
     );
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    consoleErrorSpy.mockRestore();
+  });
+  it('should continue processing subsequent issues when one issue has no model configured', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1 (no model)',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+      createMockIssue({
+        url: 'url2',
+        title: 'Issue 2 (with model label)',
+        labels: ['category:impl', 'llm-model:claude-sonnet-4-6'],
+        status: 'Awaiting Workspace',
+        number: 2,
+        itemId: 'item-2',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    const consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'No LLM model configured for issue url1. Provide --defaultLlmModelName or add an llm-model: label.',
+    );
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toContain(
+      'url2 impl claude-sonnet-4-6',
+    );
+    consoleErrorSpy.mockRestore();
   });
   it('should handle no awaiting workspace issues gracefully', async () => {
     // Test that the loop handles an empty awaiting workspace issues array
@@ -799,7 +854,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: 3,
@@ -833,7 +888,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -900,7 +955,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -983,7 +1038,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1025,7 +1080,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1112,7 +1167,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1191,7 +1246,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1299,7 +1354,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1346,7 +1401,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1404,7 +1459,7 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
-        defaultLlmModelName: null,
+        defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
         logFilePath: null,
         maximumPreparingIssuesCount: null,
@@ -1465,7 +1520,7 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
-        defaultLlmModelName: null,
+        defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
         logFilePath: null,
         maximumPreparingIssuesCount: null,
@@ -1515,7 +1570,7 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
-        defaultLlmModelName: null,
+        defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
         logFilePath: null,
         maximumPreparingIssuesCount: null,
@@ -1565,7 +1620,7 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
-        defaultLlmModelName: null,
+        defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
         logFilePath: null,
         maximumPreparingIssuesCount: null,
@@ -1615,7 +1670,7 @@ describe('StartPreparationUseCase', () => {
         awaitingWorkspaceStatus: 'Awaiting Workspace',
         preparationStatus: 'Preparation',
         defaultAgentName: 'agent1',
-        defaultLlmModelName: null,
+        defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
         logFilePath: null,
         maximumPreparingIssuesCount: null,
@@ -1672,7 +1727,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1720,7 +1775,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1767,7 +1822,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
@@ -1831,7 +1886,7 @@ describe('StartPreparationUseCase', () => {
       awaitingWorkspaceStatus: 'Awaiting Workspace',
       preparationStatus: 'Preparation',
       defaultAgentName: 'agent1',
-      defaultLlmModelName: null,
+      defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
       logFilePath: null,
       maximumPreparingIssuesCount: null,
