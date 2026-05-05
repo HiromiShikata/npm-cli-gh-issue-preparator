@@ -343,6 +343,17 @@ defaultAgentName: 'case-test-agent'
 
       expect(result.defaultAgentName).toBe('case-test-agent');
     });
+
+    it('should parse logFileDirPath from README config', () => {
+      const readme = `<details>
+<summary>config</summary>
+logFileDirPath: '/var/log/aw'
+</details>`;
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result.logFileDirPath).toBe('/var/log/aw');
+    });
   });
 
   describe('mergeConfigs', () => {
@@ -416,6 +427,20 @@ defaultAgentName: 'case-test-agent'
       expect(result.defaultAgentName).toBe('config-agent');
       expect(result.maximumPreparingIssuesCount).toBe(20);
       expect(result.allowedIssueAuthors).toBe('readme-user1,readme-user2');
+    });
+
+    it('should use README override for logFileDirPath over config file value', () => {
+      const configFile = {
+        projectUrl: 'https://github.com/config/project',
+        logFileDirPath: '/config/log/dir',
+      };
+      const readmeOverrides = {
+        logFileDirPath: '/readme/log/dir',
+      };
+
+      const result = mergeConfigs(configFile, {}, readmeOverrides);
+
+      expect(result.logFileDirPath).toBe('/readme/log/dir');
     });
   });
 
@@ -637,6 +662,51 @@ defaultAgentName: 'case-test-agent'
       expect(mockRun).toHaveBeenCalledWith(
         expect.objectContaining({
           logFileDirPath: '/var/log/aw',
+          logFilePath: null,
+        }),
+      );
+    });
+
+    it('should pass logFileDirPath from README overriding config file', async () => {
+      const configWithDir = {
+        ...defaultConfig,
+        logFileDirPath: '/config/log/dir',
+      };
+      writeConfig(configWithDir);
+
+      const readmeContent = [
+        '# Project',
+        '<details>',
+        '<summary>config</summary>',
+        "logFileDirPath: '/readme/log/dir'",
+        '</details>',
+      ].join('\n');
+      mockFetchReadme.mockResolvedValueOnce(readmeContent);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logFileDirPath: '/readme/log/dir',
           logFilePath: null,
         }),
       );

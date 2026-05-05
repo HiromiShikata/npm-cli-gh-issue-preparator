@@ -20,7 +20,6 @@ preparationStatus: 'Preparation'
 defaultAgentName: 'impl'
 defaultLlmModelName: 'claude-opus'
 defaultLlmAgentName: 'impl'
-logFilePath: '/path/to/log.txt'
 logFileDirPath: '/path/to/log/dir'
 maximumPreparingIssuesCount: 6
 utilizationPercentageThreshold: 90
