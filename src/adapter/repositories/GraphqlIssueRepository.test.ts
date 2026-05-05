@@ -568,6 +568,33 @@ describe('GraphqlIssueRepository', () => {
       consoleLogSpy.mockRestore();
     });
 
+    it('should throw rate limit error after exhausting retries on GraphQL rate limit for status options', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({ status: 'Preparation' });
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+        }),
+      });
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching status options for project',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
     it('should retry on GraphQL rate limit error when fetching status options', async () => {
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
       const mockSleep = jest.fn().mockResolvedValue(undefined);
@@ -628,6 +655,54 @@ describe('GraphqlIssueRepository', () => {
       expect(mockFetch).toHaveBeenCalledTimes(3);
       expect(mockSleep).toHaveBeenCalledTimes(1);
       consoleLogSpy.mockRestore();
+    });
+
+    it('should use data when rate limit error accompanies valid status options data', async () => {
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await repository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -3876,6 +3951,34 @@ describe('GraphqlIssueRepository', () => {
       consoleLogSpy.mockRestore();
     });
 
+    it('should throw rate limit error after exhausting retries on GraphQL rate limit for timeline', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+        }),
+      });
+
+      await expect(
+        retryRepository.findRelatedOpenPRs(
+          'https://github.com/user/repo/issues/1',
+        ),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching issue timeline for',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
     it('should retry on GraphQL rate limit error when fetching issue timeline', async () => {
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
       const mockSleep = jest.fn().mockResolvedValue(undefined);
@@ -3918,6 +4021,34 @@ describe('GraphqlIssueRepository', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockSleep).toHaveBeenCalledTimes(1);
       consoleLogSpy.mockRestore();
+    });
+
+    it('should use data when rate limit error accompanies valid timeline data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          errors: [
+            { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+          ],
+          data: {
+            repository: {
+              issue: {
+                timelineItems: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [],
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -5863,6 +5994,32 @@ describe('GraphqlIssueRepository', () => {
       consoleLogSpy.mockRestore();
     });
 
+    it('should throw rate limit error after exhausting retries on GraphQL rate limit for pull request', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+        }),
+      });
+
+      await expect(
+        retryRepository.getOpenPullRequest(prUrl),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching pull request',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
     it('should retry on GraphQL rate limit error when fetching pull request', async () => {
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
       const mockSleep = jest.fn().mockResolvedValue(undefined);
@@ -5906,6 +6063,62 @@ describe('GraphqlIssueRepository', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockSleep).toHaveBeenCalledTimes(1);
       consoleLogSpy.mockRestore();
+    });
+
+    it('should use pull request data when rate limit error accompanies valid PR data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          errors: [
+            { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+          ],
+          data: {
+            repository: {
+              pullRequest: {
+                url: prUrl,
+                state: 'OPEN',
+                headRefName: 'feature-branch',
+                baseRefName: 'main',
+                mergeable: 'MERGEABLE',
+                commits: { nodes: [] },
+                reviewThreads: { nodes: [] },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use pull request data when non-rate-limit error accompanies valid PR data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'SOME_ERROR', message: 'Some error occurred' }],
+          data: {
+            repository: {
+              pullRequest: {
+                url: prUrl,
+                state: 'OPEN',
+                headRefName: 'feature-branch',
+                baseRefName: 'main',
+                mergeable: 'MERGEABLE',
+                commits: { nodes: [] },
+                reviewThreads: { nodes: [] },
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await repository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 

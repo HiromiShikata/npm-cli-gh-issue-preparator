@@ -238,5 +238,28 @@ describe('TowerDefenceIssueRepository', () => {
       consoleLogSpy.mockRestore();
       consoleWarnSpy.mockRestore();
     });
+
+    it('should include non-Error thrown value in exhaustion error message', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockedGetStoryObjectMap.mockRejectedValue('non-error string failure');
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API error loading project data from /path/to/config.yml, all retries exhausted: non-error string failure',
+      );
+
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
   });
 });
