@@ -2,7 +2,7 @@
 
 ### Breaking Changes
 
-* **core:** `StartPreparationUseCase.run()` now accepts `configFilePath: string` instead of `logFilePath: string | null`. The wrapper command is rewritten to `aw <issueUrl> <agent> <model> --configFilePath <path>`, passing the config file path as the single source of truth. The positional `projectUrl` argument and the `--logFilePath` argument are no longer included in the wrapper invocation. `projectUrl` must be set in the config YAML file when using `startDaemon`; providing it only via `--projectUrl` CLI flag is insufficient because the wrapper reads it directly from the config file.
+* **core:** `StartPreparationUseCase.run()` now accepts `configFilePath: string` instead of `logFilePath: string | null`. The wrapper command is rewritten to `aw <issueUrl> <agent> <model> --configFilePath <path>`, passing the config file path as the single source of truth. The positional `projectUrl` argument and the `--logFilePath` argument are no longer included in the wrapper invocation. Because the wrapper script reads project-scoped values (including `projectUrl`) directly from the config file, `projectUrl` MUST be present in the config YAML when using `startDaemon`; providing it only via the `--projectUrl` CLI flag is no longer sufficient and will result in an error.
 
 ### Features
 

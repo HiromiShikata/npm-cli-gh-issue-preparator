@@ -971,7 +971,7 @@ defaultAgentName: 'case-test-agent'
       processExitSpy.mockRestore();
     });
 
-    it('should exit with error when projectUrl is missing from both CLI and config', async () => {
+    it('should exit with error when projectUrl is missing from config file', async () => {
       const configWithoutProjectUrl = {
         awaitingWorkspaceStatus: 'Awaiting',
         preparationStatus: 'Preparing',
@@ -997,7 +997,7 @@ defaultAgentName: 'case-test-agent'
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'projectUrl is required. Provide via --projectUrl, config file, or project README.',
+        'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 

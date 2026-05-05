@@ -305,12 +305,17 @@ program
     const tempProjectUrl =
       cliOverrides.projectUrl ?? configFileValues.projectUrl;
 
+    if (!tempProjectUrl) {
+      console.error(
+        'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
+      );
+      process.exit(1);
+    }
+
     let readmeOverrides: ConfigFile = {};
-    if (tempProjectUrl) {
-      const readme = await fetchProjectReadme(tempProjectUrl, token);
-      if (readme) {
-        readmeOverrides = parseProjectReadmeConfig(readme);
-      }
+    const readme = await fetchProjectReadme(tempProjectUrl, token);
+    if (readme) {
+      readmeOverrides = parseProjectReadmeConfig(readme);
     }
 
     const config = mergeConfigs(
@@ -319,19 +324,13 @@ program
       readmeOverrides,
     );
 
-    const projectUrl = config.projectUrl;
+    const projectUrl = tempProjectUrl;
     const awaitingWorkspaceStatus = config.awaitingWorkspaceStatus;
     const preparationStatus = config.preparationStatus;
     const defaultAgentName = config.defaultAgentName;
     const defaultLlmModelName = config.defaultLlmModelName;
     const defaultLlmAgentName = config.defaultLlmAgentName;
 
-    if (!projectUrl) {
-      console.error(
-        'projectUrl is required. Provide via --projectUrl, config file, or project README.',
-      );
-      process.exit(1);
-    }
     if (!awaitingWorkspaceStatus) {
       console.error(
         'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus, config file, or project README.',

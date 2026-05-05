@@ -57,7 +57,11 @@ Only the content inside the `<details><summary>config</summary>` section is pars
 
 ### Wrapper Script Contract
 
-`startDaemon` invokes a wrapper script (`aw`) for each issue. The wrapper receives `--configFilePath <path>` as the single source of truth for all project-scoped values (`projectUrl`, `logFilePath`, status names, etc.). The wrapper is expected to call `notifyFinishedIssuePreparation --configFilePath <path> --issueUrl <url>`, which resolves all project-scoped values from the config file.
+`startDaemon` invokes a wrapper script (`aw`) for each issue. The wrapper receives `--configFilePath <path>` as the single source of truth for project-scoped values. The wrapper is expected to call `notifyFinishedIssuePreparation --configFilePath <path> --issueUrl <url>`.
+
+`projectUrl` MUST be present in the config YAML file when using `startDaemon`. The wrapper script reads `projectUrl` directly from the config file; providing it only via `--projectUrl` CLI flag is not sufficient and will cause `startDaemon` to fail with an error.
+
+`awaitingWorkspaceStatus`, `preparationStatus`, and `awaitingQualityCheckStatus` can be provided in the config YAML or in the GitHub Project README (since the wrapper can fetch the README using `projectUrl` from the config file). `projectUrl` and `configFilePath` cannot be set via Project README since the README is fetched using these values.
 
 ### Issue Labels
 
