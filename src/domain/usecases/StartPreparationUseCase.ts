@@ -175,10 +175,14 @@ export class StartPreparationUseCase {
       let branchName: string;
       if (isPrUrl) {
         const pr = await this.issueRepository.getOpenPullRequest(issue.url);
-        if (pr === null || pr.branchName === null) {
+        if (pr === null) {
           console.warn(
             `Skipping non-OPEN PR ${issue.url}: wrapper requires an open PR.`,
           );
+          continue;
+        }
+        if (pr.branchName === null) {
+          console.warn(`Skipping PR ${issue.url}: head branch is unavailable.`);
           continue;
         }
         branchName = pr.branchName;
@@ -191,10 +195,13 @@ export class StartPreparationUseCase {
             `Skipping issue ${issue.url}: ${relatedPRs.length} related open PRs found (ambiguous).`,
           );
           continue;
-        } else if (
-          relatedPRs.length === 1 &&
-          relatedPRs[0].branchName !== null
-        ) {
+        } else if (relatedPRs.length === 1) {
+          if (relatedPRs[0].branchName === null) {
+            console.warn(
+              `Skipping issue ${issue.url}: related open PR has unavailable head branch.`,
+            );
+            continue;
+          }
           branchName = relatedPRs[0].branchName;
         } else {
           branchName = `i${issue.number}`;
