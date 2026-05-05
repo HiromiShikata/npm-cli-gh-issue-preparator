@@ -631,7 +631,7 @@ logFileDirPath: '/var/log/aw'
       });
     });
 
-    it('should pass logFileDirPath from config file', async () => {
+    it('should pass configFilePath to use case when logFileDirPath is set in config file', async () => {
       const configWithDir = {
         ...defaultConfig,
         logFileDirPath: '/var/log/aw',
@@ -661,13 +661,12 @@ logFileDirPath: '/var/log/aw'
       expect(mockRun).toHaveBeenCalledTimes(1);
       expect(mockRun).toHaveBeenCalledWith(
         expect.objectContaining({
-          logFileDirPath: '/var/log/aw',
-          logFilePath: null,
+          configFilePath: configFilePath,
         }),
       );
     });
 
-    it('should pass logFileDirPath from README overriding config file', async () => {
+    it('should pass configFilePath to use case when README has logFileDirPath', async () => {
       const configWithDir = {
         ...defaultConfig,
         logFileDirPath: '/config/log/dir',
@@ -706,8 +705,7 @@ logFileDirPath: '/var/log/aw'
       expect(mockRun).toHaveBeenCalledTimes(1);
       expect(mockRun).toHaveBeenCalledWith(
         expect.objectContaining({
-          logFileDirPath: '/readme/log/dir',
-          logFilePath: null,
+          configFilePath: configFilePath,
         }),
       );
     });
