@@ -211,10 +211,15 @@ export class StartPreparationUseCase {
       issue.status = params.preparationStatus;
       await this.issueRepository.update(issue, project);
 
-      const shellQuote = (arg: string): string =>
-        `'${arg.replace(/'/g, "'\\''")}'`;
-      const command = `aw ${shellQuote(issue.url)} ${shellQuote(agent)} ${shellQuote(model)} --configFilePath ${shellQuote(params.configFilePath)} --branch ${shellQuote(branchName)}`;
-      await this.localCommandRunner.runCommand(command);
+      await this.localCommandRunner.runCommand('aw', [
+        issue.url,
+        agent,
+        model,
+        '--configFilePath',
+        params.configFilePath,
+        '--branch',
+        branchName,
+      ]);
       updatedCurrentPreparationIssueCount++;
     }
   };

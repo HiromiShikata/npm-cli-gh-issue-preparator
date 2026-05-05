@@ -1,17 +1,20 @@
 import { LocalCommandRunner } from '../../domain/usecases/adapter-interfaces/LocalCommandRunner';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class NodeLocalCommandRunner implements LocalCommandRunner {
-  async runCommand(command: string): Promise<{
+  async runCommand(
+    program: string,
+    args: string[],
+  ): Promise<{
     stdout: string;
     stderr: string;
     exitCode: number;
   }> {
     try {
-      const { stdout, stderr } = await execAsync(command);
+      const { stdout, stderr } = await execFileAsync(program, args);
       return {
         stdout,
         stderr,

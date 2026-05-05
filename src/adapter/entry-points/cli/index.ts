@@ -39,7 +39,6 @@ type StartDaemonOptions = {
   defaultAgentName?: string;
   defaultLlmModelName?: string;
   defaultLlmAgentName?: string;
-  logFilePath?: string;
   maximumPreparingIssuesCount?: string;
   utilizationPercentageThreshold?: string;
   allowedIssueAuthors?: string;
@@ -263,7 +262,6 @@ program
   .option('--defaultAgentName <name>', 'Default agent name')
   .option('--defaultLlmModelName <name>', 'Default LLM model name')
   .option('--defaultLlmAgentName <name>', 'Default LLM agent name')
-  .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
     'Maximum number of issues in preparation status (default: 6)',
@@ -292,7 +290,6 @@ program
       defaultAgentName: options.defaultAgentName,
       defaultLlmModelName: options.defaultLlmModelName,
       defaultLlmAgentName: options.defaultLlmAgentName,
-      logFilePath: options.logFilePath,
       maximumPreparingIssuesCount: options.maximumPreparingIssuesCount
         ? Number(options.maximumPreparingIssuesCount)
         : undefined,
@@ -305,6 +302,16 @@ program
     if (!configFileValues.projectUrl) {
       console.error(
         'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
+      );
+      process.exit(1);
+    }
+
+    if (
+      options.projectUrl &&
+      options.projectUrl !== configFileValues.projectUrl
+    ) {
+      console.error(
+        `--projectUrl '${options.projectUrl}' does not match the projectUrl in the config file '${configFileValues.projectUrl}'. The wrapper reads projectUrl from the config file; a differing --projectUrl value would cause startDaemon to prepare issues in one project while the wrapper notifies status in another.`,
       );
       process.exit(1);
     }

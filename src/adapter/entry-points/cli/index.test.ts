@@ -448,7 +448,7 @@ defaultAgentName: 'case-test-agent'
       });
     });
 
-    it('should allow CLI args to override config file values', async () => {
+    it('should allow CLI args to override config file values for fields other than projectUrl', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined);
       const MockedStartPreparationUseCase = jest.mocked(
         StartPreparationUseCase,
@@ -467,15 +467,13 @@ defaultAgentName: 'case-test-agent'
         'startDaemon',
         '--configFilePath',
         configFilePath,
-        '--projectUrl',
-        'https://github.com/override/project',
         '--defaultAgentName',
         'override-agent',
       ]);
 
       expect(mockRun).toHaveBeenCalledTimes(1);
       expect(mockRun).toHaveBeenCalledWith({
-        projectUrl: 'https://github.com/override/project',
+        projectUrl: 'https://github.com/test/project',
         awaitingWorkspaceStatus: 'Awaiting',
         preparationStatus: 'Preparing',
         defaultAgentName: 'override-agent',
@@ -486,6 +484,40 @@ defaultAgentName: 'case-test-agent'
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
+    });
+
+    it('should error when --projectUrl does not match config file projectUrl', async () => {
+      const mockExit = jest
+        .spyOn(process, 'exit')
+        .mockImplementation((_code) => {
+          throw new Error('process.exit called');
+        });
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await expect(
+        program.parseAsync([
+          'node',
+          'test',
+          'startDaemon',
+          '--configFilePath',
+          configFilePath,
+          '--projectUrl',
+          'https://github.com/different/project',
+        ]),
+      ).rejects.toThrow('process.exit called');
+
+      expect(mockRun).not.toHaveBeenCalled();
+      mockExit.mockRestore();
     });
 
     it('should pass configFilePath to use case', async () => {
@@ -524,7 +556,7 @@ defaultAgentName: 'case-test-agent'
       });
     });
 
-    it('should pass configFilePath to use case even when logFilePath is set', async () => {
+    it('should pass configFilePath to use case when logFilePath is set in config file', async () => {
       const configWithLog = {
         ...defaultConfig,
         logFilePath: '/path/to/config-log.txt',
@@ -549,8 +581,6 @@ defaultAgentName: 'case-test-agent'
         'startDaemon',
         '--configFilePath',
         configFilePath,
-        '--logFilePath',
-        '/path/to/cli-log.txt',
       ]);
 
       expect(mockRun).toHaveBeenCalledTimes(1);

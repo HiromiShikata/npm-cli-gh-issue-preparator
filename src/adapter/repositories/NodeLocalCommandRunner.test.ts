@@ -1,11 +1,11 @@
-const mockExecAsync = jest.fn();
+const mockExecFileAsync = jest.fn();
 
 jest.mock('child_process', () => ({
-  exec: jest.fn(),
+  execFile: jest.fn(),
 }));
 
 jest.mock('util', () => ({
-  promisify: jest.fn(() => mockExecAsync),
+  promisify: jest.fn(() => mockExecFileAsync),
 }));
 
 import { NodeLocalCommandRunner } from './NodeLocalCommandRunner';
@@ -20,19 +20,19 @@ describe('NodeLocalCommandRunner', () => {
 
   describe('runCommand', () => {
     it('should execute command successfully', async () => {
-      mockExecAsync.mockResolvedValue({
+      mockExecFileAsync.mockResolvedValue({
         stdout: 'command output',
         stderr: '',
       });
 
-      const result = await runner.runCommand('echo "test"');
+      const result = await runner.runCommand('echo', ['test']);
 
       expect(result).toEqual({
         stdout: 'command output',
         stderr: '',
         exitCode: 0,
       });
-      expect(mockExecAsync).toHaveBeenCalledWith('echo "test"');
+      expect(mockExecFileAsync).toHaveBeenCalledWith('echo', ['test']);
     });
 
     it('should handle command errors with exit code', async () => {
@@ -41,9 +41,9 @@ describe('NodeLocalCommandRunner', () => {
         stdout: 'partial output',
         stderr: 'error message',
       });
-      mockExecAsync.mockRejectedValue(error);
+      mockExecFileAsync.mockRejectedValue(error);
 
-      const result = await runner.runCommand('invalid-command');
+      const result = await runner.runCommand('invalid-command', []);
 
       expect(result).toEqual({
         stdout: 'partial output',
@@ -58,9 +58,9 @@ describe('NodeLocalCommandRunner', () => {
         stdout: '',
         stderr: 'command not found',
       });
-      mockExecAsync.mockRejectedValue(error);
+      mockExecFileAsync.mockRejectedValue(error);
 
-      const result = await runner.runCommand('nonexistent');
+      const result = await runner.runCommand('nonexistent', []);
 
       expect(result).toEqual({
         stdout: '',
@@ -70,9 +70,9 @@ describe('NodeLocalCommandRunner', () => {
     });
 
     it('should throw error if error format is unexpected', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Unexpected error'));
+      mockExecFileAsync.mockRejectedValue(new Error('Unexpected error'));
 
-      await expect(runner.runCommand('command')).rejects.toThrow(
+      await expect(runner.runCommand('command', [])).rejects.toThrow(
         'Unexpected error',
       );
     });
