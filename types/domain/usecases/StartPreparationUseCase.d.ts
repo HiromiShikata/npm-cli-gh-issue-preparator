@@ -27,7 +27,7 @@ export declare class StartPreparationUseCase {
     defaultAgentName: string;
     defaultLlmModelName: string | null;
     defaultLlmAgentName: string | null;
-    logFilePath: string | null;
+    configFilePath: string;
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
     allowedIssueAuthors: string[] | null;

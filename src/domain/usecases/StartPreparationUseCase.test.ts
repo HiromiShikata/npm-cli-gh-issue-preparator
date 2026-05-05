@@ -137,7 +137,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -181,7 +181,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -193,9 +193,15 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'impl',
+      'claude-opus',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should pass --branch to aw command when issue has an existing linked PR', async () => {
     const awaitingIssues: Issue[] = [
@@ -234,15 +240,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'impl',
+      'claude-opus',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should pass --branch with PR branch name when issue URL is a PR URL', async () => {
     const awaitingIssues: Issue[] = [
@@ -280,15 +292,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw https://github.com/user/repo/pull/354 impl claude-opus ${mockProject.url} --branch dependabot/npm_and_yarn/multi-cc382f683c`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'https://github.com/user/repo/pull/354',
+      'impl',
+      'claude-opus',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'dependabot/npm_and_yarn/multi-cc382f683c',
+    ]);
     expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
     expect(mockIssueRepository.getOpenPullRequest).toHaveBeenCalledWith(
       'https://github.com/user/repo/pull/354',
@@ -319,7 +337,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -366,7 +384,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -423,7 +441,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -472,7 +490,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -516,7 +534,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -573,7 +591,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -582,7 +600,7 @@ describe('StartPreparationUseCase', () => {
     expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
   });
-  it('should append logFilePath to aw command when provided', async () => {
+  it('should pass configFilePath to aw command', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'url1',
@@ -608,17 +626,23 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: '/path/to/log.txt',
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url} --logFilePath /path/to/log.txt --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'impl',
+      'claude-opus',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
-  it('should not append logFilePath to aw command when not provided', async () => {
+  it('should use configFilePath in aw command', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'url1',
@@ -644,15 +668,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'impl',
+      'claude-opus',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should use llm-agent label over category label and defaultLlmAgentName', async () => {
     const awaitingIssues: Issue[] = [
@@ -680,15 +710,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: 'default-llm-agent',
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 research claude-sonnet-4-6 ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'research',
+      'claude-sonnet-4-6',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should use category label over defaultLlmAgentName when no llm-agent label', async () => {
     const awaitingIssues: Issue[] = [
@@ -716,15 +752,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: 'default-llm-agent',
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-sonnet-4-6 ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'impl',
+      'claude-sonnet-4-6',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should use defaultLlmAgentName over defaultAgentName when no label', async () => {
     const awaitingIssues: Issue[] = [
@@ -752,15 +794,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: 'default-llm-agent',
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 default-llm-agent claude-sonnet-4-6 ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'default-llm-agent',
+      'claude-sonnet-4-6',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should use llm-model label over defaultLlmModelName', async () => {
     const awaitingIssues: Issue[] = [
@@ -788,15 +836,21 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-opus',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-sonnet ${mockProject.url} --branch i1`,
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url1',
+      'impl',
+      'claude-sonnet',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i1',
+    ]);
   });
   it('should log error and skip issue when no llm-model label and no defaultLlmModelName', async () => {
     const awaitingIssues: Issue[] = [
@@ -827,7 +881,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -875,7 +929,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -884,9 +938,15 @@ describe('StartPreparationUseCase', () => {
       'No LLM model configured for issue url1. Provide --defaultLlmModelName or add an llm-model: label.',
     );
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toContain(
-      'url2 impl claude-sonnet-4-6',
-    );
+    expect(mockLocalCommandRunner.runCommand).toHaveBeenCalledWith('aw', [
+      'url2',
+      'impl',
+      'claude-sonnet-4-6',
+      '--configFilePath',
+      '/path/to/config.yml',
+      '--branch',
+      'i2',
+    ]);
     consoleErrorSpy.mockRestore();
   });
   it('should handle no awaiting workspace issues gracefully', async () => {
@@ -916,7 +976,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -951,7 +1011,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: 3,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -985,7 +1045,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1052,7 +1112,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1092,7 +1152,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1135,7 +1195,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1177,7 +1237,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1223,7 +1283,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1264,7 +1324,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 100,
       allowedIssueAuthors: null,
@@ -1300,7 +1360,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1343,7 +1403,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1372,7 +1432,7 @@ describe('StartPreparationUseCase', () => {
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: '/path/to/config.yml',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1409,7 +1469,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: null,
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 70,
       allowedIssueAuthors: null,
@@ -1451,7 +1511,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 80,
       allowedIssueAuthors: null,
@@ -1498,7 +1558,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1556,7 +1616,7 @@ describe('StartPreparationUseCase', () => {
         defaultAgentName: 'agent1',
         defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: '/path/to/config.yml',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1617,7 +1677,7 @@ describe('StartPreparationUseCase', () => {
         defaultAgentName: 'agent1',
         defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: '/path/to/config.yml',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1667,7 +1727,7 @@ describe('StartPreparationUseCase', () => {
         defaultAgentName: 'agent1',
         defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: '/path/to/config.yml',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1717,7 +1777,7 @@ describe('StartPreparationUseCase', () => {
         defaultAgentName: 'agent1',
         defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: '/path/to/config.yml',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1767,7 +1827,7 @@ describe('StartPreparationUseCase', () => {
         defaultAgentName: 'agent1',
         defaultLlmModelName: 'claude-sonnet-4-6',
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: '/path/to/config.yml',
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1824,7 +1884,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: ['user1', 'user2'],
@@ -1872,7 +1932,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
@@ -1919,7 +1979,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: ['user1', 'user2'],
@@ -1983,7 +2043,7 @@ describe('StartPreparationUseCase', () => {
       defaultAgentName: 'agent1',
       defaultLlmModelName: 'claude-sonnet-4-6',
       defaultLlmAgentName: null,
-      logFilePath: null,
+      configFilePath: '/path/to/config.yml',
       maximumPreparingIssuesCount: null,
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: ['user1'],

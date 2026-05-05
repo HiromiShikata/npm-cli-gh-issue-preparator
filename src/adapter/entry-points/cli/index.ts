@@ -39,7 +39,6 @@ type StartDaemonOptions = {
   defaultAgentName?: string;
   defaultLlmModelName?: string;
   defaultLlmAgentName?: string;
-  logFilePath?: string;
   maximumPreparingIssuesCount?: string;
   utilizationPercentageThreshold?: string;
   allowedIssueAuthors?: string;
@@ -263,7 +262,6 @@ program
   .option('--defaultAgentName <name>', 'Default agent name')
   .option('--defaultLlmModelName <name>', 'Default LLM model name')
   .option('--defaultLlmAgentName <name>', 'Default LLM agent name')
-  .option('--logFilePath <path>', 'Path to log file')
   .option(
     '--maximumPreparingIssuesCount <count>',
     'Maximum number of issues in preparation status (default: 6)',
@@ -292,7 +290,6 @@ program
       defaultAgentName: options.defaultAgentName,
       defaultLlmModelName: options.defaultLlmModelName,
       defaultLlmAgentName: options.defaultLlmAgentName,
-      logFilePath: options.logFilePath,
       maximumPreparingIssuesCount: options.maximumPreparingIssuesCount
         ? Number(options.maximumPreparingIssuesCount)
         : undefined,
@@ -302,15 +299,30 @@ program
       allowedIssueAuthors: options.allowedIssueAuthors,
     };
 
+    if (!configFileValues.projectUrl) {
+      console.error(
+        'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
+      );
+      process.exit(1);
+    }
+
+    if (
+      options.projectUrl &&
+      options.projectUrl !== configFileValues.projectUrl
+    ) {
+      console.error(
+        `--projectUrl '${options.projectUrl}' does not match the projectUrl in the config file '${configFileValues.projectUrl}'. The wrapper reads projectUrl from the config file; a differing --projectUrl value would cause startDaemon to prepare issues in one project while the wrapper notifies status in another.`,
+      );
+      process.exit(1);
+    }
+
     const tempProjectUrl =
       cliOverrides.projectUrl ?? configFileValues.projectUrl;
 
     let readmeOverrides: ConfigFile = {};
-    if (tempProjectUrl) {
-      const readme = await fetchProjectReadme(tempProjectUrl, token);
-      if (readme) {
-        readmeOverrides = parseProjectReadmeConfig(readme);
-      }
+    const readme = await fetchProjectReadme(tempProjectUrl, token);
+    if (readme) {
+      readmeOverrides = parseProjectReadmeConfig(readme);
     }
 
     const config = mergeConfigs(
@@ -319,20 +331,13 @@ program
       readmeOverrides,
     );
 
-    const projectUrl = config.projectUrl;
+    const projectUrl = tempProjectUrl;
     const awaitingWorkspaceStatus = config.awaitingWorkspaceStatus;
     const preparationStatus = config.preparationStatus;
     const defaultAgentName = config.defaultAgentName;
     const defaultLlmModelName = config.defaultLlmModelName;
     const defaultLlmAgentName = config.defaultLlmAgentName;
-    const logFilePath = config.logFilePath;
 
-    if (!projectUrl) {
-      console.error(
-        'projectUrl is required. Provide via --projectUrl, config file, or project README.',
-      );
-      process.exit(1);
-    }
     if (!awaitingWorkspaceStatus) {
       console.error(
         'awaitingWorkspaceStatus is required. Provide via --awaitingWorkspaceStatus, config file, or project README.',
@@ -442,7 +447,7 @@ program
       defaultAgentName,
       defaultLlmModelName: defaultLlmModelName ?? null,
       defaultLlmAgentName: defaultLlmAgentName ?? null,
-      logFilePath: logFilePath ?? null,
+      configFilePath: options.configFilePath,
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,
       allowedIssueAuthors,

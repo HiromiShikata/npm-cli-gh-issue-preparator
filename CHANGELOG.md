@@ -1,3 +1,9 @@
+# [Unreleased]
+
+### Breaking Changes
+
+* **core:** `StartPreparationUseCase.run()` now accepts `configFilePath: string` instead of `logFilePath: string | null`. The wrapper command is rewritten to `aw <issueUrl> <agent> <model> --configFilePath <path>`, passing the config file path as the single source of truth. The positional `projectUrl` argument and the `--logFilePath` argument are no longer included in the wrapper invocation. Because the wrapper script reads project-scoped values (including `projectUrl`) directly from the config file, `projectUrl` MUST be present in the config YAML when using `startDaemon`; providing it only via the `--projectUrl` CLI flag is no longer sufficient and will result in an error.
+
 # [1.30.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.29.1...v1.30.0) (2026-05-05)
 
 
@@ -9,12 +15,6 @@
 ### Features
 
 * **core:** always pass --branch to wrapper; skip non-OPEN and ambiguous PR cases ([a7f95b5](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/a7f95b513bdea5ef01a2139828f8a2a428da8dd5))
-
-# [Unreleased]
-
-### Features
-
-* **core:** always pass --branch to wrapper; skip non-OPEN PRs and ambiguous multi-PR issues; derive i<number> branch for issues with no related open PR
 
 ## [1.29.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.29.0...v1.29.1) (2026-05-05)
 
@@ -35,12 +35,6 @@
 ### Features
 
 * **core:** remove hardcoded LLM model default; require explicit config or label ([776b2b8](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/776b2b8393af72a05a30273c548870e406b22296))
-
-# [Unreleased]
-
-### Breaking Changes
-
-* **core:** remove hardcoded default LLM model; `defaultLlmModelName` or an `llm-model:` label is now required — omitting both logs an error and skips the issue instead of silently using the old `claude-sonnet-4.6` literal (use CLI-executable forms such as `claude-sonnet-4-6` or alias `sonnet`)
 
 # [1.28.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.27.0...v1.28.0) (2026-05-03)
 

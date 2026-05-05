@@ -441,14 +441,14 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
     });
 
-    it('should allow CLI args to override config file values', async () => {
+    it('should allow CLI args to override config file values for fields other than projectUrl', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined);
       const MockedStartPreparationUseCase = jest.mocked(
         StartPreparationUseCase,
@@ -467,34 +467,60 @@ defaultAgentName: 'case-test-agent'
         'startDaemon',
         '--configFilePath',
         configFilePath,
-        '--projectUrl',
-        'https://github.com/override/project',
         '--defaultAgentName',
         'override-agent',
       ]);
 
       expect(mockRun).toHaveBeenCalledTimes(1);
       expect(mockRun).toHaveBeenCalledWith({
-        projectUrl: 'https://github.com/override/project',
+        projectUrl: 'https://github.com/test/project',
         awaitingWorkspaceStatus: 'Awaiting',
         preparationStatus: 'Preparing',
         defaultAgentName: 'override-agent',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
     });
 
-    it('should pass logFilePath from config file', async () => {
-      const configWithLog = {
-        ...defaultConfig,
-        logFilePath: '/path/to/log.txt',
-      };
-      writeConfig(configWithLog);
+    it('should error when --projectUrl does not match config file projectUrl', async () => {
+      const mockExit = jest
+        .spyOn(process, 'exit')
+        .mockImplementation((_code) => {
+          throw new Error('process.exit called');
+        });
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
 
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await expect(
+        program.parseAsync([
+          'node',
+          'test',
+          'startDaemon',
+          '--configFilePath',
+          configFilePath,
+          '--projectUrl',
+          'https://github.com/different/project',
+        ]),
+      ).rejects.toThrow('process.exit called');
+
+      expect(mockRun).not.toHaveBeenCalled();
+      mockExit.mockRestore();
+    });
+
+    it('should pass configFilePath to use case', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined);
       const MockedStartPreparationUseCase = jest.mocked(
         StartPreparationUseCase,
@@ -523,14 +549,14 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: '/path/to/log.txt',
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
     });
 
-    it('should pass logFilePath from CLI overriding config', async () => {
+    it('should pass configFilePath to use case when logFilePath is set in config file', async () => {
       const configWithLog = {
         ...defaultConfig,
         logFilePath: '/path/to/config-log.txt',
@@ -555,8 +581,6 @@ defaultAgentName: 'case-test-agent'
         'startDaemon',
         '--configFilePath',
         configFilePath,
-        '--logFilePath',
-        '/path/to/cli-log.txt',
       ]);
 
       expect(mockRun).toHaveBeenCalledTimes(1);
@@ -567,7 +591,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: '/path/to/cli-log.txt',
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -609,7 +633,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: 10,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -653,7 +677,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: 20,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -811,7 +835,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 75,
         allowedIssueAuthors: null,
@@ -855,7 +879,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 50,
         allowedIssueAuthors: null,
@@ -977,7 +1001,7 @@ defaultAgentName: 'case-test-agent'
       processExitSpy.mockRestore();
     });
 
-    it('should exit with error when projectUrl is missing from both CLI and config', async () => {
+    it('should exit with error when projectUrl is missing from config file', async () => {
       const configWithoutProjectUrl = {
         awaitingWorkspaceStatus: 'Awaiting',
         preparationStatus: 'Preparing',
@@ -1003,7 +1027,43 @@ defaultAgentName: 'case-test-agent'
       ).rejects.toThrow('process.exit called');
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'projectUrl is required. Provide via --projectUrl, config file, or project README.',
+        'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
+      );
+      expect(processExitSpy).toHaveBeenCalledWith(1);
+
+      consoleErrorSpy.mockRestore();
+      processExitSpy.mockRestore();
+    });
+
+    it('should exit with error when projectUrl is provided via CLI but missing from config file', async () => {
+      const configWithoutProjectUrl = {
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+      };
+      writeConfig(configWithoutProjectUrl);
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const processExitSpy = jest
+        .spyOn(process, 'exit')
+        .mockImplementation(() => {
+          throw new Error('process.exit called');
+        });
+
+      await expect(
+        program.parseAsync([
+          'node',
+          'test',
+          'startDaemon',
+          '--configFilePath',
+          configFilePath,
+          '--projectUrl',
+          'https://github.com/cli-only/project',
+        ]),
+      ).rejects.toThrow('process.exit called');
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
       );
       expect(processExitSpy).toHaveBeenCalledWith(1);
 
@@ -1148,7 +1208,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user1', 'user2'],
@@ -1190,7 +1250,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1234,7 +1294,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user3', 'user4'],

@@ -28,7 +28,7 @@ export class StartPreparationUseCase {
     defaultAgentName: string;
     defaultLlmModelName: string | null;
     defaultLlmAgentName: string | null;
-    logFilePath: string | null;
+    configFilePath: string;
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
     allowedIssueAuthors: string[] | null;
@@ -211,11 +211,15 @@ export class StartPreparationUseCase {
       issue.status = params.preparationStatus;
       await this.issueRepository.update(issue, project);
 
-      const logFilePathArg = params.logFilePath
-        ? `--logFilePath ${params.logFilePath}`
-        : null;
-      const command = `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''} --branch ${branchName}`;
-      await this.localCommandRunner.runCommand(command);
+      await this.localCommandRunner.runCommand('aw', [
+        issue.url,
+        agent,
+        model,
+        '--configFilePath',
+        params.configFilePath,
+        '--branch',
+        branchName,
+      ]);
       updatedCurrentPreparationIssueCount++;
     }
   };
