@@ -43,6 +43,9 @@ export class TowerDefenceProjectRepository implements ProjectRepository {
         this.cachedProject = result.project;
         return result.project;
       } catch (error) {
+        if (error instanceof Error && !this.isTransientGitHubApiError(error)) {
+          throw error;
+        }
         lastError = error;
         console.warn(
           `Failed to load project from ${this.configFilePath} (attempt ${attempt + 1}/${this.retryDelaysMs.length + 1}): ${error instanceof Error ? error.message : String(error)}`,
@@ -55,6 +58,20 @@ export class TowerDefenceProjectRepository implements ProjectRepository {
       lastError instanceof Error ? lastError.message : String(lastError);
     throw new Error(
       `GitHub API error loading project from ${this.configFilePath}, all retries exhausted: ${errorMessage}`,
+    );
+  }
+
+  private isTransientGitHubApiError(error: Error): boolean {
+    if (error instanceof TypeError) {
+      return true;
+    }
+    const message = error.message;
+    return (
+      message.includes('ECONNRESET') ||
+      message.includes('ETIMEDOUT') ||
+      message.includes('ENOTFOUND') ||
+      message.includes('fetch failed') ||
+      message.includes('rate limit')
     );
   }
 

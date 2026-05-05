@@ -261,5 +261,27 @@ describe('TowerDefenceIssueRepository', () => {
       consoleLogSpy.mockRestore();
       consoleWarnSpy.mockRestore();
     });
+
+    it('should immediately rethrow non-transient Error without retry', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const nonTransientError = new Error('ENOENT: no such file or directory');
+      mockedGetStoryObjectMap.mockRejectedValue(nonTransientError);
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow('ENOENT: no such file or directory');
+
+      expect(mockedGetStoryObjectMap).toHaveBeenCalledTimes(1);
+      expect(mockSleep).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
+    });
   });
 });

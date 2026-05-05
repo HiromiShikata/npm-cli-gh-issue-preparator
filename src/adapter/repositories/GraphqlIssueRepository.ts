@@ -632,21 +632,27 @@ export class GraphqlIssueRepository implements Pick<
           await this.sleep(delay);
         }
 
-        const response = await fetch('https://api.github.com/graphql', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query,
-            variables: {
-              owner,
-              number: projectNumber,
-              after,
+        let response: Response;
+        try {
+          response = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.token}`,
+              'Content-Type': 'application/json',
             },
-          }),
-        });
+            body: JSON.stringify({
+              query,
+              variables: {
+                owner,
+                number: projectNumber,
+                after,
+              },
+            }),
+          });
+        } catch (fetchError) {
+          if (attempt < this.retryDelaysMs.length) continue;
+          throw fetchError;
+        }
 
         if (response.status === 429) {
           if (attempt < this.retryDelaysMs.length) continue;
@@ -739,36 +745,69 @@ export class GraphqlIssueRepository implements Pick<
       }
     `;
 
-    const response = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: mutation,
-        variables: {
-          projectId: statusInfo.projectId,
-          itemId: issue.itemId,
-          fieldId: statusInfo.fieldId,
-          value: { singleSelectOptionId: statusInfo.optionId },
-        },
-      }),
-    });
+    for (let attempt = 0; attempt <= this.retryDelaysMs.length; attempt++) {
+      if (attempt > 0) {
+        const delay = this.retryDelaysMs[attempt - 1];
+        console.log(
+          `GitHub API rate limited updating project item, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.retryDelaysMs.length})`,
+        );
+        await this.sleep(delay);
+      }
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error`);
+      let response: Response;
+      try {
+        response = await fetch('https://api.github.com/graphql', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: mutation,
+            variables: {
+              projectId: statusInfo.projectId,
+              itemId: issue.itemId,
+              fieldId: statusInfo.fieldId,
+              value: { singleSelectOptionId: statusInfo.optionId },
+            },
+          }),
+        });
+      } catch (fetchError) {
+        if (attempt < this.retryDelaysMs.length) continue;
+        throw fetchError;
+      }
+
+      if (response.status === 429) {
+        if (attempt < this.retryDelaysMs.length) continue;
+        break;
+      }
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: HTTP ${response.status}`);
+      }
+
+      const responseData: unknown = await response.json();
+
+      if (!isUpdateItemResponse(responseData)) {
+        throw new Error('Invalid API response format');
+      }
+
+      if (responseData.errors && responseData.errors.length > 0) {
+        if (isRateLimitErrors(responseData.errors)) {
+          if (attempt < this.retryDelaysMs.length) continue;
+          break;
+        }
+        throw new Error(
+          `GraphQL errors: ${JSON.stringify(responseData.errors)}`,
+        );
+      }
+
+      return;
     }
 
-    const responseData: unknown = await response.json();
-
-    if (!isUpdateItemResponse(responseData)) {
-      throw new Error('Invalid API response format');
-    }
-
-    if (responseData.errors) {
-      throw new Error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
-    }
+    throw new Error(
+      'GitHub API rate limit exceeded updating project item, all retries exhausted',
+    );
   }
 
   async updateNextActionDate(
@@ -1083,22 +1122,28 @@ export class GraphqlIssueRepository implements Pick<
           await this.sleep(delay);
         }
 
-        const response = await fetch('https://api.github.com/graphql', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query,
-            variables: {
-              owner,
-              repo,
-              issueNumber,
-              after,
+        let response: Response;
+        try {
+          response = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.token}`,
+              'Content-Type': 'application/json',
             },
-          }),
-        });
+            body: JSON.stringify({
+              query,
+              variables: {
+                owner,
+                repo,
+                issueNumber,
+                after,
+              },
+            }),
+          });
+        } catch (fetchError) {
+          if (attempt < this.retryDelaysMs.length) continue;
+          throw fetchError;
+        }
 
         if (response.status === 429) {
           if (attempt < this.retryDelaysMs.length) continue;
@@ -1265,17 +1310,23 @@ export class GraphqlIssueRepository implements Pick<
         await this.sleep(delay);
       }
 
-      const response = await fetch('https://api.github.com/graphql', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query,
-          variables: { owner, repo, prNumber },
-        }),
-      });
+      let response: Response;
+      try {
+        response = await fetch('https://api.github.com/graphql', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            variables: { owner, repo, prNumber },
+          }),
+        });
+      } catch (fetchError) {
+        if (attempt < this.retryDelaysMs.length) continue;
+        throw fetchError;
+      }
 
       if (response.status === 429) {
         if (attempt < this.retryDelaysMs.length) continue;
@@ -1295,18 +1346,14 @@ export class GraphqlIssueRepository implements Pick<
         );
       }
 
-      if (responseData.errors) {
+      if (responseData.errors && responseData.errors.length > 0) {
         if (isRateLimitErrors(responseData.errors)) {
-          if (!responseData.data?.repository?.pullRequest) {
-            if (attempt < this.retryDelaysMs.length) continue;
-            break;
-          }
+          if (attempt < this.retryDelaysMs.length) continue;
+          break;
         }
-        if (!responseData.data?.repository?.pullRequest) {
-          throw new Error(
-            `GraphQL errors: ${JSON.stringify(responseData.errors)}`,
-          );
-        }
+        throw new Error(
+          `GraphQL errors: ${JSON.stringify(responseData.errors)}`,
+        );
       }
 
       const pr = responseData.data?.repository?.pullRequest;

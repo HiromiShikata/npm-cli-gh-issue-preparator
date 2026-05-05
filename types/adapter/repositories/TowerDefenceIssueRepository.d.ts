@@ -10,8 +10,16 @@ export declare class TowerDefenceIssueRepository implements Pick<
   private cachedProject;
   private cachedIssues;
   private storyObjectMap;
-  constructor(configFilePath: string, _token: string);
+  private readonly retryDelaysMs;
+  private readonly sleep;
+  constructor(
+    configFilePath: string,
+    _token: string,
+    retryDelaysMs?: number[],
+    sleep?: (ms: number) => Promise<void>,
+  );
   private loadData;
+  private isTransientGitHubApiError;
   getAllOpened(project: Project): Promise<Issue[]>;
   getStoryObjectMap: (project: Project) => Promise<StoryObjectMap>;
   private mapToIssue;

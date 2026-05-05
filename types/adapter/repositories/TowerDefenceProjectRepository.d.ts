@@ -5,8 +5,16 @@ export declare class TowerDefenceProjectRepository implements ProjectRepository 
   private readonly _token;
   private cachedProject;
   private projectUrl;
-  constructor(configFilePath: string, _token: string);
+  private readonly retryDelaysMs;
+  private readonly sleep;
+  constructor(
+    configFilePath: string,
+    _token: string,
+    retryDelaysMs?: number[],
+    sleep?: (ms: number) => Promise<void>,
+  );
   private loadProject;
+  private isTransientGitHubApiError;
   getByUrl(url: string): Promise<Project>;
   prepareStatus(_name: string, project: Project): Promise<Project>;
   private mapToProject;

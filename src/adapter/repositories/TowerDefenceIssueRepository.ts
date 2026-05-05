@@ -67,6 +67,9 @@ export class TowerDefenceIssueRepository implements Pick<
           storyObjectMap: result.storyObjectMap,
         };
       } catch (error) {
+        if (error instanceof Error && !this.isTransientGitHubApiError(error)) {
+          throw error;
+        }
         lastError = error;
         console.warn(
           `Failed to load project data from ${this.configFilePath} (attempt ${attempt + 1}/${this.retryDelaysMs.length + 1}): ${error instanceof Error ? error.message : String(error)}`,
@@ -79,6 +82,20 @@ export class TowerDefenceIssueRepository implements Pick<
       lastError instanceof Error ? lastError.message : String(lastError);
     throw new Error(
       `GitHub API error loading project data from ${this.configFilePath}, all retries exhausted: ${errorMessage}`,
+    );
+  }
+
+  private isTransientGitHubApiError(error: Error): boolean {
+    if (error instanceof TypeError) {
+      return true;
+    }
+    const message = error.message;
+    return (
+      message.includes('ECONNRESET') ||
+      message.includes('ETIMEDOUT') ||
+      message.includes('ENOTFOUND') ||
+      message.includes('fetch failed') ||
+      message.includes('rate limit')
     );
   }
 
