@@ -4,10 +4,6 @@
 
 * **core:** `StartPreparationUseCase.run()` now accepts `configFilePath: string` instead of `logFilePath: string | null`. The wrapper command is rewritten to `aw <issueUrl> <agent> <model> --configFilePath <path>`, passing the config file path as the single source of truth. The positional `projectUrl` argument and the `--logFilePath` argument are no longer included in the wrapper invocation. Because the wrapper script reads project-scoped values (including `projectUrl`) directly from the config file, `projectUrl` MUST be present in the config YAML when using `startDaemon`; providing it only via the `--projectUrl` CLI flag is no longer sufficient and will result in an error.
 
-### Features
-
-* **core:** always pass --branch to wrapper; skip non-OPEN PRs and ambiguous multi-PR issues; derive i<number> branch for issues with no related open PR
-
 # [1.30.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.29.1...v1.30.0) (2026-05-05)
 
 

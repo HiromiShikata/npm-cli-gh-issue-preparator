@@ -122,11 +122,15 @@ class StartPreparationUseCase {
                 }
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
-                const logFilePathArg = params.logFilePath
-                    ? `--logFilePath ${params.logFilePath}`
-                    : null;
-                const command = `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''} --branch ${branchName}`;
-                await this.localCommandRunner.runCommand(command);
+                await this.localCommandRunner.runCommand('aw', [
+                    issue.url,
+                    agent,
+                    model,
+                    '--configFilePath',
+                    params.configFilePath,
+                    '--branch',
+                    branchName,
+                ]);
                 updatedCurrentPreparationIssueCount++;
             }
         };
