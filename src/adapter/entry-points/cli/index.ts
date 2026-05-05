@@ -149,7 +149,6 @@ const parseProjectReadmeConfig = (readme: string): ConfigFile => {
       defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
       defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
       logFilePath: getStringValue(parsed, 'logFilePath'),
-      logFileDirPath: getStringValue(parsed, 'logFileDirPath'),
       maximumPreparingIssuesCount: getNumberValue(
         parsed,
         'maximumPreparingIssuesCount',
@@ -205,10 +204,7 @@ const mergeConfigs = (
     readmeOverrides.logFilePath ??
     cliOverrides.logFilePath ??
     configFile.logFilePath,
-  logFileDirPath:
-    readmeOverrides.logFileDirPath ??
-    cliOverrides.logFileDirPath ??
-    configFile.logFileDirPath,
+  logFileDirPath: configFile.logFileDirPath,
   maximumPreparingIssuesCount:
     readmeOverrides.maximumPreparingIssuesCount ??
     cliOverrides.maximumPreparingIssuesCount ??
