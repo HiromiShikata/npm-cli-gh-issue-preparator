@@ -77,6 +77,7 @@ const loadConfigFile = (configFilePath) => {
             defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
             defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
             logFilePath: getStringValue(parsed, 'logFilePath'),
+            logFileDirPath: getStringValue(parsed, 'logFileDirPath'),
             maximumPreparingIssuesCount: getNumberValue(parsed, 'maximumPreparingIssuesCount'),
             utilizationPercentageThreshold: getNumberValue(parsed, 'utilizationPercentageThreshold'),
             allowedIssueAuthors: getStringValue(parsed, 'allowedIssueAuthors'),
@@ -114,6 +115,7 @@ const parseProjectReadmeConfig = (readme) => {
             defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
             defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
             logFilePath: getStringValue(parsed, 'logFilePath'),
+            logFileDirPath: getStringValue(parsed, 'logFileDirPath'),
             maximumPreparingIssuesCount: getNumberValue(parsed, 'maximumPreparingIssuesCount'),
             utilizationPercentageThreshold: getNumberValue(parsed, 'utilizationPercentageThreshold'),
             allowedIssueAuthors: getStringValue(parsed, 'allowedIssueAuthors'),
@@ -148,6 +150,9 @@ const mergeConfigs = (configFile, cliOverrides, readmeOverrides) => ({
     logFilePath: readmeOverrides.logFilePath ??
         cliOverrides.logFilePath ??
         configFile.logFilePath,
+    logFileDirPath: readmeOverrides.logFileDirPath ??
+        cliOverrides.logFileDirPath ??
+        configFile.logFileDirPath,
     maximumPreparingIssuesCount: readmeOverrides.maximumPreparingIssuesCount ??
         cliOverrides.maximumPreparingIssuesCount ??
         configFile.maximumPreparingIssuesCount,

@@ -118,6 +118,14 @@ describe('CLI', () => {
       expect(result).toEqual(config);
     });
 
+    it('should load logFileDirPath from config file', () => {
+      writeConfig({ logFileDirPath: '/var/log/aw' });
+
+      const result = loadConfigFile(configFilePath);
+
+      expect(result.logFileDirPath).toBe('/var/log/aw');
+    });
+
     it('should return empty config for empty YAML', () => {
       fs.writeFileSync(configFilePath, '');
 
@@ -596,6 +604,42 @@ defaultAgentName: 'case-test-agent'
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
+    });
+
+    it('should pass logFileDirPath from config file', async () => {
+      const configWithDir = {
+        ...defaultConfig,
+        logFileDirPath: '/var/log/aw',
+      };
+      writeConfig(configWithDir);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logFileDirPath: '/var/log/aw',
+          logFilePath: null,
+        }),
+      );
     });
 
     it('should pass maximumPreparingIssuesCount from config file', async () => {
