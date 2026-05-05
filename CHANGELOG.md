@@ -1,3 +1,18 @@
+# [1.31.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.30.0...v1.31.0) (2026-05-05)
+
+
+### Bug Fixes
+
+* **core:** address remaining review comments on configFilePath PR ([acd366c](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/acd366ca467be0a2083f844b98ffb444d93414a1))
+* **core:** address shell injection and config contract review comments ([8ae5958](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/8ae595890464fe78c0579c1c4dea0640e06327f0))
+* **core:** rebuild bin/types artifacts and remove duplicate changelog entry ([9a62151](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/9a62151f254932229aced608897ca94af2cbb9cf))
+* **core:** validate projectUrl presence in config YAML before startDaemon proceeds ([b2a7599](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/b2a75990a04688defceaf73465028670b8938a8c))
+
+
+### Features
+
+* **core:** pass --configFilePath to wrapper script instead of project URL ([4dde683](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/4dde683b3e496b24db4df27b4a0a5317fdb873ac))
+
 # [Unreleased]
 
 ### Breaking Changes
