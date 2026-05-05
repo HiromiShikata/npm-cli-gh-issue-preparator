@@ -1,3 +1,15 @@
+# [1.30.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.29.1...v1.30.0) (2026-05-05)
+
+
+### Bug Fixes
+
+* **core:** distinguish null branchName from non-OPEN PR; skip single PR with null branch; add test ([6081073](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/6081073e1228d021df1de723d5da44ed379203e1))
+
+
+### Features
+
+* **core:** always pass --branch to wrapper; skip non-OPEN and ambiguous PR cases ([a7f95b5](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/a7f95b513bdea5ef01a2139828f8a2a428da8dd5))
+
 # [Unreleased]
 
 ### Features

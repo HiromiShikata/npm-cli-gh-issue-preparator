@@ -90,25 +90,42 @@ class StartPreparationUseCase {
                     continue;
                 }
                 const isPrUrl = issue.url.includes('/pull/');
-                let existingPRBranchName = null;
+                let branchName;
                 if (isPrUrl) {
                     const pr = await this.issueRepository.getOpenPullRequest(issue.url);
-                    existingPRBranchName = pr?.branchName ?? null;
+                    if (pr === null) {
+                        console.warn(`Skipping non-OPEN PR ${issue.url}: wrapper requires an open PR.`);
+                        continue;
+                    }
+                    if (pr.branchName === null) {
+                        console.warn(`Skipping PR ${issue.url}: head branch is unavailable.`);
+                        continue;
+                    }
+                    branchName = pr.branchName;
                 }
                 else {
                     const relatedPRs = await this.issueRepository.findRelatedOpenPRs(issue.url);
-                    existingPRBranchName =
-                        relatedPRs.length === 1 ? relatedPRs[0].branchName : null;
+                    if (relatedPRs.length > 1) {
+                        console.warn(`Skipping issue ${issue.url}: ${relatedPRs.length} related open PRs found (ambiguous).`);
+                        continue;
+                    }
+                    else if (relatedPRs.length === 1) {
+                        if (relatedPRs[0].branchName === null) {
+                            console.warn(`Skipping issue ${issue.url}: related open PR has unavailable head branch.`);
+                            continue;
+                        }
+                        branchName = relatedPRs[0].branchName;
+                    }
+                    else {
+                        branchName = `i${issue.number}`;
+                    }
                 }
                 issue.status = params.preparationStatus;
                 await this.issueRepository.update(issue, project);
                 const logFilePathArg = params.logFilePath
                     ? `--logFilePath ${params.logFilePath}`
                     : null;
-                const branchArg = existingPRBranchName !== null
-                    ? ` --branch ${existingPRBranchName}`
-                    : '';
-                const command = `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''}${branchArg}`;
+                const command = `aw ${issue.url} ${agent} ${model} ${project.url}${logFilePathArg !== null ? ` ${logFilePathArg}` : ''} --branch ${branchName}`;
                 await this.localCommandRunner.runCommand(command);
                 updatedCurrentPreparationIssueCount++;
             }
