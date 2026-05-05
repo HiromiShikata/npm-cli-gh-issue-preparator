@@ -194,7 +194,7 @@ describe('StartPreparationUseCase', () => {
     expect(mockIssueRepository.update.mock.calls[0][1]).toBe(mockProject);
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url}`,
+      `aw url1 impl claude-opus ${mockProject.url} --branch i1`,
     );
   });
   it('should pass --branch to aw command when issue has an existing linked PR', async () => {
@@ -294,7 +294,7 @@ describe('StartPreparationUseCase', () => {
       'https://github.com/user/repo/pull/354',
     );
   });
-  it('should not pass --branch when PR URL returns null from getOpenPullRequest', async () => {
+  it('should skip and not call wrapper when PR URL returns null from getOpenPullRequest', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'https://github.com/user/repo/pull/999',
@@ -309,11 +309,9 @@ describe('StartPreparationUseCase', () => {
     );
     mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
     mockIssueRepository.getOpenPullRequest.mockResolvedValue(null);
-    mockLocalCommandRunner.runCommand.mockResolvedValue({
-      stdout: '',
-      stderr: '',
-      exitCode: 0,
-    });
+    const consoleWarnSpy = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
     await useCase.run({
       projectUrl: 'https://github.com/user/repo',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
@@ -326,13 +324,61 @@ describe('StartPreparationUseCase', () => {
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw https://github.com/user/repo/pull/999 impl claude-opus ${mockProject.url}`,
-    );
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
     expect(mockIssueRepository.findRelatedOpenPRs).not.toHaveBeenCalled();
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Skipping non-OPEN PR https://github.com/user/repo/pull/999: wrapper requires an open PR.',
+    );
+    consoleWarnSpy.mockRestore();
   });
-  it('should not pass --branch when issue has multiple linked PRs', async () => {
+  it('should skip and not call wrapper when PR URL has open PR with null branchName', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'https://github.com/user/repo/pull/999',
+        title: 'PR 999',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockIssueRepository.getOpenPullRequest.mockResolvedValue({
+      url: 'https://github.com/user/repo/pull/999',
+      branchName: null,
+      isConflicted: false,
+      isPassedAllCiJob: false,
+      isCiStateSuccess: false,
+      isResolvedAllReviewComments: false,
+      isBranchOutOfDate: false,
+      missingRequiredCheckNames: [],
+    });
+    const consoleWarnSpy = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Skipping PR https://github.com/user/repo/pull/999: head branch is unavailable.',
+    );
+    consoleWarnSpy.mockRestore();
+  });
+  it('should skip and not call wrapper when issue has multiple related open PRs', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'url1',
@@ -367,11 +413,9 @@ describe('StartPreparationUseCase', () => {
     );
     mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
     mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([pr1, pr2]);
-    mockLocalCommandRunner.runCommand.mockResolvedValue({
-      stdout: '',
-      stderr: '',
-      exitCode: 0,
-    });
+    const consoleWarnSpy = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
     await useCase.run({
       projectUrl: 'https://github.com/user/repo',
       awaitingWorkspaceStatus: 'Awaiting Workspace',
@@ -384,10 +428,61 @@ describe('StartPreparationUseCase', () => {
       utilizationPercentageThreshold: 90,
       allowedIssueAuthors: null,
     });
-    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
-    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url}`,
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Skipping issue url1: 2 related open PRs found (ambiguous).',
     );
+    consoleWarnSpy.mockRestore();
+  });
+  it('should skip and not call wrapper when issue has one related open PR with null branchName', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+    ];
+    const prWithNullBranch: RelatedPullRequest = {
+      url: 'https://github.com/user/repo/pull/42',
+      branchName: null,
+      isConflicted: false,
+      isPassedAllCiJob: false,
+      isCiStateSuccess: false,
+      isResolvedAllReviewComments: false,
+      isBranchOutOfDate: false,
+      missingRequiredCheckNames: [],
+    };
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      prWithNullBranch,
+    ]);
+    const consoleWarnSpy = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: 'claude-opus',
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    expect(mockIssueRepository.update.mock.calls).toHaveLength(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Skipping issue url1: related open PR has unavailable head branch.',
+    );
+    consoleWarnSpy.mockRestore();
   });
   it('should assign workspace to awaiting issues', async () => {
     const awaitingIssues: Issue[] = [
@@ -520,7 +615,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url} --logFilePath /path/to/log.txt`,
+      `aw url1 impl claude-opus ${mockProject.url} --logFilePath /path/to/log.txt --branch i1`,
     );
   });
   it('should not append logFilePath to aw command when not provided', async () => {
@@ -556,7 +651,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-opus ${mockProject.url}`,
+      `aw url1 impl claude-opus ${mockProject.url} --branch i1`,
     );
   });
   it('should use llm-agent label over category label and defaultLlmAgentName', async () => {
@@ -592,7 +687,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 research claude-sonnet-4-6 ${mockProject.url}`,
+      `aw url1 research claude-sonnet-4-6 ${mockProject.url} --branch i1`,
     );
   });
   it('should use category label over defaultLlmAgentName when no llm-agent label', async () => {
@@ -628,7 +723,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-sonnet-4-6 ${mockProject.url}`,
+      `aw url1 impl claude-sonnet-4-6 ${mockProject.url} --branch i1`,
     );
   });
   it('should use defaultLlmAgentName over defaultAgentName when no label', async () => {
@@ -664,7 +759,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 default-llm-agent claude-sonnet-4-6 ${mockProject.url}`,
+      `aw url1 default-llm-agent claude-sonnet-4-6 ${mockProject.url} --branch i1`,
     );
   });
   it('should use llm-model label over defaultLlmModelName', async () => {
@@ -700,7 +795,7 @@ describe('StartPreparationUseCase', () => {
     });
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
     expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toBe(
-      `aw url1 impl claude-sonnet ${mockProject.url}`,
+      `aw url1 impl claude-sonnet ${mockProject.url} --branch i1`,
     );
   });
   it('should log error and skip issue when no llm-model label and no defaultLlmModelName', async () => {
