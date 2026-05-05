@@ -1,3 +1,11 @@
+## [1.29.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.29.0...v1.29.1) (2026-05-05)
+
+
+### Bug Fixes
+
+* **core:** call setPrNextActionDate in approved escalation path and strengthen test ([6ffcdce](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/6ffcdcec4216a593e8a7718a6a5d0d839d730dbb))
+* **core:** use distinct wording when APPROVED status triggers escalation threshold ([56b89c2](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/56b89c21992e0e3617c2f40f41586cc12655eca4)), closes [#283](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/283)
+
 # [1.29.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.28.0...v1.29.0) (2026-05-05)
 
 
