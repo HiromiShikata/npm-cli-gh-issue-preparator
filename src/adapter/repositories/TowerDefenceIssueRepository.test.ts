@@ -175,5 +175,169 @@ describe('TowerDefenceIssueRepository', () => {
 
       expect(getStoryObjectMap).toHaveBeenCalledTimes(1);
     });
+
+    it('should retry on error and succeed when retry succeeds', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const mockIssues: Issue[] = [createMockIssue({ state: 'OPEN' })];
+      mockedGetStoryObjectMap
+        .mockRejectedValueOnce(
+          new TypeError(
+            "Cannot read properties of undefined (reading 'organization')",
+          ),
+        )
+        .mockResolvedValueOnce({
+          project: createMockTowerDefenceProject(),
+          issues: mockIssues,
+          cacheUsed: false,
+          storyObjectMap: createMockStoryObjectMap(),
+        });
+
+      const result = await retryRepository.getAllOpened(createMockProject());
+
+      expect(result).toHaveLength(1);
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      expect(mockSleep).toHaveBeenCalledWith(100);
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should throw with clear error message after exhausting all retries', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const originalError = new TypeError(
+        "Cannot read properties of undefined (reading 'organization')",
+      );
+      mockedGetStoryObjectMap.mockRejectedValue(originalError);
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow(
+        "GitHub API error loading project data from /path/to/config.yml, all retries exhausted: Cannot read properties of undefined (reading 'organization')",
+      );
+
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should include non-Error thrown value in exhaustion error message', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockedGetStoryObjectMap.mockRejectedValue('non-error string failure');
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API error loading project data from /path/to/config.yml, all retries exhausted: non-error string failure',
+      );
+
+      consoleLogSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should immediately rethrow non-transient Error without retry', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const nonTransientError = new Error('ENOENT: no such file or directory');
+      mockedGetStoryObjectMap.mockRejectedValue(nonTransientError);
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow('ENOENT: no such file or directory');
+
+      expect(mockedGetStoryObjectMap).toHaveBeenCalledTimes(1);
+      expect(mockSleep).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should immediately rethrow TypeError not matching null/undefined property access', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const deterministicTypeError = new TypeError(
+        'someFunction is not a function',
+      );
+      mockedGetStoryObjectMap.mockRejectedValue(deterministicTypeError);
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow('someFunction is not a function');
+
+      expect(mockedGetStoryObjectMap).toHaveBeenCalledTimes(1);
+      expect(mockSleep).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('getStoryObjectMap', () => {
+    it('should return story object map from tower defence library', async () => {
+      const mockStoryObjectMap = createMockStoryObjectMap();
+      mockedGetStoryObjectMap.mockResolvedValue({
+        project: createMockTowerDefenceProject(),
+        issues: [],
+        cacheUsed: false,
+        storyObjectMap: mockStoryObjectMap,
+      });
+
+      const result = await repository.getStoryObjectMap(createMockProject());
+
+      expect(result).toBe(mockStoryObjectMap);
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use cached data on subsequent calls', async () => {
+      const mockStoryObjectMap = createMockStoryObjectMap();
+      mockedGetStoryObjectMap.mockResolvedValue({
+        project: createMockTowerDefenceProject(),
+        issues: [],
+        cacheUsed: false,
+        storyObjectMap: mockStoryObjectMap,
+      });
+
+      await repository.getStoryObjectMap(createMockProject());
+      await repository.getStoryObjectMap(createMockProject());
+
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(1);
+    });
   });
 });

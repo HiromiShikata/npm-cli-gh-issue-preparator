@@ -219,17 +219,20 @@ describe('GraphqlIssueRepository', () => {
       ).rejects.toThrow('Status option not found for status: null');
     });
 
-    it('should return null when API response is not ok', async () => {
+    it('should throw HTTP error when status options API response is not ok', async () => {
       const mockIssue = createMockIssue({ status: 'Preparation' });
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 500,
         json: async () => ({}),
       });
 
       await expect(
         repository.update(mockIssue, createMockProject()),
-      ).rejects.toThrow('Status option not found for status: Preparation');
+      ).rejects.toThrow(
+        'GitHub API error fetching status options for project https://github.com/users/user/projects/1: HTTP 500',
+      );
     });
 
     it('should throw error when update API response is not ok', async () => {
@@ -488,6 +491,617 @@ describe('GraphqlIssueRepository', () => {
       await expect(
         repository.update(mockIssue, createMockProject()),
       ).rejects.toThrow('Status option not found for status: Preparation');
+    });
+
+    it('should retry on HTTP 429 when fetching status options and succeed on retry', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await retryRepository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      expect(mockSleep).toHaveBeenCalledWith(100);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on HTTP 429 for status options', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({ status: 'Preparation' });
+
+      mockFetch.mockResolvedValue({ ok: false, status: 429 });
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching status options for project',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on GraphQL rate limit for status options', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({ status: 'Preparation' });
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+        }),
+      });
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching status options for project',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry on GraphQL rate limit error when fetching status options', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await retryRepository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should use data when rate limit error accompanies valid status options data', async () => {
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await repository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on fetch network error when fetching status options', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockRejectedValueOnce(new Error('ECONNRESET'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await retryRepository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw fetch error after exhausting retries on status options network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({ status: 'Preparation' });
+
+      mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow('ECONNRESET');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry mutation on HTTP 429 from updateProjectV2ItemFieldValue', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await retryRepository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on mutation HTTP 429', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValue({ ok: false, status: 429 });
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded updating project item, all retries exhausted',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on mutation GraphQL rate limit', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+          }),
+        });
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded updating project item, all retries exhausted',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry mutation on GraphQL rate limit error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await retryRepository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry mutation on fetch network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockRejectedValueOnce(new Error('ECONNRESET'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              updateProjectV2ItemFieldValue: {
+                projectV2Item: { id: 'item-123' },
+              },
+            },
+          }),
+        });
+
+      await retryRepository.update(mockIssue, createMockProject());
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw fetch error after exhausting retries on mutation network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow('ECONNRESET');
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      consoleLogSpy.mockRestore();
     });
   });
 
@@ -3674,6 +4288,251 @@ describe('GraphqlIssueRepository', () => {
       expect(result).toHaveLength(1);
       expect(result[0].isPassedAllCiJob).toBe(true);
     });
+
+    it('should retry on HTTP 429 when fetching issue timeline and succeed on retry', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      expect(mockSleep).toHaveBeenCalledWith(100);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on HTTP 429 for timeline', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockResolvedValue({ ok: false, status: 429 });
+
+      await expect(
+        retryRepository.findRelatedOpenPRs(
+          'https://github.com/user/repo/issues/1',
+        ),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching issue timeline for',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on GraphQL rate limit for timeline', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+        }),
+      });
+
+      await expect(
+        retryRepository.findRelatedOpenPRs(
+          'https://github.com/user/repo/issues/1',
+        ),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching issue timeline for',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry on GraphQL rate limit error when fetching issue timeline', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry even when rate limit error accompanies partial timeline data', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry on fetch network error when fetching issue timeline', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockRejectedValueOnce(new Error('ECONNRESET'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.findRelatedOpenPRs(
+        'https://github.com/user/repo/issues/1',
+      );
+
+      expect(result).toHaveLength(0);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw fetch error after exhausting retries on timeline network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(
+        retryRepository.findRelatedOpenPRs(
+          'https://github.com/user/repo/issues/1',
+        ),
+      ).rejects.toThrow('ECONNRESET');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
   });
 
   describe('get', () => {
@@ -5557,6 +6416,276 @@ describe('GraphqlIssueRepository', () => {
 
       expect(result?.missingRequiredCheckNames).toEqual([]);
       expect(result?.isPassedAllCiJob).toBe(true);
+    });
+
+    it('should retry on HTTP 429 when fetching pull request and succeed on retry', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                pullRequest: {
+                  url: prUrl,
+                  state: 'OPEN',
+                  headRefName: 'feature-branch',
+                  baseRefName: 'main',
+                  mergeable: 'MERGEABLE',
+                  commits: { nodes: [] },
+                  reviewThreads: { nodes: [] },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(result?.url).toBe(prUrl);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      expect(mockSleep).toHaveBeenCalledWith(100);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on HTTP 429 for pull request', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockResolvedValue({ ok: false, status: 429 });
+
+      await expect(retryRepository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching pull request',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on GraphQL rate limit for pull request', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+        }),
+      });
+
+      await expect(retryRepository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'GitHub API rate limit exceeded fetching pull request',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry on GraphQL rate limit error when fetching pull request', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                pullRequest: {
+                  url: prUrl,
+                  state: 'OPEN',
+                  headRefName: 'feature-branch',
+                  baseRefName: 'main',
+                  mergeable: 'MERGEABLE',
+                  commits: { nodes: [] },
+                  reviewThreads: { nodes: [] },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should retry when rate limit error accompanies pull request data', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+            data: {
+              repository: {
+                pullRequest: {
+                  url: prUrl,
+                  state: 'OPEN',
+                  headRefName: 'feature-branch',
+                  baseRefName: 'main',
+                  mergeable: 'MERGEABLE',
+                  commits: { nodes: [] },
+                  reviewThreads: { nodes: [] },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                pullRequest: {
+                  url: prUrl,
+                  state: 'OPEN',
+                  headRefName: 'feature-branch',
+                  baseRefName: 'main',
+                  mergeable: 'MERGEABLE',
+                  commits: { nodes: [] },
+                  reviewThreads: { nodes: [] },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw when non-rate-limit error accompanies pull request data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          errors: [{ type: 'SOME_ERROR', message: 'Some error occurred' }],
+          data: {
+            repository: {
+              pullRequest: {
+                url: prUrl,
+                state: 'OPEN',
+                headRefName: 'feature-branch',
+                baseRefName: 'main',
+                mergeable: 'MERGEABLE',
+                commits: { nodes: [] },
+                reviewThreads: { nodes: [] },
+              },
+            },
+          },
+        }),
+      });
+
+      await expect(repository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'GraphQL errors:',
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should retry on fetch network error when fetching pull request', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockRejectedValueOnce(new Error('ECONNRESET'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                pullRequest: {
+                  url: prUrl,
+                  state: 'OPEN',
+                  headRefName: 'feature-branch',
+                  baseRefName: 'main',
+                  mergeable: 'MERGEABLE',
+                  commits: { nodes: [] },
+                  reviewThreads: { nodes: [] },
+                },
+              },
+            },
+          }),
+        });
+
+      const result = await retryRepository.getOpenPullRequest(prUrl);
+
+      expect(result).not.toBeNull();
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw fetch error after exhausting retries on pull request network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(retryRepository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'ECONNRESET',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
     });
   });
 
