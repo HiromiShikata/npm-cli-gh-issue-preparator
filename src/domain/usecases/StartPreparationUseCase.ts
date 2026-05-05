@@ -191,7 +191,10 @@ export class StartPreparationUseCase {
             `Skipping issue ${issue.url}: ${relatedPRs.length} related open PRs found (ambiguous).`,
           );
           continue;
-        } else if (relatedPRs.length === 1 && relatedPRs[0].branchName !== null) {
+        } else if (
+          relatedPRs.length === 1 &&
+          relatedPRs[0].branchName !== null
+        ) {
           branchName = relatedPRs[0].branchName;
         } else {
           branchName = `i${issue.number}`;
