@@ -63,7 +63,9 @@ export class TowerDefenceProjectRepository implements ProjectRepository {
 
   private isTransientGitHubApiError(error: Error): boolean {
     if (error instanceof TypeError) {
-      return true;
+      return /^Cannot read propert(?:y|ies) of (?:undefined|null)/.test(
+        error.message,
+      );
     }
     const message = error.message;
     return (

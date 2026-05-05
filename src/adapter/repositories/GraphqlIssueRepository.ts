@@ -660,7 +660,9 @@ export class GraphqlIssueRepository implements Pick<
         }
 
         if (!response.ok) {
-          return null;
+          throw new Error(
+            `GitHub API error fetching status options for project ${projectUrl}: HTTP ${response.status}`,
+          );
         }
 
         const responseData: unknown = await response.json();
@@ -1168,10 +1170,8 @@ export class GraphqlIssueRepository implements Pick<
           responseData.errors.length > 0 &&
           isRateLimitErrors(responseData.errors)
         ) {
-          if (!responseData.data?.repository?.issue) {
-            if (attempt < this.retryDelaysMs.length) continue;
-            break;
-          }
+          if (attempt < this.retryDelaysMs.length) continue;
+          break;
         }
 
         pageResult = responseData;

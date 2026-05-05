@@ -219,17 +219,20 @@ describe('GraphqlIssueRepository', () => {
       ).rejects.toThrow('Status option not found for status: null');
     });
 
-    it('should return null when API response is not ok', async () => {
+    it('should throw HTTP error when status options API response is not ok', async () => {
       const mockIssue = createMockIssue({ status: 'Preparation' });
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 500,
         json: async () => ({}),
       });
 
       await expect(
         repository.update(mockIssue, createMockProject()),
-      ).rejects.toThrow('Status option not found for status: Preparation');
+      ).rejects.toThrow(
+        'GitHub API error fetching status options for project https://github.com/users/user/projects/1: HTTP 500',
+      );
     });
 
     it('should throw error when update API response is not ok', async () => {
@@ -4419,30 +4422,58 @@ describe('GraphqlIssueRepository', () => {
       consoleLogSpy.mockRestore();
     });
 
-    it('should use data when rate limit error accompanies valid timeline data', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
-          data: {
-            repository: {
-              issue: {
-                timelineItems: {
-                  pageInfo: { hasNextPage: false, endCursor: null },
-                  nodes: [],
+    it('should retry even when rate limit error accompanies partial timeline data', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            errors: [
+              { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
+            ],
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
                 },
               },
             },
-          },
-        }),
-      });
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              repository: {
+                issue: {
+                  timelineItems: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [],
+                  },
+                },
+              },
+            },
+          }),
+        });
 
-      const result = await repository.findRelatedOpenPRs(
+      const result = await retryRepository.findRelatedOpenPRs(
         'https://github.com/user/repo/issues/1',
       );
 
       expect(result).toHaveLength(0);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
     });
 
     it('should retry on fetch network error when fetching issue timeline', async () => {

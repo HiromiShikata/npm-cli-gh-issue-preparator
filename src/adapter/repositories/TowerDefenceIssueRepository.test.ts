@@ -283,6 +283,30 @@ describe('TowerDefenceIssueRepository', () => {
       expect(mockSleep).not.toHaveBeenCalled();
       consoleWarnSpy.mockRestore();
     });
+
+    it('should immediately rethrow TypeError not matching null/undefined property access', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new TowerDefenceIssueRepository(
+        '/path/to/config.yml',
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      const deterministicTypeError = new TypeError(
+        'someFunction is not a function',
+      );
+      mockedGetStoryObjectMap.mockRejectedValue(deterministicTypeError);
+
+      await expect(
+        retryRepository.getAllOpened(createMockProject()),
+      ).rejects.toThrow('someFunction is not a function');
+
+      expect(mockedGetStoryObjectMap).toHaveBeenCalledTimes(1);
+      expect(mockSleep).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   describe('getStoryObjectMap', () => {
