@@ -760,6 +760,26 @@ describe('GraphqlIssueRepository', () => {
       consoleLogSpy.mockRestore();
     });
 
+    it('should throw fetch error after exhausting retries on status options network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({ status: 'Preparation' });
+
+      mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow('ECONNRESET');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
+
     it('should retry mutation on HTTP 429 from updateProjectV2ItemFieldValue', async () => {
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
       const mockSleep = jest.fn().mockResolvedValue(undefined);
@@ -852,6 +872,59 @@ describe('GraphqlIssueRepository', () => {
           }),
         })
         .mockResolvedValue({ ok: false, status: 429 });
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow(
+        'GitHub API rate limit exceeded updating project item, all retries exhausted',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw rate limit error after exhausting retries on mutation GraphQL rate limit', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
+          }),
+        });
 
       await expect(
         retryRepository.update(mockIssue, createMockProject()),
@@ -977,6 +1050,52 @@ describe('GraphqlIssueRepository', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(3);
       expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw fetch error after exhausting retries on mutation network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+      const mockIssue = createMockIssue({
+        status: 'Preparation',
+        itemId: 'item-123',
+      });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              user: {
+                projectV2: {
+                  id: 'proj-123',
+                  fields: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        id: 'field-1',
+                        name: 'Status',
+                        options: [{ id: 'opt-2', name: 'Preparation' }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          }),
+        })
+        .mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(
+        retryRepository.update(mockIssue, createMockProject()),
+      ).rejects.toThrow('ECONNRESET');
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
       consoleLogSpy.mockRestore();
     });
   });
@@ -4360,6 +4479,27 @@ describe('GraphqlIssueRepository', () => {
       expect(mockSleep).toHaveBeenCalledTimes(1);
       consoleLogSpy.mockRestore();
     });
+
+    it('should throw fetch error after exhausting retries on timeline network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(
+        retryRepository.findRelatedOpenPRs(
+          'https://github.com/user/repo/issues/1',
+        ),
+      ).rejects.toThrow('ECONNRESET');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      consoleLogSpy.mockRestore();
+    });
   });
 
   describe('get', () => {
@@ -6493,6 +6633,25 @@ describe('GraphqlIssueRepository', () => {
       expect(result).not.toBeNull();
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockSleep).toHaveBeenCalledTimes(1);
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should throw fetch error after exhausting retries on pull request network error', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const mockSleep = jest.fn().mockResolvedValue(undefined);
+      const retryRepository = new GraphqlIssueRepository(
+        'test-token',
+        [100],
+        mockSleep,
+      );
+
+      mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(retryRepository.getOpenPullRequest(prUrl)).rejects.toThrow(
+        'ECONNRESET',
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
       consoleLogSpy.mockRestore();
     });
   });

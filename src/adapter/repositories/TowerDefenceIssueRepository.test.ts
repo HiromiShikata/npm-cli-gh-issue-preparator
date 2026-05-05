@@ -284,4 +284,36 @@ describe('TowerDefenceIssueRepository', () => {
       consoleWarnSpy.mockRestore();
     });
   });
+
+  describe('getStoryObjectMap', () => {
+    it('should return story object map from tower defence library', async () => {
+      const mockStoryObjectMap = createMockStoryObjectMap();
+      mockedGetStoryObjectMap.mockResolvedValue({
+        project: createMockTowerDefenceProject(),
+        issues: [],
+        cacheUsed: false,
+        storyObjectMap: mockStoryObjectMap,
+      });
+
+      const result = await repository.getStoryObjectMap(createMockProject());
+
+      expect(result).toBe(mockStoryObjectMap);
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use cached data on subsequent calls', async () => {
+      const mockStoryObjectMap = createMockStoryObjectMap();
+      mockedGetStoryObjectMap.mockResolvedValue({
+        project: createMockTowerDefenceProject(),
+        issues: [],
+        cacheUsed: false,
+        storyObjectMap: mockStoryObjectMap,
+      });
+
+      await repository.getStoryObjectMap(createMockProject());
+      await repository.getStoryObjectMap(createMockProject());
+
+      expect(getStoryObjectMap).toHaveBeenCalledTimes(1);
+    });
+  });
 });
