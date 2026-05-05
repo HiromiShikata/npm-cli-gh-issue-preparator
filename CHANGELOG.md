@@ -1,3 +1,9 @@
+# [Unreleased]
+
+### Features
+
+* **core:** always pass --branch to wrapper; skip non-OPEN PRs and ambiguous multi-PR issues; derive i<number> branch for issues with no related open PR
+
 ## [1.29.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.29.0...v1.29.1) (2026-05-05)
 
 
