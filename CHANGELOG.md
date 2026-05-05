@@ -1,3 +1,12 @@
+## [1.31.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.31.0...v1.31.1) (2026-05-05)
+
+
+### Bug Fixes
+
+* **core:** add retry with backoff to GraphqlIssueRepository, TowerDefenceIssueRepository, TowerDefenceProjectRepository ([87d4f0c](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/87d4f0c5013c0f5ac50f1ca7ef00c0d28d341f19))
+* **core:** address review comments - throw on non-OK HTTP, always retry on rate-limit, narrow TypeError ([d114049](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d1140492252647f416a9e816b761ab6b00f87196))
+* **core:** address review comments on PR [#295](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/295) ([ee3fb9f](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ee3fb9f78619d00b4331cef119a54b594a509c8b)), closes [#294](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/294)
+
 # [1.31.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.30.0...v1.31.0) (2026-05-05)
 
 

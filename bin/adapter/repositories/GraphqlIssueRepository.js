@@ -326,7 +326,7 @@ class GraphqlIssueRepository {
                     break;
                 }
                 if (!response.ok) {
-                    return null;
+                    throw new Error(`GitHub API error fetching status options for project ${projectUrl}: HTTP ${response.status}`);
                 }
                 const responseData = await response.json();
                 if (!isStatusFieldsResponse(responseData)) {
@@ -744,11 +744,9 @@ class GraphqlIssueRepository {
                 if (responseData.errors &&
                     responseData.errors.length > 0 &&
                     (0, GraphqlRateLimitHelper_1.isRateLimitError)(responseData.errors)) {
-                    if (!responseData.data?.repository?.issue) {
-                        if (attempt < this.retryDelaysMs.length)
-                            continue;
-                        break;
-                    }
+                    if (attempt < this.retryDelaysMs.length)
+                        continue;
+                    break;
                 }
                 pageResult = responseData;
                 break;

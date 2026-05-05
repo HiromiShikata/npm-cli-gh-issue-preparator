@@ -44,7 +44,7 @@ class TowerDefenceProjectRepository {
     }
     isTransientGitHubApiError(error) {
         if (error instanceof TypeError) {
-            return true;
+            return /^Cannot read propert(?:y|ies) of (?:undefined|null)/.test(error.message);
         }
         const message = error.message;
         return (message.includes('ECONNRESET') ||
