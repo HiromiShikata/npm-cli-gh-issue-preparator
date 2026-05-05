@@ -26,7 +26,7 @@
 
 ### Features
 
-* **core:** add `logFileDirPath` config field — set in config file or project README to specify a directory for per-invocation log files; the wrapper reads this value from the config file
+* **core:** add `logFileDirPath` config field — set in the config file to specify a directory for per-invocation log files; the wrapper reads this value directly from the config file (cannot be set via GitHub Project README config)
 
 ### Breaking Changes
 
