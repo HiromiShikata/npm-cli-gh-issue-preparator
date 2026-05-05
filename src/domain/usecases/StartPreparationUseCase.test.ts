@@ -703,7 +703,7 @@ describe('StartPreparationUseCase', () => {
       `aw url1 impl claude-sonnet ${mockProject.url}`,
     );
   });
-  it('should throw error when no llm-model label and no defaultLlmModelName', async () => {
+  it('should log error and skip issue when no llm-model label and no defaultLlmModelName', async () => {
     const awaitingIssues: Issue[] = [
       createMockIssue({
         url: 'url1',
@@ -722,23 +722,77 @@ describe('StartPreparationUseCase', () => {
       stderr: '',
       exitCode: 0,
     });
-    await expect(
-      useCase.run({
-        projectUrl: 'https://github.com/user/repo',
-        awaitingWorkspaceStatus: 'Awaiting Workspace',
-        preparationStatus: 'Preparation',
-        defaultAgentName: 'agent1',
-        defaultLlmModelName: null,
-        defaultLlmAgentName: null,
-        logFilePath: null,
-        maximumPreparingIssuesCount: null,
-        utilizationPercentageThreshold: 90,
-        allowedIssueAuthors: null,
-      }),
-    ).rejects.toThrow(
+    const consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
       'No LLM model configured for issue url1. Provide --defaultLlmModelName or add an llm-model: label.',
     );
     expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(0);
+    consoleErrorSpy.mockRestore();
+  });
+  it('should continue processing subsequent issues when one issue has no model configured', async () => {
+    const awaitingIssues: Issue[] = [
+      createMockIssue({
+        url: 'url1',
+        title: 'Issue 1 (no model)',
+        labels: ['category:impl'],
+        status: 'Awaiting Workspace',
+      }),
+      createMockIssue({
+        url: 'url2',
+        title: 'Issue 2 (with model label)',
+        labels: ['category:impl', 'llm-model:claude-sonnet-4-6'],
+        status: 'Awaiting Workspace',
+        number: 2,
+        itemId: 'item-2',
+      }),
+    ];
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.getStoryObjectMap.mockResolvedValue(
+      createMockStoryObjectMap(awaitingIssues),
+    );
+    mockIssueRepository.getAllOpened.mockResolvedValueOnce(awaitingIssues);
+    mockLocalCommandRunner.runCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+    const consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    await useCase.run({
+      projectUrl: 'https://github.com/user/repo',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      preparationStatus: 'Preparation',
+      defaultAgentName: 'agent1',
+      defaultLlmModelName: null,
+      defaultLlmAgentName: null,
+      logFilePath: null,
+      maximumPreparingIssuesCount: null,
+      utilizationPercentageThreshold: 90,
+      allowedIssueAuthors: null,
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'No LLM model configured for issue url1. Provide --defaultLlmModelName or add an llm-model: label.',
+    );
+    expect(mockLocalCommandRunner.runCommand.mock.calls).toHaveLength(1);
+    expect(mockLocalCommandRunner.runCommand.mock.calls[0][0]).toContain(
+      'url2 impl claude-sonnet-4-6',
+    );
+    consoleErrorSpy.mockRestore();
   });
   it('should handle no awaiting workspace issues gracefully', async () => {
     // Test that the loop handles an empty awaiting workspace issues array

@@ -166,9 +166,10 @@ export class StartPreparationUseCase {
           ?.replace('llm-model:', '')
           .trim() || params.defaultLlmModelName;
       if (!model) {
-        throw new Error(
+        console.error(
           `No LLM model configured for issue ${issue.url}. Provide --defaultLlmModelName or add an llm-model: label.`,
         );
+        continue;
       }
       const isPrUrl = issue.url.includes('/pull/');
       let existingPRBranchName: string | null = null;
