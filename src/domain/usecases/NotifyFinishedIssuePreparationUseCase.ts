@@ -163,9 +163,13 @@ export class NotifyFinishedIssuePreparationUseCase {
     ) {
       issue.status = params.awaitingQualityCheckStatus;
       await this.issueRepository.update(issue, project);
+      const escalationStatusLine =
+        rejections.length > 0
+          ? rejectionStatusMessage
+          : 'Auto Status Check: APPROVED (escalated due to prior failures)';
       await this.issueCommentRepository.createComment(
         issue,
-        `${rejectionStatusMessage}\n\nFailed to pass the check automatically for ${params.thresholdForAutoReject} times`,
+        `${escalationStatusLine}\n\nFailed to pass the check automatically for ${params.thresholdForAutoReject} times`,
       );
       await this.sendWorkflowBlockerNotification(
         params.issueUrl,

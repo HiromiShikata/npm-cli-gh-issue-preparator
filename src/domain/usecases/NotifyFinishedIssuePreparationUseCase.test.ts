@@ -521,6 +521,51 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should use APPROVED escalation wording when current check passes but threshold is met', async () => {
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
+      createMockComment({ content: 'From: :robot: Agent report - all done' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        branchName: null,
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+
+    const createCommentCall =
+      mockIssueCommentRepository.createComment.mock.calls[0];
+    expect(createCommentCall[1]).toContain(
+      'Auto Status Check: APPROVED (escalated due to prior failures)',
+    );
+    expect(createCommentCall[1]).not.toContain('Auto Status Check: APPROVED\n');
+  });
+
   it('should not auto-escalate when rejections are below threshold', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
