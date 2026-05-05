@@ -72,7 +72,13 @@ class NotifyFinishedIssuePreparationUseCase {
                     .includes('failed to pass the check automatically'))) {
                 issue.status = params.awaitingQualityCheckStatus;
                 await this.issueRepository.update(issue, project);
-                await this.issueCommentRepository.createComment(issue, `${rejectionStatusMessage}\n\nFailed to pass the check automatically for ${params.thresholdForAutoReject} times`);
+                const escalationStatusLine = rejections.length > 0
+                    ? rejectionStatusMessage
+                    : 'Auto Status Check: APPROVED (escalated due to prior failures)';
+                if (rejections.length === 0 && approvedPrUrl !== null) {
+                    await this.setPrNextActionDate(approvedPrUrl, project);
+                }
+                await this.issueCommentRepository.createComment(issue, `${escalationStatusLine}\n\nFailed to pass the check automatically for ${params.thresholdForAutoReject} times`);
                 await this.sendWorkflowBlockerNotification(params.issueUrl, params.workflowBlockerResolvedWebhookUrl, project);
                 return;
             }

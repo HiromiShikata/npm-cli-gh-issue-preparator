@@ -521,6 +521,66 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
+  it('should use APPROVED escalation wording and set PR next action date when current check passes but threshold is met', async () => {
+    const fakeNow = new Date('2024-06-15T00:00:00.000Z');
+    jest.useFakeTimers();
+    jest.setSystemTime(fakeNow);
+
+    const issue = createMockIssue({
+      url: 'https://github.com/user/repo/issues/1',
+      status: 'Preparation',
+    });
+
+    mockProjectRepository.getByUrl.mockResolvedValue(mockProject);
+    mockIssueRepository.get.mockResolvedValue(issue);
+    mockIssueCommentRepository.getCommentsFromIssue.mockResolvedValue([
+      createMockComment({ content: 'Auto Status Check: REJECTED - first' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - second' }),
+      createMockComment({ content: 'Auto Status Check: REJECTED - third' }),
+      createMockComment({ content: 'From: :robot: Agent report - all done' }),
+    ]);
+    mockIssueRepository.findRelatedOpenPRs.mockResolvedValue([
+      {
+        url: 'https://github.com/user/repo/pull/1',
+        branchName: null,
+        isConflicted: false,
+        isPassedAllCiJob: true,
+        isCiStateSuccess: true,
+        isResolvedAllReviewComments: true,
+        isBranchOutOfDate: false,
+        missingRequiredCheckNames: [],
+      },
+    ]);
+
+    await useCase.run({
+      projectUrl: 'https://github.com/users/user/projects/1',
+      issueUrl: 'https://github.com/user/repo/issues/1',
+      preparationStatus: 'Preparation',
+      awaitingWorkspaceStatus: 'Awaiting Workspace',
+      awaitingQualityCheckStatus: 'Awaiting Quality Check',
+      thresholdForAutoReject: 3,
+      workflowBlockerResolvedWebhookUrl: null,
+    });
+
+    jest.useRealTimers();
+
+    const expectedDate = new Date('2024-06-15T00:00:00.000Z');
+    expectedDate.setMonth(expectedDate.getMonth() + 1);
+
+    const createCommentCall =
+      mockIssueCommentRepository.createComment.mock.calls[0];
+    expect(createCommentCall[1]).toContain(
+      'Auto Status Check: APPROVED (escalated due to prior failures)',
+    );
+    expect(createCommentCall[1]).not.toContain('Auto Status Check: APPROVED\n');
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledTimes(1);
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledWith(
+      'https://github.com/user/repo/pull/1',
+      mockProject,
+      expectedDate,
+    );
+  });
+
   it('should not auto-escalate when rejections are below threshold', async () => {
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
