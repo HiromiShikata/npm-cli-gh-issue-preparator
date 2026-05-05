@@ -31,6 +31,7 @@ type ConfigFile = {
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: number;
   workflowBlockerResolvedWebhookUrl?: string;
+  codexHomeCandidates?: string[];
 };
 
 type StartDaemonOptions = {
@@ -73,6 +74,24 @@ const getNumberValue = (
   return typeof value === 'number' ? value : undefined;
 };
 
+const getStringArrayValue = (
+  obj: Record<string, unknown>,
+  key: string,
+): string[] | undefined => {
+  const value = obj[key];
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const strings: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') {
+      return undefined;
+    }
+    strings.push(item);
+  }
+  return strings;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -113,6 +132,7 @@ const loadConfigFile = (configFilePath: string): ConfigFile => {
         parsed,
         'workflowBlockerResolvedWebhookUrl',
       ),
+      codexHomeCandidates: getStringArrayValue(parsed, 'codexHomeCandidates'),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -167,6 +187,7 @@ const parseProjectReadmeConfig = (readme: string): ConfigFile => {
         parsed,
         'workflowBlockerResolvedWebhookUrl',
       ),
+      codexHomeCandidates: getStringArrayValue(parsed, 'codexHomeCandidates'),
     };
   } catch {
     console.warn('Failed to parse YAML from project README config section');
@@ -229,6 +250,10 @@ const mergeConfigs = (
     readmeOverrides.workflowBlockerResolvedWebhookUrl ??
     cliOverrides.workflowBlockerResolvedWebhookUrl ??
     configFile.workflowBlockerResolvedWebhookUrl,
+  codexHomeCandidates:
+    readmeOverrides.codexHomeCandidates ??
+    cliOverrides.codexHomeCandidates ??
+    configFile.codexHomeCandidates,
 });
 
 const fetchProjectReadme = async (
@@ -443,6 +468,11 @@ program
       `maximumPreparingIssuesCount: ${maximumPreparingIssuesCount ?? 'null (default: 6)'}, utilizationPercentageThreshold: ${utilizationPercentageThreshold}`,
     );
 
+    const codexHomeCandidates =
+      config.codexHomeCandidates && config.codexHomeCandidates.length > 0
+        ? config.codexHomeCandidates
+        : null;
+
     await useCase.run({
       projectUrl,
       awaitingWorkspaceStatus,
@@ -454,6 +484,7 @@ program
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,
       allowedIssueAuthors,
+      codexHomeCandidates,
     });
   });
 

@@ -55,6 +55,7 @@ Only the content inside the `<details><summary>config</summary>` section is pars
 
 - `thresholdForAutoReject` (default: `3`) - Number of consecutive auto-rejection comments before automatically escalating the issue to the awaiting quality check status. Can be set via CLI argument `--thresholdForAutoReject`, config file, or GitHub Project README config.
 - `logFileDirPath` (optional) - Directory for per-invocation log files. The wrapper script reads this from the YAML config file and creates log files at `<dir>/<org>_<repo>_<issueNumber>_<YYYYMMDD_HHMMSS>.log`. Must be set in the config file (cannot be set via GitHub Project README config, as the wrapper reads the YAML file directly).
+- `codexHomeCandidates` (optional) - Ordered list of `CODEX_HOME` directory paths for Codex profile selection. When provided, each launched job receives a `--codexHome` argument cycling through the list in order. Absent or empty keeps current behavior. Can be set via config file or GitHub Project README config.
 
 ### Wrapper Script Contract
 

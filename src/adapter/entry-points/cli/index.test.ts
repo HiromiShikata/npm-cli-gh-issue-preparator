@@ -258,6 +258,44 @@ describe('CLI', () => {
       consoleErrorSpy.mockRestore();
       processExitSpy.mockRestore();
     });
+
+    it('should load codexHomeCandidates as string array from YAML file', () => {
+      const config = {
+        projectUrl: 'https://github.com/test/project',
+        codexHomeCandidates: ['.codex-dev1', '.codex-dev2', '.codex-main'],
+      };
+      writeConfig(config);
+
+      const result = loadConfigFile(configFilePath);
+
+      expect(result.codexHomeCandidates).toEqual([
+        '.codex-dev1',
+        '.codex-dev2',
+        '.codex-main',
+      ]);
+    });
+
+    it('should ignore codexHomeCandidates when it contains non-string elements', () => {
+      fs.writeFileSync(
+        configFilePath,
+        'codexHomeCandidates:\n  - .codex-dev1\n  - 123\n',
+      );
+
+      const result = loadConfigFile(configFilePath);
+
+      expect(result.codexHomeCandidates).toBeUndefined();
+    });
+
+    it('should ignore codexHomeCandidates when it is not an array', () => {
+      const config = {
+        codexHomeCandidates: 'not-an-array',
+      };
+      writeConfig(config);
+
+      const result = loadConfigFile(configFilePath);
+
+      expect(result.codexHomeCandidates).toBeUndefined();
+    });
   });
 
   describe('parseProjectReadmeConfig', () => {
@@ -417,6 +455,24 @@ defaultAgentName: 'case-test-agent'
       expect(result.maximumPreparingIssuesCount).toBe(20);
       expect(result.allowedIssueAuthors).toBe('readme-user1,readme-user2');
     });
+
+    it('should merge codexHomeCandidates with correct priority', () => {
+      const configFile = {
+        codexHomeCandidates: ['.codex-dev1', '.codex-dev2'],
+      };
+      const readmeOverrides = {
+        codexHomeCandidates: ['.codex-readme'],
+      };
+
+      const resultWithReadme = mergeConfigs(configFile, {}, readmeOverrides);
+      const resultWithConfig = mergeConfigs(configFile, {}, {});
+
+      expect(resultWithReadme.codexHomeCandidates).toEqual(['.codex-readme']);
+      expect(resultWithConfig.codexHomeCandidates).toEqual([
+        '.codex-dev1',
+        '.codex-dev2',
+      ]);
+    });
   });
 
   describe('startDaemon', () => {
@@ -453,6 +509,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -491,6 +548,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -561,6 +619,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -603,6 +662,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -645,6 +705,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: 10,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -689,6 +750,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: 20,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -847,6 +909,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 75,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -891,6 +954,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 50,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -1220,6 +1284,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user1', 'user2'],
+        codexHomeCandidates: null,
       });
     });
 
@@ -1262,6 +1327,7 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 
@@ -1306,6 +1372,93 @@ defaultAgentName: 'case-test-agent'
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user3', 'user4'],
+        codexHomeCandidates: null,
+      });
+    });
+
+    it('should pass codexHomeCandidates from config file to useCase.run', async () => {
+      const configWithCandidates = {
+        ...defaultConfig,
+        codexHomeCandidates: ['.codex-dev1', '.codex-dev2', '.codex-main'],
+      };
+      writeConfig(configWithCandidates);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        configFilePath: configFilePath,
+        maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
+        codexHomeCandidates: ['.codex-dev1', '.codex-dev2', '.codex-main'],
+      });
+    });
+
+    it('should pass null codexHomeCandidates when config has empty array', async () => {
+      const configWithEmptyCandidates = {
+        ...defaultConfig,
+        codexHomeCandidates: [],
+      };
+      writeConfig(configWithEmptyCandidates);
+
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalledWith({
+        projectUrl: 'https://github.com/test/project',
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+        defaultLlmModelName: null,
+        defaultLlmAgentName: null,
+        configFilePath: configFilePath,
+        maximumPreparingIssuesCount: null,
+        utilizationPercentageThreshold: 90,
+        allowedIssueAuthors: null,
+        codexHomeCandidates: null,
       });
     });
 

@@ -27,3 +27,7 @@ allowedIssueAuthors: 'HiromiShikata,other-author'
 awaitingQualityCheckStatus: 'Awaiting quality check'
 thresholdForAutoReject: 3
 workflowBlockerResolvedWebhookUrl: 'https://example.com/webhook?url={URL}&message={MESSAGE}'
+codexHomeCandidates:
+  - .codex-dev1
+  - .codex-dev2
+  - .codex-main
