@@ -55,6 +55,10 @@ Only the content inside the `<details><summary>config</summary>` section is pars
 
 - `thresholdForAutoReject` (default: `3`) - Number of consecutive auto-rejection comments before automatically escalating the issue to the awaiting quality check status. Can be set via CLI argument `--thresholdForAutoReject`, config file, or GitHub Project README config.
 
+### Wrapper Script Contract
+
+`startDaemon` invokes a wrapper script (`aw`) for each issue. The wrapper receives `--configFilePath <path>` as the single source of truth for all project-scoped values (`projectUrl`, `logFilePath`, status names, etc.). The wrapper is expected to call `notifyFinishedIssuePreparation --configFilePath <path> --issueUrl <url>`, which resolves all project-scoped values from the config file.
+
 ### Issue Labels
 
 You can use GitHub issue labels to customize the agent and model selection for individual issues:

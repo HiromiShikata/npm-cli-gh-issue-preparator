@@ -325,7 +325,6 @@ program
     const defaultAgentName = config.defaultAgentName;
     const defaultLlmModelName = config.defaultLlmModelName;
     const defaultLlmAgentName = config.defaultLlmAgentName;
-    const logFilePath = config.logFilePath;
 
     if (!projectUrl) {
       console.error(
@@ -442,7 +441,7 @@ program
       defaultAgentName,
       defaultLlmModelName: defaultLlmModelName ?? null,
       defaultLlmAgentName: defaultLlmAgentName ?? null,
-      logFilePath: logFilePath ?? null,
+      configFilePath: options.configFilePath,
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,
       allowedIssueAuthors,

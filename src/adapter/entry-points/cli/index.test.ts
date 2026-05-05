@@ -441,7 +441,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -481,20 +481,14 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'override-agent',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
     });
 
-    it('should pass logFilePath from config file', async () => {
-      const configWithLog = {
-        ...defaultConfig,
-        logFilePath: '/path/to/log.txt',
-      };
-      writeConfig(configWithLog);
-
+    it('should pass configFilePath to use case', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined);
       const MockedStartPreparationUseCase = jest.mocked(
         StartPreparationUseCase,
@@ -523,14 +517,14 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: '/path/to/log.txt',
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
       });
     });
 
-    it('should pass logFilePath from CLI overriding config', async () => {
+    it('should pass configFilePath to use case even when logFilePath is set', async () => {
       const configWithLog = {
         ...defaultConfig,
         logFilePath: '/path/to/config-log.txt',
@@ -567,7 +561,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: '/path/to/cli-log.txt',
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -609,7 +603,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: 10,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -653,7 +647,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: 20,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -811,7 +805,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 75,
         allowedIssueAuthors: null,
@@ -855,7 +849,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 50,
         allowedIssueAuthors: null,
@@ -1148,7 +1142,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user1', 'user2'],
@@ -1190,7 +1184,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: null,
@@ -1234,7 +1228,7 @@ defaultAgentName: 'case-test-agent'
         defaultAgentName: 'agent1',
         defaultLlmModelName: null,
         defaultLlmAgentName: null,
-        logFilePath: null,
+        configFilePath: configFilePath,
         maximumPreparingIssuesCount: null,
         utilizationPercentageThreshold: 90,
         allowedIssueAuthors: ['user3', 'user4'],
