@@ -1,3 +1,15 @@
+# [1.29.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.28.0...v1.29.0) (2026-05-05)
+
+
+### Bug Fixes
+
+* **core:** log error and skip issue instead of throwing when model is missing ([d01fd52](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d01fd52a96cf6e1c7915d6e2af90e6f6e511444e))
+
+
+### Features
+
+* **core:** remove hardcoded LLM model default; require explicit config or label ([776b2b8](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/776b2b8393af72a05a30273c548870e406b22296))
+
 # [Unreleased]
 
 ### Breaking Changes
