@@ -302,15 +302,15 @@ program
       allowedIssueAuthors: options.allowedIssueAuthors,
     };
 
-    const tempProjectUrl =
-      cliOverrides.projectUrl ?? configFileValues.projectUrl;
-
-    if (!tempProjectUrl) {
+    if (!configFileValues.projectUrl) {
       console.error(
         'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
       );
       process.exit(1);
     }
+
+    const tempProjectUrl =
+      cliOverrides.projectUrl ?? configFileValues.projectUrl;
 
     let readmeOverrides: ConfigFile = {};
     const readme = await fetchProjectReadme(tempProjectUrl, token);

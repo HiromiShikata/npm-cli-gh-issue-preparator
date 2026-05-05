@@ -1005,6 +1005,42 @@ defaultAgentName: 'case-test-agent'
       processExitSpy.mockRestore();
     });
 
+    it('should exit with error when projectUrl is provided via CLI but missing from config file', async () => {
+      const configWithoutProjectUrl = {
+        awaitingWorkspaceStatus: 'Awaiting',
+        preparationStatus: 'Preparing',
+        defaultAgentName: 'agent1',
+      };
+      writeConfig(configWithoutProjectUrl);
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const processExitSpy = jest
+        .spyOn(process, 'exit')
+        .mockImplementation(() => {
+          throw new Error('process.exit called');
+        });
+
+      await expect(
+        program.parseAsync([
+          'node',
+          'test',
+          'startDaemon',
+          '--configFilePath',
+          configFilePath,
+          '--projectUrl',
+          'https://github.com/cli-only/project',
+        ]),
+      ).rejects.toThrow('process.exit called');
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'projectUrl must be set in the config YAML file when using startDaemon. The wrapper script reads project-scoped values directly from the config file. Providing it via --projectUrl CLI flag alone is not sufficient.',
+      );
+      expect(processExitSpy).toHaveBeenCalledWith(1);
+
+      consoleErrorSpy.mockRestore();
+      processExitSpy.mockRestore();
+    });
+
     it('should exit with error when awaitingWorkspaceStatus is missing from both CLI and config', async () => {
       const configMissing = {
         projectUrl: 'https://github.com/test/project',
