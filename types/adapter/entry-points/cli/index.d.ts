@@ -15,6 +15,7 @@ type ConfigFile = {
   awaitingQualityCheckStatus?: string;
   thresholdForAutoReject?: number;
   workflowBlockerResolvedWebhookUrl?: string;
+  codexHomeCandidates?: string[];
 };
 declare const loadConfigFile: (configFilePath: string) => ConfigFile;
 declare const parseProjectReadmeConfig: (readme: string) => ConfigFile;

@@ -31,6 +31,7 @@ export declare class StartPreparationUseCase {
     maximumPreparingIssuesCount: number | null;
     utilizationPercentageThreshold: number;
     allowedIssueAuthors: string[] | null;
+    codexHomeCandidates: string[] | null;
   }) => Promise<void>;
 }
 //# sourceMappingURL=StartPreparationUseCase.d.ts.map
