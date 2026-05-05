@@ -167,6 +167,9 @@ export class NotifyFinishedIssuePreparationUseCase {
         rejections.length > 0
           ? rejectionStatusMessage
           : 'Auto Status Check: APPROVED (escalated due to prior failures)';
+      if (rejections.length === 0 && approvedPrUrl !== null) {
+        await this.setPrNextActionDate(approvedPrUrl, project);
+      }
       await this.issueCommentRepository.createComment(
         issue,
         `${escalationStatusLine}\n\nFailed to pass the check automatically for ${params.thresholdForAutoReject} times`,

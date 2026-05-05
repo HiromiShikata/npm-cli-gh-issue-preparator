@@ -521,7 +521,11 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
     );
   });
 
-  it('should use APPROVED escalation wording when current check passes but threshold is met', async () => {
+  it('should use APPROVED escalation wording and set PR next action date when current check passes but threshold is met', async () => {
+    const fakeNow = new Date('2024-06-15T00:00:00.000Z');
+    jest.useFakeTimers();
+    jest.setSystemTime(fakeNow);
+
     const issue = createMockIssue({
       url: 'https://github.com/user/repo/issues/1',
       status: 'Preparation',
@@ -558,12 +562,23 @@ describe('NotifyFinishedIssuePreparationUseCase', () => {
       workflowBlockerResolvedWebhookUrl: null,
     });
 
+    jest.useRealTimers();
+
+    const expectedDate = new Date('2024-06-15T00:00:00.000Z');
+    expectedDate.setMonth(expectedDate.getMonth() + 1);
+
     const createCommentCall =
       mockIssueCommentRepository.createComment.mock.calls[0];
     expect(createCommentCall[1]).toContain(
       'Auto Status Check: APPROVED (escalated due to prior failures)',
     );
     expect(createCommentCall[1]).not.toContain('Auto Status Check: APPROVED\n');
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledTimes(1);
+    expect(mockIssueRepository.updateNextActionDate).toHaveBeenCalledWith(
+      'https://github.com/user/repo/pull/1',
+      mockProject,
+      expectedDate,
+    );
   });
 
   it('should not auto-escalate when rejections are below threshold', async () => {
