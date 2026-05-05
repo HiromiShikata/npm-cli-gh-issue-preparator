@@ -4027,9 +4027,7 @@ describe('GraphqlIssueRepository', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          errors: [
-            { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
-          ],
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
           data: {
             repository: {
               issue: {
@@ -6010,9 +6008,7 @@ describe('GraphqlIssueRepository', () => {
         }),
       });
 
-      await expect(
-        retryRepository.getOpenPullRequest(prUrl),
-      ).rejects.toThrow(
+      await expect(retryRepository.getOpenPullRequest(prUrl)).rejects.toThrow(
         'GitHub API rate limit exceeded fetching pull request',
       );
 
@@ -6069,9 +6065,7 @@ describe('GraphqlIssueRepository', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          errors: [
-            { type: 'RATE_LIMIT', message: 'API rate limit exceeded' },
-          ],
+          errors: [{ type: 'RATE_LIMIT', message: 'API rate limit exceeded' }],
           data: {
             repository: {
               pullRequest: {
