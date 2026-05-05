@@ -54,7 +54,7 @@ Only the content inside the `<details><summary>config</summary>` section is pars
 ### Parameters
 
 - `thresholdForAutoReject` (default: `3`) - Number of consecutive auto-rejection comments before automatically escalating the issue to the awaiting quality check status. Can be set via CLI argument `--thresholdForAutoReject`, config file, or GitHub Project README config.
-- `logFileDirPath` (optional) - Directory for per-invocation log files. When set, each worker command receives `--logFilePath <dir>/<org>_<repo>_<issueNumber>_<YYYYMMDD_HHMMSS>.log`. Takes precedence over `logFilePath` when both are set. Can be set via config file or GitHub Project README config.
+- `logFileDirPath` (optional) - Directory for per-invocation log files. The wrapper script reads this from the config file and creates log files at `<dir>/<org>_<repo>_<issueNumber>_<YYYYMMDD_HHMMSS>.log`. Can be set via config file or GitHub Project README config.
 
 ### Wrapper Script Contract
 
