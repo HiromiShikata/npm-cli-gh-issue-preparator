@@ -381,6 +381,37 @@ defaultAgentName: 'case-test-agent'
 
       expect(result.defaultAgentName).toBe('case-test-agent');
     });
+
+    it('should parse codexHomeCandidates list from README config', () => {
+      const readme = `<details>
+<summary>config</summary>
+codexHomeCandidates:
+  - .codex-dev1
+  - .codex-dev2
+  - .codex-main
+</details>`;
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result.codexHomeCandidates).toEqual([
+        '.codex-dev1',
+        '.codex-dev2',
+        '.codex-main',
+      ]);
+    });
+
+    it('should return undefined for codexHomeCandidates when list contains non-string elements', () => {
+      const readme = `<details>
+<summary>config</summary>
+codexHomeCandidates:
+  - .codex-dev1
+  - 42
+</details>`;
+
+      const result = parseProjectReadmeConfig(readme);
+
+      expect(result.codexHomeCandidates).toBeUndefined();
+    });
   });
 
   describe('mergeConfigs', () => {
