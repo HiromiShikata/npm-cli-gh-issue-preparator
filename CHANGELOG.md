@@ -1,3 +1,20 @@
+# [1.32.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.31.1...v1.32.0) (2026-05-06)
+
+
+### Bug Fixes
+
+* **core:** address review comments on logFileDirPath implementation ([cc02199](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/cc02199236beede0828342e672e67828b8125772))
+* **core:** correct CHANGELOG entry for logFileDirPath - config-file-only, not README ([ef389da](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/ef389daedb949a7426f2b196793a2c26be320001))
+* **core:** regenerate bin/ artifacts to match config-file-only logFileDirPath source ([c716583](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c7165831bab83af71de272505a1ff4e7082e1695))
+* **core:** remove logFileDirPath from README parsing and merge; config-file-only ([5213b8b](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/5213b8bcf338237bc1428bb00f4bfb38857475e5))
+* **core:** update tests to match configFilePath interface after rebase ([030b678](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/030b67851e984088311c776f43181bec15180143))
+
+
+### Features
+
+* **core:** read logFileDirPath from config and build per-invocation full log path ([7811d1d](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/7811d1d770ea505fd0b962fbfa2774deb6868b4b)), closes [#286](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/286)
+* **core:** read logFileDirPath from config and build per-invocation full log path ([44a896b](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/44a896bf019dc92d41b5132a4dc90fa0a7ceee4c))
+
 ## [1.31.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.31.0...v1.31.1) (2026-05-05)
 
 
