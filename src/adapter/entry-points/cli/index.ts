@@ -24,6 +24,7 @@ type ConfigFile = {
   defaultLlmModelName?: string;
   defaultLlmAgentName?: string;
   logFilePath?: string;
+  logFileDirPath?: string;
   maximumPreparingIssuesCount?: number;
   utilizationPercentageThreshold?: number;
   allowedIssueAuthors?: string;
@@ -93,6 +94,7 @@ const loadConfigFile = (configFilePath: string): ConfigFile => {
       defaultLlmModelName: getStringValue(parsed, 'defaultLlmModelName'),
       defaultLlmAgentName: getStringValue(parsed, 'defaultLlmAgentName'),
       logFilePath: getStringValue(parsed, 'logFilePath'),
+      logFileDirPath: getStringValue(parsed, 'logFileDirPath'),
       maximumPreparingIssuesCount: getNumberValue(
         parsed,
         'maximumPreparingIssuesCount',
@@ -202,6 +204,7 @@ const mergeConfigs = (
     readmeOverrides.logFilePath ??
     cliOverrides.logFilePath ??
     configFile.logFilePath,
+  logFileDirPath: configFile.logFileDirPath,
   maximumPreparingIssuesCount:
     readmeOverrides.maximumPreparingIssuesCount ??
     cliOverrides.maximumPreparingIssuesCount ??

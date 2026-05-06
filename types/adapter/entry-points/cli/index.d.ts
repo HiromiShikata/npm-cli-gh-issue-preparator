@@ -8,6 +8,7 @@ type ConfigFile = {
   defaultLlmModelName?: string;
   defaultLlmAgentName?: string;
   logFilePath?: string;
+  logFileDirPath?: string;
   maximumPreparingIssuesCount?: number;
   utilizationPercentageThreshold?: number;
   allowedIssueAuthors?: string;

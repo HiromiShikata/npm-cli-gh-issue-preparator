@@ -118,6 +118,14 @@ describe('CLI', () => {
       expect(result).toEqual(config);
     });
 
+    it('should load logFileDirPath from config file', () => {
+      writeConfig({ logFileDirPath: '/var/log/aw' });
+
+      const result = loadConfigFile(configFilePath);
+
+      expect(result.logFileDirPath).toBe('/var/log/aw');
+    });
+
     it('should return empty config for empty YAML', () => {
       fs.writeFileSync(configFilePath, '');
 
