@@ -2013,6 +2013,7 @@ describe('StartPreparationUseCase', () => {
       isInProgress: false,
       isClosed: false,
       createdAt: new Date(),
+      author: '',
     };
 
     const storyObjectMap: StoryObjectMap = new Map();
