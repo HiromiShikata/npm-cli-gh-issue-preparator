@@ -114,15 +114,8 @@ export class TowerDefenceIssueRepository implements Pick<
   };
 
   private mapToIssue(towerDefenceIssue: TowerDefenceIssue): Issue {
-    const author =
-      'author' in towerDefenceIssue &&
-      typeof towerDefenceIssue.author === 'string'
-        ? towerDefenceIssue.author
-        : '';
-
     return {
       ...towerDefenceIssue,
-      author,
     };
   }
 }
