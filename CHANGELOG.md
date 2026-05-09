@@ -1,3 +1,11 @@
+## [1.32.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.32.0...v1.32.1) (2026-05-09)
+
+
+### Bug Fixes
+
+* **core:** add required author field to Issue test fixtures for v1.42.1 compatibility ([c5adc02](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/c5adc02c5326e111ffc6b85ec6a3cb4bc1eb360a))
+* **core:** remove dead author type-guard code now that Issue.author is required in v1.42.1 ([d5dd0f0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/d5dd0f0706db840d0b9908f95e298b6f25ee7ce3))
+
 # [1.32.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.31.1...v1.32.0) (2026-05-06)
 
 

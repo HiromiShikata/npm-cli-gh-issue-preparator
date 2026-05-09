@@ -43,9 +43,6 @@ class StartPreparationUseCase {
                 .filter((issue) => issue.status === params.awaitingWorkspaceStatus)
                 .map((issue) => ({
                 ...issue,
-                author: 'author' in issue && typeof issue.author === 'string'
-                    ? issue.author
-                    : '',
             }));
             const currentPreparationIssueCount = allIssues.filter((issue) => issue.status === params.preparationStatus).length;
             let updatedCurrentPreparationIssueCount = currentPreparationIssueCount;
