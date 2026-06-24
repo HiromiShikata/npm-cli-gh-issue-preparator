@@ -1,3 +1,4 @@
+*.toml
 *.xml
 .gitignore
 .prettierignore
