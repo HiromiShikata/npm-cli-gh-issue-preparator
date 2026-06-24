@@ -73,6 +73,6 @@
     "commander": "^14.0.0",
     "dotenv": "^16.4.5",
     "github-issue-tower-defence-management": "^1.30.0",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^5.1.0"
   }
 }
