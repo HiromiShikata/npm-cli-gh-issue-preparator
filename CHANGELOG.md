@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.32.1...v1.33.0) (2026-06-26)
+
+
+### Features
+
+* **core:** add stale tmux session cleanup to daemon cycle ([#331](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/issues/331)) ([abc015b](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/commit/abc015bf790e93f31aeed0ec287d3ed75f6154b8))
+
 ## [1.32.1](https://github.com/HiromiShikata/npm-cli-gh-issue-preparator/compare/v1.32.0...v1.32.1) (2026-05-09)
 
 

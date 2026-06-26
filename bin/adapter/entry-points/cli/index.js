@@ -44,6 +44,7 @@ const fs = __importStar(require("fs"));
 const yaml = __importStar(require("js-yaml"));
 const commander_1 = require("commander");
 const StartPreparationUseCase_1 = require("../../../domain/usecases/StartPreparationUseCase");
+const StaleTmuxSessionKillUseCase_1 = require("../../../domain/usecases/StaleTmuxSessionKillUseCase");
 const NotifyFinishedIssuePreparationUseCase_1 = require("../../../domain/usecases/NotifyFinishedIssuePreparationUseCase");
 const TowerDefenceIssueRepository_1 = require("../../repositories/TowerDefenceIssueRepository");
 const GraphqlIssueRepository_1 = require("../../repositories/GraphqlIssueRepository");
@@ -312,6 +313,15 @@ program
         maximumPreparingIssuesCount,
         utilizationPercentageThreshold,
         allowedIssueAuthors,
+    });
+    const staleTmuxSessionKillUseCase = new StaleTmuxSessionKillUseCase_1.StaleTmuxSessionKillUseCase(projectRepository, {
+        getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(towerDefenceIssueRepository),
+    }, localCommandRunner);
+    await staleTmuxSessionKillUseCase.run({
+        projectUrl,
+        excludedStatus: StaleTmuxSessionKillUseCase_1.DEFAULT_EXCLUDED_STATUS,
+        idleThresholdSeconds: StaleTmuxSessionKillUseCase_1.DEFAULT_IDLE_THRESHOLD_SECONDS,
+        now: new Date(),
     });
 });
 program
