@@ -8,9 +8,11 @@ import {
   mergeConfigs,
 } from './index';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
+import { StaleTmuxSessionKillUseCase } from '../../../domain/usecases/StaleTmuxSessionKillUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
 
 jest.mock('../../../domain/usecases/StartPreparationUseCase');
+jest.mock('../../../domain/usecases/StaleTmuxSessionKillUseCase');
 jest.mock('../../../domain/usecases/NotifyFinishedIssuePreparationUseCase');
 jest.mock('../../repositories/TowerDefenceIssueRepository', () => ({
   TowerDefenceIssueRepository: jest.fn().mockImplementation(() => ({
@@ -420,6 +422,62 @@ defaultAgentName: 'case-test-agent'
   });
 
   describe('startDaemon', () => {
+    const setupStaleTmuxMock = (): jest.Mock<
+      Promise<void>,
+      Parameters<StaleTmuxSessionKillUseCase['run']>
+    > => {
+      const staleTmuxRun = jest.fn<
+        Promise<void>,
+        Parameters<StaleTmuxSessionKillUseCase['run']>
+      >(() => Promise.resolve());
+      const MockedStaleTmuxSessionKillUseCase = jest.mocked(
+        StaleTmuxSessionKillUseCase,
+      );
+      MockedStaleTmuxSessionKillUseCase.mockImplementation(function (
+        this: StaleTmuxSessionKillUseCase,
+      ) {
+        this.run = staleTmuxRun;
+        return this;
+      });
+      return staleTmuxRun;
+    };
+    beforeEach(() => {
+      setupStaleTmuxMock();
+    });
+
+    it('should run stale tmux session cleanup after preparation', async () => {
+      const mockStaleTmuxRun = setupStaleTmuxMock();
+      const mockRun = jest.fn().mockResolvedValue(undefined);
+      const MockedStartPreparationUseCase = jest.mocked(
+        StartPreparationUseCase,
+      );
+      MockedStartPreparationUseCase.mockImplementation(function (
+        this: StartPreparationUseCase,
+      ) {
+        this.run = mockRun;
+        return this;
+      });
+
+      await program.parseAsync([
+        'node',
+        'test',
+        'startDaemon',
+        '--configFilePath',
+        configFilePath,
+      ]);
+
+      expect(mockStaleTmuxRun).toHaveBeenCalledTimes(1);
+      expect(mockStaleTmuxRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectUrl: 'https://github.com/test/project',
+          excludedStatus: 'In Tmux by human',
+          idleThresholdSeconds: 86400,
+        }),
+      );
+      const staleTmuxCallArgument = mockStaleTmuxRun.mock.calls[0][0];
+      expect(staleTmuxCallArgument.now).toBeInstanceOf(Date);
+    });
+
     it('should read parameters from config file', async () => {
       const mockRun = jest.fn().mockResolvedValue(undefined);
       const MockedStartPreparationUseCase = jest.mocked(

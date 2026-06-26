@@ -6,6 +6,11 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import { StartPreparationUseCase } from '../../../domain/usecases/StartPreparationUseCase';
+import {
+  StaleTmuxSessionKillUseCase,
+  DEFAULT_EXCLUDED_STATUS,
+  DEFAULT_IDLE_THRESHOLD_SECONDS,
+} from '../../../domain/usecases/StaleTmuxSessionKillUseCase';
 import { NotifyFinishedIssuePreparationUseCase } from '../../../domain/usecases/NotifyFinishedIssuePreparationUseCase';
 import { TowerDefenceIssueRepository } from '../../repositories/TowerDefenceIssueRepository';
 import { GraphqlIssueRepository } from '../../repositories/GraphqlIssueRepository';
@@ -454,6 +459,22 @@ program
       maximumPreparingIssuesCount,
       utilizationPercentageThreshold,
       allowedIssueAuthors,
+    });
+
+    const staleTmuxSessionKillUseCase = new StaleTmuxSessionKillUseCase(
+      projectRepository,
+      {
+        getAllOpened: towerDefenceIssueRepository.getAllOpened.bind(
+          towerDefenceIssueRepository,
+        ),
+      },
+      localCommandRunner,
+    );
+    await staleTmuxSessionKillUseCase.run({
+      projectUrl,
+      excludedStatus: DEFAULT_EXCLUDED_STATUS,
+      idleThresholdSeconds: DEFAULT_IDLE_THRESHOLD_SECONDS,
+      now: new Date(),
     });
   });
 
