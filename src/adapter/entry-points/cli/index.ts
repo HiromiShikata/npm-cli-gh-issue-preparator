@@ -84,6 +84,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const loadConfigFile = (configFilePath: string): ConfigFile => {
   try {
     const content = fs.readFileSync(configFilePath, 'utf-8');
+    if (!content.trim()) {
+      return {};
+    }
     const parsed: unknown = yaml.load(content);
     if (!isRecord(parsed)) {
       return {};
