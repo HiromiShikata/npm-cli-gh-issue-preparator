@@ -3,6 +3,7 @@
   "include": ["src"],
   "exclude": ["node_modules", "**/__tests__/*", "**/*.test.ts"],
   "compilerOptions": {
+    "rootDir": "./src",
     "outDir": "bin",
     "declaration": true,
     "declarationMap": true,
