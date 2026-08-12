@@ -4582,6 +4582,7 @@ describe('GraphqlIssueRepository', () => {
       expect(result?.assignees).toEqual(['user1']);
       expect(result?.labels).toEqual(['bug']);
       expect(result?.author).toBe('testauthor');
+      expect(result?.closingIssueReferenceUrls).toEqual([]);
     });
 
     it('should default author to empty string when author is null', async () => {
