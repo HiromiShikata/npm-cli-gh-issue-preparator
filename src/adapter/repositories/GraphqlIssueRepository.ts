@@ -530,6 +530,7 @@ export class GraphqlIssueRepository implements Pick<
         isClosed: issueData.state === 'CLOSED',
         createdAt: new Date(issueData.createdAt),
         author: issueData.author?.login ?? '',
+        closingIssueReferenceUrls: [],
       };
 
       return issue;

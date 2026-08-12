@@ -45,6 +45,7 @@ const createMockIssue = (overrides: Partial<Issue> = {}): Issue => ({
   isClosed: false,
   createdAt: new Date(),
   author: 'testuser',
+  closingIssueReferenceUrls: [],
   ...overrides,
 });
 
