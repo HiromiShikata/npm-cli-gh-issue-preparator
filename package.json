@@ -45,7 +45,7 @@
   },
   "homepage": "https://github.com/HiromiShikata/npm-cli-gh-issue-preparator#readme",
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.0",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
