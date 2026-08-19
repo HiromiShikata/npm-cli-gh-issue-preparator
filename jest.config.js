@@ -5,7 +5,7 @@ module.exports = {
     '^.+\\.ts?$': 'ts-jest',
     '^.+\\.js$': ['ts-jest', { tsconfig: { allowJs: true } }],
   },
-  transformIgnorePatterns: ['<rootDir>/node_modules/(?!(ky)/)'],
+  transformIgnorePatterns: ['<rootDir>/node_modules/(?!(ky|commander)/)'],
   collectCoverage: true,
   collectCoverageFrom: [
     'src/**/*.ts',
